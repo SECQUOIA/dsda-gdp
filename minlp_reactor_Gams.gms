@@ -118,9 +118,12 @@ option reslim = 18000;
 option minlp=baron;
 option nlp = conopt;
 option threads=0;
+
+* Generating BARON option file
 $onecho > baron.opt
 EpsR 0.0001
 $offecho
+
 yf.l('1') = 1;
 yr.l('1') = 1;
 SUP_CSTR.OptFile = 1;

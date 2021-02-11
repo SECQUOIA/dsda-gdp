@@ -265,6 +265,10 @@ m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)
 
 dir_path = os.path.dirname(os.path.abspath(__file__))
 gams_path = os.path.join(dir_path, "gamsfiles/")
+if not(os.path.exists(gams_path)):
+    print('Directory for automatically generated files ' +
+          gams_path + ' does not exist. We will create it')
+    os.makedirs(gams_path)
 
 # SOLVE
 solvername = 'gams'

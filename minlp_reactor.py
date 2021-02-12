@@ -1,6 +1,6 @@
 import pyomo.environ as pe
 import networkx as nx
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
 import os
@@ -336,6 +336,8 @@ def minlp_reactors_dsda(NT=5, visualize=False):
                              nodelist=recylabels, node_shape='', edgecolors='black')
             nx.draw_networkx_edge_labels(
                 graph, posrecy, edge_labels=edgelabels)
+
+        plt.show()
 
     return results
 

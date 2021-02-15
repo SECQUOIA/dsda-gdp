@@ -6,14 +6,14 @@ from pyomo.opt.base.solvers import SolverFactory
 import os
 
 
-def minlp_reactors_dsda(NT=5, visualize=False):
+def minlp_reactors(NT=5, visualize=False):
     # INPUTS
     # NT = 5  # Size of the superstructure (This is an input parameter)
     Initial_Number_Of_Reactors = 1  # Initialization for yf
     Initial_Location_Of_Recycle = 1  # Initialization for yr
 
     # PYOMO MODEL
-    m = pe.ConcreteModel(name="minlp_cstr_superstructure")
+    m = pe.ConcreteModel(name='minlp_cstr_superstructure')
 
     # SETS
     m.I = pe.Set(initialize=['A', 'B'])  # Set of components
@@ -345,4 +345,4 @@ def minlp_reactors_dsda(NT=5, visualize=False):
 if __name__ == "__main__":
     NT = 5
     # Visualization works best (aesthetically) for NT=5
-    results = minlp_reactors_dsda(NT, visualize=True)
+    results = minlp_reactors(NT, visualize=True)

@@ -7,14 +7,14 @@ from pyomo.opt.base.solvers import SolverFactory
 import os
 
 
-def minlp_reactors_dsda(NT=5, visualize=False):
+def gdp_reactors(NT=5, visualize=False):
     # INPUTS
     # NT = 5  # Size of the superstructure (This is an input parameter)
     Initial_Number_Of_Reactors = 1  # Initialization for yf
     Initial_Location_Of_Recycle = 1  # Initialization for yr
 
     # PYOMO MODEL
-    m = pe.ConcreteModel(name="minlp_cstr_superstructure")
+    m = pe.ConcreteModel(name='gdp_reactors')
 
     # SETS
     m.I = pe.Set(initialize=['A', 'B'])  # Set of components
@@ -57,11 +57,8 @@ def minlp_reactors_dsda(NT=5, visualize=False):
 
     # Unit operation in n (True if unit n is a CSTR, False if unit n is a bypass)
     def YP_Init(m, n):  # Initialization
-        if n == 1:
-            return True
-        else:
-            temp = pe.land(~m.YF[j] for j in range(1,n+1))
-            return pe.lor(temp, m.YF[n])
+        temp = pe.land(~m.YF[j] for j in range(1, n+1))
+        return pe.lor(temp, m.YF[n])
     m.YP = pe.BooleanVar(m.N, initialize=YP_Init)
 
     # REAL VARIABLES
@@ -265,7 +262,6 @@ def minlp_reactors_dsda(NT=5, visualize=False):
         def neg_YRD_QFR_desact(disjunct):
             return m.QFR[n] == 0
 
-
     # Create disjunction blocks
     m.YR_is_recycle = Disjunct(m.N, rule=build_recycle_equations)
     m.YR_is_not_recycle = Disjunct(m.N, rule=build_no_recycle_equations)
@@ -273,8 +269,8 @@ def minlp_reactors_dsda(NT=5, visualize=False):
     m.YP_is_cstr = Disjunct(m.N, rule=build_cstr_equations)
     m.YP_is_bypass = Disjunct(m.N, rule=build_bypass_equations)
 
-
     # Create disjunctions
+
     @m.Disjunction(m.N)
     def YP_is_cstr_or_bypass(m, n):
         return [m.YP_is_cstr[n], m.YP_is_bypass[n]]
@@ -283,12 +279,10 @@ def minlp_reactors_dsda(NT=5, visualize=False):
     def YR_is_recycle_or_not(m, n):
         return [m.YR_is_recycle[n], m.YR_is_not_recycle[n]]
 
-
     # Associate Boolean variables with with disjunctions
     for n in m.N:
         m.YP[n].associate_binary_var(m.YP_is_cstr[n].indicator_var)
         m.YR[n].associate_binary_var(m.YR_is_recycle[n].indicator_var)
-
 
     # Logic Constraints
     # Unit must be a CSTR to include a recycle (YR -> YP)
@@ -315,11 +309,8 @@ def minlp_reactors_dsda(NT=5, visualize=False):
     # Unit operation in n constraint
 
     def unit_in_n_rule(m, n):
-        if n == 1:
-            return m.YP[n].equivalent_to(True)
-        else:
-            temp = pe.land(~m.YF[j] for j in range(1,n+1))
-            return m.YP[n].equivalent_to(pe.lor(temp, m.YF[n]))
+        temp = pe.land(~m.YF[j] for j in range(1, n+1))
+        return m.YP[n].equivalent_to(pe.lor(temp, m.YF[n]))
 
     m.unit_in_n = pe.LogicalConstraint(m.N, rule=unit_in_n_rule)
 
@@ -451,4 +442,4 @@ def minlp_reactors_dsda(NT=5, visualize=False):
 if __name__ == "__main__":
     NT = 5
     # Visualization works best (aesthetically) for NT=5
-    minlp_reactors_dsda(NT, visualize=False)
+    gdp_reactors(NT, visualize=False)

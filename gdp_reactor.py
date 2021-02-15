@@ -8,6 +8,10 @@ import os
 
 
 def minlp_reactors_dsda(NT=5, visualize=False):
+    # INPUTS
+    # NT = 5  # Size of the superstructure (This is an input parameter)
+    Initial_Number_Of_Reactors = 1  # Initialization for yf
+    Initial_Location_Of_Recycle = 1  # Initialization for yr
 
     # PYOMO MODEL
     m = pe.ConcreteModel(name="minlp_cstr_superstructure")
@@ -35,13 +39,30 @@ def minlp_reactors_dsda(NT=5, visualize=False):
     # BINARY VARIABLES
 
     # Existence of an unreacted feed in unit n
-    m.YF = pe.BooleanVar(m.N)
+    def YF_Init(m, n):  # Initialization
+        if n == Initial_Number_Of_Reactors:
+            return True
+        else:
+            return False
+
+    m.YF = pe.BooleanVar(m.N, initialize=YF_Init)
 
     # Existence of recycle flow in unit n
-    m.YR = pe.BooleanVar(m.N)
+    def YR_Init(m, n):  # Initialization
+        if n == Initial_Location_Of_Recycle:
+            return True
+        else:
+            return False
+    m.YR = pe.BooleanVar(m.N, initialize=YR_Init)
 
     # Unit operation in n (True if unit n is a CSTR, False if unit n is a bypass)
-    m.YP = pe.BooleanVar(m.N)
+    def YP_Init(m, n):  # Initialization
+        if n == 1:
+            return True
+        else:
+            temp = pe.land(~m.YF[j] for j in range(1,n+1))
+            return pe.lor(temp, m.YF[n])
+    m.YP = pe.BooleanVar(m.N, initialize=YP_Init)
 
     # REAL VARIABLES
 

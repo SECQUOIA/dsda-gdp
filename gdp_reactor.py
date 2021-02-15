@@ -1,7 +1,7 @@
 import pyomo.environ as pe
 from pyomo.gdp import (Disjunct, Disjunction)
 import networkx as nx
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
 import os
@@ -166,7 +166,7 @@ def minlp_reactors_dsda(NT=5, visualize=False):
 
     m.vol_cons = pe.Constraint(m.N, rule=vol_cons_rule)
 
-    # YD Disjunction
+    # YD Disjunction block equation definition
 
     def build_cstr_equations(disjunct, n):
         m = disjunct.model()
@@ -216,7 +216,7 @@ def minlp_reactors_dsda(NT=5, visualize=False):
             '''
             return m.c[n] == 0
 
-    # YR Disjuction
+    # YR Disjuction block equation definition
 
     def build_recycle_equations(disjunct, n):
         m = disjunct.model()
@@ -244,12 +244,16 @@ def minlp_reactors_dsda(NT=5, visualize=False):
         def neg_YRD_QFR_desact(disjunct):
             return m.QFR[n] == 0
 
+
+    # Create disjunction blocks
     m.YR_is_recycle = Disjunct(m.N, rule=build_recycle_equations)
     m.YR_is_not_recycle = Disjunct(m.N, rule=build_no_recycle_equations)
 
     m.YP_is_cstr = Disjunct(m.N, rule=build_cstr_equations)
     m.YP_is_bypass = Disjunct(m.N, rule=build_bypass_equations)
 
+
+    # Create disjunctions
     @m.Disjunction(m.N)
     def YP_is_cstr_or_bypass(m, n):
         return [m.YP_is_cstr[n], m.YP_is_bypass[n]]
@@ -258,10 +262,12 @@ def minlp_reactors_dsda(NT=5, visualize=False):
     def YR_is_recycle_or_not(m, n):
         return [m.YR_is_recycle[n], m.YR_is_not_recycle[n]]
 
+
     # Associate Boolean variables with with disjunctions
     for n in m.N:
         m.YP[n].associate_binary_var(m.YP_is_cstr[n].indicator_var)
         m.YR[n].associate_binary_var(m.YR_is_recycle[n].indicator_var)
+
 
     # Logic Constraints
     # Unit must be a CSTR to include a recycle (YR -> YP)
@@ -285,37 +291,16 @@ def minlp_reactors_dsda(NT=5, visualize=False):
 
     m.one_recycle = pe.LogicalConstraint(rule=one_recycle_rule)
 
-    # _____________ HERE _______________
     # Unit operation in n constraint
 
     def unit_in_n_rule(m, n):
-        temp = pe.land(~m.YF[1], ~m.YF[2], ~m.YF[3], ~m.YF[4], ~m.YF[5])
-        return m.YP[n].equivalent_to(pe.exactly(1, temp, m.YF[n]))
+        if n == 1:
+            return m.YP[n].equivalent_to(True)
+        else:
+            temp = pe.land(~m.YF[j] for j in range(1,n+1))
+            return m.YP[n].equivalent_to(pe.lor(temp, m.YF[n]))
 
     m.unit_in_n = pe.LogicalConstraint(m.N, rule=unit_in_n_rule)
-    m.unit_in_n.pprint()
-
-    # ________ FORCE OPT SOLUTION _______________
-
-    # Comment constraint above and uncomment the following lines to validate implementation
-
-    # def trampa1_rule(m,n):
-    #    if n == NT:
-    #        return m.YR[n].equivalent_to(True)
-    #    else:
-    #        return m.YR[n].equivalent_to(False)
-
-    #m.trampa1 = pe.LogicalConstraint(m.N, rule=trampa1_rule)
-
-    # def trampa2_rule(m,n):
-    #    if n == NT:
-    #        return m.YF[n].equivalent_to(True)
-    #    else:
-    #        return m.YF[n].equivalent_to(False)
-
-    #m.trampa2 = pe.LogicalConstraint(m.N, rule=trampa2_rule)
-
-    # _______________________________________________________
 
     # OBJECTIVE
 
@@ -346,7 +331,7 @@ def minlp_reactors_dsda(NT=5, visualize=False):
                         # symbolic_solver_labels=True,
 
                         add_options=[
-                            'option reslim = 5;'
+                            'option reslim = 20;'
                             'option optcr = 0.0;'
                             # Uncomment the following lines to setup IIS computation of BARON through option file
                             # 'GAMS_MODEL.optfile = 1;'
@@ -358,14 +343,86 @@ def minlp_reactors_dsda(NT=5, visualize=False):
 
     print('Objective:', round(pe.value(m.obj), 5))
 
-    for n in m.N:
-        print('YP', n, pe.value(m.YP[n].get_associated_binary()))
-    print()
-    for n in m.N:
-        print('YF', n, pe.value(m.YF[n].get_associated_binary()))
-    print()
-    for n in m.N:
-        print('YR', n, pe.value(m.YR[n].get_associated_binary()))
+    if visualize:
+        x = list((range(1, NT+1)))
+
+        # Initialize bypasses (b), reactors(r) and recycle
+        xb = []
+        xr = []
+        recycle = 0
+
+        yp = {}
+        yr = {}
+
+        # Use information from solved model
+        for n in m.N:
+            yp[n] = pe.value(pe.value(m.YP[n].get_associated_binary()))
+            yr[n] = pe.value(pe.value(m.YR[n].get_associated_binary()))
+
+        # Classify units in bypasses (b) or reactors(r) and determine recycle
+        for i in x:
+            if yp[i] > 0.5:
+                xr.append(i)
+            else:
+                xb.append(i)
+            if yr[i] > 0.5:
+                recycle = i
+
+        # Create labels for bypasses (b), reactors(r), input/output (f) and recycle(recy)
+        blabels = dict(zip(range(1, len(xb)+1), xb[::-1]))
+        rlabels = dict(zip(range(len(xb)+1, len(xb)+1+len(xr)), xr[::-1]))
+        flabels = {0: '', NT+1: ''}
+        recylabels = {'r1': '', 'r2': '', 'r3': '', 'r4': ''}
+
+        # Create posicions (pos) for bypasses (b), reactors(r), input/output(f) and recycle(recy)
+        posb = {}
+        posr = {}
+        posf = {0: (0.2, 0), NT+1: (NT+1, 0)}
+        posrecy = {'r1': (NT+0.5, -0.0009), 'r2': (NT+0.5, 0.008),
+                   'r3': (NT-recycle+0.5, 0.007), 'r4': (NT-recycle+0.5, -0.0009)}
+
+        for i in range(1, len(xb)+1):
+            posb[i] = (i, 0)
+
+        for i in range(len(xb)+1, len(xb)+1+len(xr)):
+            posr[i] = (i, 0)
+
+        # Create flow arrow from input to output
+        arcsf = [(0, NT+1)]
+
+        # Declare graph
+        graph = nx.DiGraph()
+
+        # Graph input/out(f)
+        nx.draw_networkx_labels(graph, posf, flabels)
+        nx.draw_networkx_edges(graph, posf, arcsf, width=1, arrowsize=10)
+        nx.draw_networkx(graph, posf, node_size=1, node_color='black',
+                         nodelist=flabels, with_labels=True, node_shape='', edgecolors='black')
+
+        # Graph bypasses(b)
+        nx.draw_networkx_labels(graph, posb, blabels)
+        nx.draw_networkx(graph, posb, node_size=900, node_color='whitesmoke', width=1.5,
+                         nodelist=blabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=0.2)
+
+        # Graph reactors(r)
+        nx.draw_networkx_labels(graph, posr, rlabels)
+        nx.draw_networkx(graph, posr, node_size=900, node_color='lightslategray', width=1.5,
+                         nodelist=rlabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=1.5)
+
+        # Graph recycle(recy) if it exists
+        if recycle != 0:
+            arcsrecy = [('r1', 'r2'), ('r3', 'r4')]
+            pairs = list(zip(list(arcsrecy), ['R', 'R']))
+            edgelabels = dict(pairs)
+            nx.draw_networkx_labels(graph, posrecy, recylabels)
+            nx.draw_networkx_edges(
+                graph, posrecy, arcsrecy, width=1, arrowsize=10)
+            nx.draw_networkx(graph, posrecy, node_size=0, node_color='white',
+                             nodelist=recylabels, node_shape='', edgecolors='black')
+            nx.draw_networkx_edge_labels(
+                graph, posrecy, edge_labels=edgelabels)
+
+        plt.show()
 
     return results
 

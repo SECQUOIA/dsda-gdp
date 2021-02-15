@@ -36,7 +36,7 @@ def gdp_reactors(NT=5, visualize=False):
 
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
-    # BINARY VARIABLES
+    # BOOLEAN VARIABLES
 
     # Existence of an unreacted feed in unit n
     def YF_Init(m, n):  # Initialization

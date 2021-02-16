@@ -38,11 +38,10 @@ def master_iplc(NT=5):
     return {1: pe.value(m.ext_var_1), 2: pe.value(m.ext_var_2)}
 
 
-def cstr_model_gdp(x, NT=5):
+def cstr_model_gdp(NT=5):
     # INPUTS
     # NT = 5  # Size of the superstructure (This is an input parameter)
     Initial_Number_Of_Reactors = 1  # Initialization for yf
-    Initial_Location_Of_Recycle = 1  # Initialization for yr
 
     # PYOMO MODEL
     m = pe.ConcreteModel(name='gdp_reactors')
@@ -67,14 +66,16 @@ def cstr_model_gdp(x, NT=5):
 
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
-    # Compute y = y(x)
+    # BINARY VARIABLE
+    def YF_Init(m, n):  # Initialization
+        if n == Initial_Number_Of_Reactors:
+            return 1
+        else:
+            return 0
 
-    ext_var_1 = x[1]
-    ext_var_2 = x[2]
+    m.YF = pe.Var(m.N, within=pe.Binary, initialize=YF_Init)
 
     # BOOLEAN VARIABLES
-
-    m.YF = pe.BooleanVar(m.N)
     m.YR = pe.BooleanVar(m.N)
     m.YP = pe.BooleanVar(m.N)
 
@@ -301,30 +302,34 @@ def cstr_model_gdp(x, NT=5):
         m.YP[n].associate_binary_var(m.YP_is_cstr[n].indicator_var)
         m.YR[n].associate_binary_var(m.YR_is_recycle[n].indicator_var)
 
-    # Existence of an unreacted feed in unit n
-    def YF_fix_rule(m, n):
-        if n == ext_var_1:
-            return m.YF[n].equivalent_to(True)
-        else:
-            return m.YF[n].equivalent_to(False)
+    # Logic Constraints
+    # Unit must be a CSTR to include a recycle
 
-    m.YF_fix = pe.LogicalConstraint(m.N, rule=YF_fix_rule)
+    def cstr_if_recycle_rule(m, n):
+        return m.YR_is_recycle[n].indicator_var <= m.YP_is_cstr[n].indicator_var
 
-    # Existence of recycle flow in unit n
-    def YR_fix_rule(m, n):
-        if n == ext_var_2:
-            return m.YR[n].equivalent_to(True)
-        else:
-            return m.YR[n].equivalent_to(False)
+    m.cstr_if_recycle = pe.Constraint(m.N, rule=cstr_if_recycle_rule)
 
-    m.YR_fix = pe.LogicalConstraint(m.N, rule=YR_fix_rule)
+    # There is only one unreacted feed
 
-    # Unit operation in n (True if unit n is a CSTR, False if unit n is a bypass)
-    def YP_fix_rule(m, n):
-        temp = pe.land(~m.YF[j] for j in range(1, n+1))
-        return m.YP[n].equivalent_to(pe.lor(temp, m.YF[n]))
+    def one_unreacted_feed_rule(m):
+        return sum(m.YF[n] for n in m.N) == 1
 
-    m.YP_fix = pe.LogicalConstraint(m.N, rule=YP_fix_rule)
+    m.one_unreacted_feed = pe.Constraint(rule=one_unreacted_feed_rule)
+
+    # There is only one recycle stream
+
+    def one_recycle_rule(m):
+        return sum(m.YR_is_recycle[n].indicator_var for n in m.N) == 1
+
+    m.one_recycle = pe.Constraint(rule=one_recycle_rule)
+
+    # Unit operation in n constraint
+
+    def unit_in_n_rule(m, n):
+        return m.YP_is_cstr[n].indicator_var == 1 - (sum(m.YF[n2] for n2 in m.N if n2 <= n) - m.YF[n])
+
+    m.unit_in_n = pe.Constraint(m.N, rule=unit_in_n_rule)
 
     # OBJECTIVE
 
@@ -338,39 +343,10 @@ def cstr_model_gdp(x, NT=5):
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.bigm').apply_to(m)
 
-    dir_path = os.path.dirname(os.path.abspath(__file__))
-    gams_path = os.path.join(dir_path, "gamsfiles/")
-    if not(os.path.exists(gams_path)):
-        print('Directory for automatically generated files ' +
-              gams_path + ' does not exist. We will create it')
-        os.makedirs(gams_path)
+    return m
 
-    # SOLVE
-    solvername = 'gams'
-    opt = SolverFactory(solvername, solver='baron')
-    results = opt.solve(m, tee=False,
-                        # Uncomment the following lines if you want to save GAMS models
-                        # keepfiles=True,
-                        # tmpdir=gams_path,
-                        # symbolic_solver_labels=True,
-
-                        add_options=[
-                            'option reslim = 10;'
-                            'option optcr = 0.0;'
-                            # Uncomment the following lines to setup IIS computation of BARON through option file
-                            # 'GAMS_MODEL.optfile = 1;'
-                            # '\n'
-                            # '$onecho > baron.opt \n'
-                            # 'CompIIS 1 \n'
-                            # '$offecho'
-                        ])
-
-    return round(pe.value(m.obj), 5)
-
-
-if __name__ == "__main__":
-    NT = 5
-    X1, X2, x, aux, aux2 = [], [], {}, [], 1
+def complete_enumeration(m, NT):
+    X1, X2, aux, aux2 = [], [], [], 1
 
     for i in range(1, NT+1):
         X1.append(i)
@@ -383,12 +359,68 @@ if __name__ == "__main__":
         for j in aux:
             X1.append(j)
             X2.append(aux2)
+
     print('=============================')
     print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
     print('-----------------------------')
 
     for i in range(len(X1)):
-        x = {1: X1[i], 2: X2[i]}
-        print('%6s %6s %12s' % (X1[i], X2[i], cstr_model_gdp(x, NT)))
+
+        for n in m.N:
+            if n == X1[i]:
+                m.YF[n].fix(1)
+            else:
+                m.YF[n].fix(0)
+            
+            if n == X2[i]:
+                m.YR_is_recycle[n].indicator_var.fix(1)
+                m.YR_is_not_recycle[n].indicator_var.fix(0)                
+            else:
+                m.YR_is_recycle[n].indicator_var.fix(0)
+                m.YR_is_not_recycle[n].indicator_var.fix(1)    
+
+            temp = 1 - (sum(m.YF[n2] for n2 in m.N if n2 <= n) - m.YF[n])
+            if temp == 1:
+                m.YP_is_cstr[n].indicator_var.fix(1)
+                m.YP_is_bypass[n].indicator_var.fix(0)
+            else:
+                m.YP_is_cstr[n].indicator_var.fix(0)
+                m.YP_is_bypass[n].indicator_var.fix(1) 
+
+
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        gams_path = os.path.join(dir_path, "gamsfiles/")
+        if not(os.path.exists(gams_path)):
+            print('Directory for automatically generated files ' +
+                gams_path + ' does not exist. We will create it')
+            os.makedirs(gams_path)
+        solvername = 'gams'
+        opt = SolverFactory(solvername, solver='msnlp')
+        results = opt.solve(m, tee=False,
+                            # Uncomment the following lines if you want to save GAMS models
+                            #keepfiles=True,
+                            #tmpdir=gams_path,
+                            #symbolic_solver_labels=True,
+
+                            add_options=[
+                                'option reslim = 10;'
+                                'option optcr = 0.0;'
+                                # Uncomment the following lines to setup IIS computation of BARON through option file
+                                # 'GAMS_MODEL.optfile = 1;'
+                                # '\n'
+                                # '$onecho > baron.opt \n'
+                                # 'CompIIS 1 \n'
+                                # '$offecho'
+                            ])
+
+        print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 5)))
 
     print('=============================')
+
+
+
+if __name__ == "__main__":
+    NT = 5
+    m = cstr_model_gdp(NT)
+    complete_enumeration(m, NT)
+

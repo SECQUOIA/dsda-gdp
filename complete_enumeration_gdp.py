@@ -41,7 +41,8 @@ def master_iplc(NT=5):
 def cstr_model_gdp(NT=5):
     # INPUTS
     # NT = 5  # Size of the superstructure (This is an input parameter)
-    Initial_Number_Of_Reactors = 1  # Initialization for yf
+    Initial_Number_Of_Reactors = 1  # Initialization for YF
+    Initial_Location_Of_Recycle = 1  # Initialization for YR
 
     # PYOMO MODEL
     m = pe.ConcreteModel(name='gdp_reactors')
@@ -66,17 +67,15 @@ def cstr_model_gdp(NT=5):
 
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
-    # BINARY VARIABLE
-    def YF_Init(m, n):  # Initialization
-        if n == Initial_Number_Of_Reactors:
-            return 1
-        else:
-            return 0
-
-    m.YF = pe.Var(m.N, within=pe.Binary, initialize=YF_Init)
+   # BINARY VARIABLE
+    m.YF = pe.Var(m.N, within=pe.Binary)
 
     # BOOLEAN VARIABLES
+
+    # Existence of recycle flow in unit n
     m.YR = pe.BooleanVar(m.N)
+
+    # Unit operation in n (True if unit n is a CSTR, False if unit n is a bypass)
     m.YP = pe.BooleanVar(m.N)
 
     # REAL VARIABLES

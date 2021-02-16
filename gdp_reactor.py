@@ -10,8 +10,6 @@ import os
 def gdp_reactors(NT=5, visualize=False):
     # INPUTS
     # NT = 5  # Size of the superstructure (This is an input parameter)
-    Initial_Number_Of_Reactors = 1  # Initialization for yf
-    Initial_Location_Of_Recycle = 1  # Initialization for yr
 
     # PYOMO MODEL
     m = pe.ConcreteModel(name='gdp_reactors')
@@ -36,30 +34,16 @@ def gdp_reactors(NT=5, visualize=False):
 
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
+    # BINARY VARIABLE
+    m.YF = pe.Var(m.N, within=pe.Binary)
+
     # BOOLEAN VARIABLES
 
-    # Existence of an unreacted feed in unit n
-    def YF_Init(m, n):  # Initialization
-        if n == Initial_Number_Of_Reactors:
-            return True
-        else:
-            return False
-
-    m.YF = pe.BooleanVar(m.N, initialize=YF_Init)
-
     # Existence of recycle flow in unit n
-    def YR_Init(m, n):  # Initialization
-        if n == Initial_Location_Of_Recycle:
-            return True
-        else:
-            return False
-    m.YR = pe.BooleanVar(m.N, initialize=YR_Init)
+    m.YR = pe.BooleanVar(m.N)
 
     # Unit operation in n (True if unit n is a CSTR, False if unit n is a bypass)
-    def YP_Init(m, n):  # Initialization
-        temp = pe.land(~m.YF[j] for j in range(1, n+1))
-        return pe.lor(temp, m.YF[n])
-    m.YP = pe.BooleanVar(m.N, initialize=YP_Init)
+    m.YP = pe.BooleanVar(m.N)
 
     # REAL VARIABLES
 
@@ -285,34 +269,33 @@ def gdp_reactors(NT=5, visualize=False):
         m.YR[n].associate_binary_var(m.YR_is_recycle[n].indicator_var)
 
     # Logic Constraints
-    # Unit must be a CSTR to include a recycle (YR -> YP)
+    # Unit must be a CSTR to include a recycle
 
     def cstr_if_recycle_rule(m, n):
-        return m.YR[n].implies(m.YP[n])
+        return m.YR_is_recycle[n].indicator_var <= m.YP_is_cstr[n].indicator_var
 
-    m.cstr_if_recycle = pe.LogicalConstraint(m.N, rule=cstr_if_recycle_rule)
+    m.cstr_if_recycle = pe.Constraint(m.N, rule=cstr_if_recycle_rule)
 
     # There is only one unreacted feed
 
     def one_unreacted_feed_rule(m):
-        return pe.exactly(1, m.YF)
+        return sum(m.YF[n] for n in m.N) == 1
 
-    m.one_unreacted_feed = pe.LogicalConstraint(rule=one_unreacted_feed_rule)
+    m.one_unreacted_feed = pe.Constraint(rule=one_unreacted_feed_rule)
 
     # There is only one recycle stream
 
     def one_recycle_rule(m):
-        return pe.exactly(1, m.YR)
+        return sum(m.YR_is_recycle[n].indicator_var for n in m.N) == 1
 
-    m.one_recycle = pe.LogicalConstraint(rule=one_recycle_rule)
+    m.one_recycle = pe.Constraint(rule=one_recycle_rule)
 
     # Unit operation in n constraint
 
     def unit_in_n_rule(m, n):
-        temp = pe.land(~m.YF[j] for j in range(1, n+1))
-        return m.YP[n].equivalent_to(pe.lor(temp, m.YF[n]))
+        return m.YP_is_cstr[n].indicator_var == 1 - (sum(m.YF[n2] for n2 in m.N if n2 <= n) - m.YF[n])
 
-    m.unit_in_n = pe.LogicalConstraint(m.N, rule=unit_in_n_rule)
+    m.unit_in_n = pe.Constraint(m.N, rule=unit_in_n_rule)
 
     # OBJECTIVE
 

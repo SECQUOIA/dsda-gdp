@@ -1,44 +1,10 @@
 import pyomo.environ as pe
 from pyomo.gdp import (Disjunct, Disjunction)
-import networkx as nx
-import matplotlib.pyplot as plt
 from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
 import os
 
-
-def master_iplc(NT=5):
-    m = pe.ConcreteModel(name='external_initialization')
-    m.ext_var_1 = pe.Var(within=pe.NonNegativeIntegers, bounds=(0, NT))
-    m.ext_var_2 = pe.Var(within=pe.NonNegativeIntegers, bounds=(0, NT))
-
-    @m.Constraint()
-    def feas_constraint(m):
-        return m.ext_var_2 - m.ext_var_1 <= 0
-
-    m.z_ext = pe.Var()
-
-    @m.Constraint()
-    def z_cons(m):
-        return m.z_ext == 1
-
-    def obj_rule(m):
-        return m.z_ext
-
-    m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)
-
-    solvername = 'gams'
-    opt = SolverFactory(solvername, solver='cplex')
-    results = opt.solve(m, tee=True,
-                        add_options=[
-                            'option reslim = 20;'
-                            'option optcr = 0.0;'
-                        ])
-
-    return {1: pe.value(m.ext_var_1), 2: pe.value(m.ext_var_2)}
-
-
-def cstr_model_gdp(NT=5):
+def fnlp_gdp(NT,x):
     # INPUTS
     # NT = 5  # Size of the superstructure (This is an input parameter)
     Initial_Number_Of_Reactors = 1  # Initialization for YF
@@ -330,6 +296,32 @@ def cstr_model_gdp(NT=5):
 
     m.unit_in_n = pe.Constraint(m.N, rule=unit_in_n_rule)
 
+    # External variable fix
+    ext_var_1 =  x[1]
+    ext_var_2 =  x[2]
+
+    for n in m.N:
+        if n == ext_var_1:
+            m.YF[n].fix(1)
+        else:
+            m.YF[n].fix(0)
+        
+        if n == ext_var_2:
+            m.YR_is_recycle[n].indicator_var.fix(1)
+            m.YR_is_not_recycle[n].indicator_var.fix(0)                
+        else:
+            m.YR_is_recycle[n].indicator_var.fix(0)
+            m.YR_is_not_recycle[n].indicator_var.fix(1)    
+
+        temp = 1 - (sum(m.YF[n2] for n2 in m.N if n2 <= n) - m.YF[n])
+        if temp == 1:
+            m.YP_is_cstr[n].indicator_var.fix(1)
+            m.YP_is_bypass[n].indicator_var.fix(0)
+        else:
+            m.YP_is_cstr[n].indicator_var.fix(0)
+            m.YP_is_bypass[n].indicator_var.fix(1)
+
+
     # OBJECTIVE
 
     def obj_rule(m):
@@ -342,10 +334,36 @@ def cstr_model_gdp(NT=5):
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.bigm').apply_to(m)
 
+    # SOLVE
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    gams_path = os.path.join(dir_path, "gamsfiles/")
+    if not(os.path.exists(gams_path)):
+        print('Directory for automatically generated files ' +
+            gams_path + ' does not exist. We will create it')
+        os.makedirs(gams_path)
+    solvername = 'gams'
+    opt = SolverFactory(solvername, solver='msnlp')
+    results = opt.solve(m, tee=False,
+                        # Uncomment the following lines if you want to save GAMS models
+                        #keepfiles=True,
+                        #tmpdir=gams_path,
+                        #symbolic_solver_labels=True,
+
+                        add_options=[
+                            'option reslim = 10;'
+                            'option optcr = 0.0;'
+                            # Uncomment the following lines to setup IIS computation of BARON through option file
+                            # 'GAMS_MODEL.optfile = 1;'
+                            # '\n'
+                            # '$onecho > baron.opt \n'
+                            # 'CompIIS 1 \n'
+                            # '$offecho'
+                        ])
+
     return m
 
-def complete_enumeration(m, NT):
-    X1, X2, aux, aux2 = [], [], [], 1
+def complete_enumeration(NT):
+    X1, X2, aux, aux2, x = [], [], [], 1, {}
 
     for i in range(1, NT+1):
         X1.append(i)
@@ -364,62 +382,14 @@ def complete_enumeration(m, NT):
     print('-----------------------------')
 
     for i in range(len(X1)):
-
-        for n in m.N:
-            if n == X1[i]:
-                m.YF[n].fix(1)
-            else:
-                m.YF[n].fix(0)
-            
-            if n == X2[i]:
-                m.YR_is_recycle[n].indicator_var.fix(1)
-                m.YR_is_not_recycle[n].indicator_var.fix(0)                
-            else:
-                m.YR_is_recycle[n].indicator_var.fix(0)
-                m.YR_is_not_recycle[n].indicator_var.fix(1)    
-
-            temp = 1 - (sum(m.YF[n2] for n2 in m.N if n2 <= n) - m.YF[n])
-            if temp == 1:
-                m.YP_is_cstr[n].indicator_var.fix(1)
-                m.YP_is_bypass[n].indicator_var.fix(0)
-            else:
-                m.YP_is_cstr[n].indicator_var.fix(0)
-                m.YP_is_bypass[n].indicator_var.fix(1) 
-
-
-        dir_path = os.path.dirname(os.path.abspath(__file__))
-        gams_path = os.path.join(dir_path, "gamsfiles/")
-        if not(os.path.exists(gams_path)):
-            print('Directory for automatically generated files ' +
-                gams_path + ' does not exist. We will create it')
-            os.makedirs(gams_path)
-        solvername = 'gams'
-        opt = SolverFactory(solvername, solver='msnlp')
-        results = opt.solve(m, tee=False,
-                            # Uncomment the following lines if you want to save GAMS models
-                            #keepfiles=True,
-                            #tmpdir=gams_path,
-                            #symbolic_solver_labels=True,
-
-                            add_options=[
-                                'option reslim = 10;'
-                                'option optcr = 0.0;'
-                                # Uncomment the following lines to setup IIS computation of BARON through option file
-                                # 'GAMS_MODEL.optfile = 1;'
-                                # '\n'
-                                # '$onecho > baron.opt \n'
-                                # 'CompIIS 1 \n'
-                                # '$offecho'
-                            ])
-
+        x = {1:X1[i], 2:X2[i]}
+        m = fnlp_gdp(NT,x)
         print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 5)))
-
     print('=============================')
 
 
 
 if __name__ == "__main__":
     NT = 5
-    m = cstr_model_gdp(NT)
-    complete_enumeration(m, NT)
+    complete_enumeration(NT)
 

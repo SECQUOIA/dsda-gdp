@@ -578,26 +578,54 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
 # improve is type bool and shows if an improvement was made while looking for neighbors
-def evaluate_neighbors(ext_vars, init, fmin, tol=0.00001):
+def evaluate_neighbors(ext_vars, init, fmin, tol=0.0001):
     improve = False
     best_var = ext_vars[0]
     best_dir = 0
     best_init = init
     temp = ext_vars
     temp.pop(0, None)
-
+    objectives = {}
+    feasibles = {}
+    initials = {}
     for i in temp.keys():
-        m, status, new_init = fnlp_gdp(
-            NT, temp[i], provide_init=True, init=init)
+        m, status, new_init = fnlp_gdp(NT, temp[i], provide_init=True, init=init)
 
         if status == pe.SolverStatus.ok:
-            act_obj = pe.value(m.obj)
-            if act_obj + tol < fmin:
-                fmin = act_obj
-                best_var = ext_vars[i]
-                best_dir = i
-                best_init = new_init
-                improve = True
+            objectives[i] = pe.value(m.obj)
+            feasibles[i] = temp[i]
+            initials[i] = new_init
+
+    key_min = min(objectives.keys(), key=(lambda k: objectives[k]))
+    min_obj = objectives[key_min]
+    mins = 0
+    for i in objectives.keys():
+        if abs(objectives[i] - min_obj) < tol:
+            mins += 1
+
+    if mins > 1:
+        ssums = {}
+        for i in feasibles.keys():
+            ssum = 0
+            for j in range(len(best_var)):
+                ssum += feasibles[i][j]**2
+            ssums[i] = ssum
+        key_max = max(ssums.keys(), key=(lambda k: ssums[k]))
+
+        if objectives[key_max] + tol < fmin:
+            fmin = objectives[key_max]
+            best_var = ext_vars[key_max]
+            best_dir = key_max
+            best_init = initials[key_max]
+            improve = True
+    else:
+        if objectives[key_min] + tol < fmin:
+            fmin = objectives[key_min]
+            best_var = ext_vars[key_min]
+            best_dir = key_min
+            best_init = initials[key_min]
+            improve = True
+
 
     return fmin, best_var, best_dir, best_init, improve
 
@@ -640,7 +668,7 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
             NT, moved_point, provide_init=True, init=init)
         if status == pe.SolverStatus.ok:
             act_obj = pe.value(m.obj)
-            if act_obj < fmin:
+            if act_obj + tol < fmin:
                 fmin = act_obj
                 best_var = moved_point
                 best_init = new_init
@@ -654,6 +682,7 @@ def dsda(NT, k, visualize=False):
     t_start = time.process_time()
     route = []
     ext_var = external_init(NT)
+    #ext_var = [3,3]
     route.append(ext_var)
     m, _, init = fnlp_gdp(NT, ext_var)
     fmin = pe.value(m.obj)
@@ -663,6 +692,8 @@ def dsda(NT, k, visualize=False):
     # Define neighborhood
     if k == '2':
         neighborhood = neighborhood_k_eq_2(len(ext_var))
+    elif k == 'inf':
+        neighborhood = {1:[-1, -1], 2:[-1, 0], 3:[-1, 1], 4:[0, -1], 5:[0, 1], 6:[1, -1], 7:[1, 0], 8:[1, 1]}
 
     looking_in_neighbors = True
 
@@ -676,6 +707,8 @@ def dsda(NT, k, visualize=False):
         # Evaluate neighbors of the actual point
         fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(
             neighbors, init, fmin)
+
+        
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
@@ -705,11 +738,11 @@ def dsda(NT, k, visualize=False):
         visualization(NT,route)
 
     # Return visited points / final point / objective at that point / execution time
-    return best_var, round(fmin, 5), t_end
+    return route[-1], round(fmin, 5), t_end
 
 
 if __name__ == "__main__":
     NT = 5
-    k = '2' # or k = 'Inf'
+    k = 'inf' # or k = 'Inf'
     # complete_enumeration(NT)
     print(dsda(NT, k, visualize=True))

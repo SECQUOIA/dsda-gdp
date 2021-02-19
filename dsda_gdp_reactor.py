@@ -503,45 +503,84 @@ def neighborhood_k_eq_2(num_ext):  # number
             direct.append(neighbors[j, i])
     return directions  # return dict
 
+def my_neighbors(start, neighborhood, optimize=False, min_allowed={}, max_allowed={}):
+    neighbors = {0:start}
+    for i in neighborhood.keys():
+        neighbors[i] = list(map(sum, zip(start,list(neighborhood[i]))))
+        
+    if optimize:
+        new_neighbors = {}
+        num_vars = len(neighbors[0])
+        for i in neighbors.keys():
+            checked = 0
+            for j in range(num_vars):
+                if neighbors[i][j] >= min_allowed[j+1] and neighbors[i][j] <= max_allowed[j+1]:
+                    checked += 1
+            if checked == num_vars:
+                new_neighbors[i] = neighbors[i]
+        
+        return new_neighbors
+    return neighbors
 
-def new_positive_points(start, neighbors, min_allowed=1):
-    new_point = {}
-    for i in neighbors.keys():
-        temp = list(map(sum, zip(start, list(neighbors[i]))))
-        check_list = 0
-        for j in temp:
-            if j >= min_allowed:
-                check_list += 1
-            if check_list == len(temp):
-                new_point[i] = temp
-    return new_point
 
-
-def evaluate_neighbors(ext_var, fmin):
-    for i in ext_var.keys():
-        m, status = fnlp_gdp(NT, ext_var[i])
-
+def evaluate_neighbors(ext_vars, init, fmin, tol=0.00001):
+    best_var = ext_vars[0]
+    best_dir = 0
+    best_init = init
+    temp = ext_vars
+    temp.pop(0, None)
+    
+    for i in temp.keys():
+        m, status , new_init = fnlp_gdp(NT, temp[i], provide_init=True, init=init)
+        
         if status == pe.SolverStatus.ok:
             act_obj = pe.value(m.obj)
-
-            if act_obj < fmin:
+            if abs(act_obj - fmin) < tol:
                 fmin = act_obj
-                best_var = ext_var[i]
+                best_var = ext_vars[i]
                 best_dir = i
+                best_init = new_init
 
-    return fmin, best_var, best_dir
+    return fmin, best_var, best_dir, best_init
 
 
-def move_in_directon(start, direction):
-    ext_var = list(map(sum, zip(list(start), list(direction))))
-    return ext_var
-
+def move_and_evaluate(start, init, fmin, direction, optimize=False, min_allowed={}, max_allowed={}, tol=0.00001):
+    best_var = start
+    best_init = init
+    moved = False
+    
+    moved_point = list(map(sum, zip(list(start), list(direction))))
+    
+    if optimize:
+        checked = 0
+        for j in range(len(start)):
+            if start[j] >= min_allowed[j+1] and start[j] <= max_allowed[j+1]:
+                    checked += 1
+            if checked == len(start):
+                
+                m, status , new_init = fnlp_gdp(NT, moved_point, provide_init=True, init=init)
+                if status == pe.SolverStatus.ok:
+                        act_obj = pe.value(m.obj)
+                        if abs(act_obj - fmin) < tol:
+                            fmin = act_obj
+                            best_var = moved_point
+                            best_init = new_init
+                            moved = True
+    else:
+        m, status , new_init = fnlp_gdp(NT, moved_point, provide_init=True, init=init)
+        if status == pe.SolverStatus.ok:
+            act_obj = pe.value(m.obj)
+            if abs(act_obj - fmin) < tol:
+                fmin = act_obj
+                best_var = moved_point
+                best_init = new_init
+                moved = True
+    
+    return fmin, best_var, moved, best_init
 
 if __name__ == "__main__":
     NT = 5
-    k = 2
-    #complete_enumeration(NT)
-
-    m, status, initial = fnlp_gdp(NT, [1,1])
-    m ,_ ,_ = fnlp_gdp(NT, [2,1], provide_init=True, init=initial)
+    k = '2'
+    complete_enumeration(NT)
+    #dsda(NT,k)
 

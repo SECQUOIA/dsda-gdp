@@ -492,7 +492,13 @@ def complete_enumeration(NT):
     print('=============================')
 
 
-def neighborhood_k_eq_2(num_ext):  # number
+
+# Creates all posible directions with k=2 for num_ext variables
+
+# num_ext is type int and means number of external variables
+# directions is type dictionary starting from 1 with all posible directions
+
+def neighborhood_k_eq_2(num_ext):
     num_neigh = 2*num_ext
     neighbors = np.concatenate((np.eye(num_ext), -np.eye(num_ext)), axis=1)
     directions = {}
@@ -501,9 +507,20 @@ def neighborhood_k_eq_2(num_ext):  # number
         directions[i+1] = direct
         for j in range(num_ext):
             direct.append(neighbors[j, i])
-    return directions  # return dict
+    return directions
 
-def my_neighbors(start, neighborhood, optimize=False, min_allowed={}, max_allowed={}, cheating=False):
+
+
+# Creates neighbor of a given point
+# Optimize option will discard out of bounds points given by min and max allowed
+# Cheating will discard infeasible points for CSTR problem (X2 - X1 > 0)
+# Cheating will only be used while solving GAMS issue
+
+# start is type list and stands for the actual point
+# neighborhood is type dict and is the output of a k-Neighborhood function
+# newbors or new_newbors is type  dict starting in 0 with neighbor of a given point
+# Neighbor 0 is the actual point
+def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed={}, cheating=False):
     neighbors = {0:start}
     for i in neighborhood.keys():
         neighbors[i] = list(map(sum, zip(start,list(neighborhood[i]))))
@@ -530,6 +547,16 @@ def my_neighbors(start, neighborhood, optimize=False, min_allowed={}, max_allowe
     return neighbors
 
 
+# Evaluates a group of given points and returns the best
+# ext_vars is dict with given points where 0 is actual point
+# init is type dict and contains solved variables for the actual point
+# fmin is type int and stands for objective at actual point
+# tol is type int and stands for numerical tolereance for equallity
+# fmin as return is type int and gives the best neighbor's objective
+# best_var is type list and gives the best neighbor
+# best_dir is type int and is the steepest direction (key in neighborhood)
+# best_init is type dict and contains solved variables for the best point
+# improve is type bool and shows if an improvement was made while looking for neighbors 
 def evaluate_neighbors(ext_vars, init, fmin, tol=0.00001):
     improve =  False
     best_var = ext_vars[0]
@@ -553,7 +580,18 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.00001):
     return fmin, best_var, best_dir, best_init, improve
 
 
-def move_and_evaluate(start, init, fmin, direction, optimize=False, min_allowed={}, max_allowed={},tol=0.00001):
+# Moves from a certain start in a given direction and evaluates it
+# start is type list with the actual point
+# init is type dict and contains solved variables for the actual point
+# fmin is type int and stands for objective at actual point
+# direction is type int and is the moving direction direction (key in neighborhood)
+# optimize option will discard out of bounds points given by min and max allowed
+# tol is type int and stands for numerical tolereance for equallity
+# fmin as return is type int and gives the best point objective (between moved and actual)
+# best_var is type list and gives the best point (between moved and actual)
+# move is type bool and shows if an improvement was made while looking for neighbors
+# best_init is type dict and contains solved variables for the best point
+def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={}, max_allowed={},tol=0.00001):
     best_var = start
     best_init = init
     moved = False
@@ -586,45 +624,63 @@ def move_and_evaluate(start, init, fmin, direction, optimize=False, min_allowed=
     
     return fmin, best_var, moved, best_init
 
+
 def dsda(NT, k):
     #Initialize
+    t_start = time.process_time() 
     route = []
     ext_var = external_init(NT)
     route.append(ext_var)
     m, _, init = fnlp_gdp(NT, ext_var)
     fmin = pe.value(m.obj)
+    min_allowed = {i:1 for i in range(1,len(ext_var)+1)}
+    max_allowed = {i:NT for i in range(1,len(ext_var)+1)}
 
+    # Define neighborhood
     if k == '2':
         neighborhood = neighborhood_k_eq_2(len(ext_var))
 
-    go_1 = True
+    looking_in_neighbors = True
 
-    while go_1:
+    # Look in neighbors (outter cycle)
+    while looking_in_neighbors:
 
-        neighbors = my_neighbors(ext_var, neighborhood, optimize=True, min_allowed={1:1, 2:1}, max_allowed={1:5, 2:5}, cheating=True)
+        # Find neighbors of the actual point
+        neighbors = my_neighbors(ext_var, neighborhood, optimize=True, min_allowed=min_allowed, max_allowed=max_allowed, cheating=True)
         
+        # Evaluate neighbors of the actual point
         fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(neighbors, init, fmin)
 
+        # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
-            go_2 = True
+            line_searching = True
             route.append(best_var)
-            while go_2:
-                fmin, best_var, moved, best_init = move_and_evaluate(best_var, best_init, fmin, neighborhood[best_dir], optimize=True, min_allowed={1:1, 2:1}, max_allowed={1:5, 2:5})
+
+            # If improvement was made start line search (inner cycle)
+            while line_searching:
+
+                # Move in given direction and evaluate
+                fmin, best_var, moved, best_init = move_and_evaluate(best_var, best_init, fmin, neighborhood[best_dir], optimize=True, min_allowed=min_allowed, max_allowed=max_allowed)
+
+                # Stopping condition in case no movement was done
                 if moved == True:
                     route.append(best_var)
                 else:
                     ext_var = best_var
-                    go_2 = False
+                    line_searching = False
                     
         
         else:
-            go_1 = False
+            looking_in_neighbors = False
 
-    print(route)
+    t_end = round(time.process_time() - t_start,2)
+
+    # Return visited points / final point / objective at that point / execution time
+    return route, best_var, round(fmin,5), t_end
 
 if __name__ == "__main__":
     NT = 5
     k = '2'
     #complete_enumeration(NT)
-    dsda(NT,k)
+    print(dsda(NT,k))
 

@@ -492,6 +492,7 @@ def complete_enumeration(NT):
         print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 5)))
     print('=============================')
 
+
 def visualization(NT, points):
     X1, X2, aux, aux2, x = [], [], [], 1, {}
 
@@ -508,18 +509,20 @@ def visualization(NT, points):
             X2.append(aux2)
 
     def drawArrow(A, B):
-        plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005, head_width=0.15, head_length=0.05, color='black', shape='full')
+        plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005,
+                  head_width=0.15, head_length=0.05, color='black', shape='full')
 
     for i in range(len(points)-1):
-        drawArrow(points[i],points[i+1])
+        drawArrow(points[i], points[i+1])
 
-    plt.scatter(X1,X2, color='gray', marker='o')
+    plt.scatter(X1, X2, color='gray', marker='o')
     plt.show()
 
 # Creates all posible directions with k=2 for num_ext variables
 
 # num_ext is type int and means number of external variables
 # directions is type dictionary starting from 1 with all posible directions
+
 
 def neighborhood_k_eq_2(num_ext):
     num_neigh = 2*num_ext
@@ -589,7 +592,8 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.0001):
     feasibles = {}
     initials = {}
     for i in temp.keys():
-        m, status, new_init = fnlp_gdp(NT, temp[i], provide_init=True, init=init)
+        m, status, new_init = fnlp_gdp(
+            NT, temp[i], provide_init=True, init=init)
 
         if status == pe.SolverStatus.ok:
             objectives[i] = pe.value(m.obj)
@@ -625,7 +629,6 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.0001):
             best_dir = key_min
             best_init = initials[key_min]
             improve = True
-
 
     return fmin, best_var, best_dir, best_init, improve
 
@@ -677,12 +680,11 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
     return fmin, best_var, moved, best_init
 
 
-def dsda(NT, k, visualize=False):
+def dsda(NT, k='inf', visualize=False):
     # Initialize
     t_start = time.process_time()
     route = []
     ext_var = external_init(NT)
-    #ext_var = [3,3]
     route.append(ext_var)
     m, _, init = fnlp_gdp(NT, ext_var)
     fmin = pe.value(m.obj)
@@ -693,7 +695,14 @@ def dsda(NT, k, visualize=False):
     if k == '2':
         neighborhood = neighborhood_k_eq_2(len(ext_var))
     elif k == 'inf':
-        neighborhood = {1:[-1, -1], 2:[-1, 0], 3:[-1, 1], 4:[0, -1], 5:[0, 1], 6:[1, -1], 7:[1, 0], 8:[1, 1]}
+        neighborhood = {1: [-1, -1], 2: [-1, 0], 3: [-1, 1],
+                        4: [0, -1], 5: [0, 1], 6: [1, -1], 7: [1, 0], 8: [1, 1]}
+    elif k == 'l_flat':
+        neighborhood = {1: [1, 1], 2: [-1, -1], 3: [1, 0], 4: [-1, 0], 5: [0, 1], 6: [0, -1]}
+    elif k == 'm_flat':
+        neighborhood = {1: [1, -1], 2: [1, 0], 3: [-1, 1], 4: [0, 1], 5: [-1, 0], 6: [0, -1]}
+    else: 
+        return "Enter a valid neighborhood ('inf', '2', 'l_flat' or 'm_flat')"
 
     looking_in_neighbors = True
 
@@ -707,8 +716,6 @@ def dsda(NT, k, visualize=False):
         # Evaluate neighbors of the actual point
         fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(
             neighbors, init, fmin)
-
-        
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
@@ -735,7 +742,7 @@ def dsda(NT, k, visualize=False):
     t_end = round(time.process_time() - t_start, 2)
 
     if visualize:
-        visualization(NT,route)
+        visualization(NT, route)
 
     # Return visited points / final point / objective at that point / execution time
     return route[-1], round(fmin, 5), t_end
@@ -743,6 +750,6 @@ def dsda(NT, k, visualize=False):
 
 if __name__ == "__main__":
     NT = 5
-    k = 'inf' # or k = 'Inf'
+    k = 'inf'  # or k = '2'
     # complete_enumeration(NT)
     print(dsda(NT, k, visualize=True))

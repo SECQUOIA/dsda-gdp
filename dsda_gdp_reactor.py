@@ -425,10 +425,9 @@ def fnlp_gdp(NT, x, provide_init=False, init={}):
     opt = SolverFactory(solvername, solver='msnlp')
     results = opt.solve(m, tee=False,
                         # Uncomment the following lines if you want to save GAMS models
-                        #keepfiles=True,
-                       #tmpdir=gams_path,
-                        #symbolic_solver_labels=True,
-
+                        keepfiles=True,
+                        tmpdir=gams_path,
+                        symbolic_solver_labels=True,
                         add_options=[
                             'option reslim = 10;'
                             'option optcr = 0.0;'
@@ -438,6 +437,7 @@ def fnlp_gdp(NT, x, provide_init=False, init={}):
                             # '$onecho > baron.opt \n'
                             # 'CompIIS 1 \n'
                             # '$offecho'
+                            #'display(execError);'
                         ])
 
     Q_init, QFR_init, F_init, FR_init, rate_init, V_init, c_init,  R_init, P_init = {
@@ -503,7 +503,7 @@ def neighborhood_k_eq_2(num_ext):  # number
             direct.append(neighbors[j, i])
     return directions  # return dict
 
-def my_neighbors(start, neighborhood, optimize=False, min_allowed={}, max_allowed={}):
+def my_neighbors(start, neighborhood, optimize=False, min_allowed={}, max_allowed={}, cheating=False):
     neighbors = {0:start}
     for i in neighborhood.keys():
         neighbors[i] = list(map(sum, zip(start,list(neighborhood[i]))))
@@ -518,12 +518,20 @@ def my_neighbors(start, neighborhood, optimize=False, min_allowed={}, max_allowe
                     checked += 1
             if checked == num_vars:
                 new_neighbors[i] = neighbors[i]
+
+        if cheating:
+            temp = new_neighbors
+            for i in list(temp.keys()):
+                if new_neighbors[i][1] - new_neighbors[i][0] > 0:
+                    new_neighbors.pop(i,None)
+
         
         return new_neighbors
     return neighbors
 
 
 def evaluate_neighbors(ext_vars, init, fmin, tol=0.00001):
+    improve =  False
     best_var = ext_vars[0]
     best_dir = 0
     best_init = init
@@ -535,16 +543,17 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.00001):
         
         if status == pe.SolverStatus.ok:
             act_obj = pe.value(m.obj)
-            if abs(act_obj - fmin) < tol:
+            if act_obj + tol < fmin:
                 fmin = act_obj
                 best_var = ext_vars[i]
                 best_dir = i
                 best_init = new_init
+                improve = True
 
-    return fmin, best_var, best_dir, best_init
+    return fmin, best_var, best_dir, best_init, improve
 
 
-def move_and_evaluate(start, init, fmin, direction, optimize=False, min_allowed={}, max_allowed={}, tol=0.00001):
+def move_and_evaluate(start, init, fmin, direction, optimize=False, min_allowed={}, max_allowed={},tol=0.00001):
     best_var = start
     best_init = init
     moved = False
@@ -553,24 +562,23 @@ def move_and_evaluate(start, init, fmin, direction, optimize=False, min_allowed=
     
     if optimize:
         checked = 0
-        for j in range(len(start)):
-            if start[j] >= min_allowed[j+1] and start[j] <= max_allowed[j+1]:
+        for j in range(len(moved_point)):
+            if moved_point[j] >= min_allowed[j+1] and moved_point[j] <= max_allowed[j+1]:
                     checked += 1
-            if checked == len(start):
-                
-                m, status , new_init = fnlp_gdp(NT, moved_point, provide_init=True, init=init)
-                if status == pe.SolverStatus.ok:
-                        act_obj = pe.value(m.obj)
-                        if abs(act_obj - fmin) < tol:
-                            fmin = act_obj
-                            best_var = moved_point
-                            best_init = new_init
-                            moved = True
+        if checked == len(moved_point):
+            m, status , new_init = fnlp_gdp(NT, moved_point, provide_init=True, init=init)
+            if status == pe.SolverStatus.ok:
+                    act_obj = pe.value(m.obj)
+                    if act_obj + tol < fmin:
+                        fmin = act_obj
+                        best_var = moved_point
+                        best_init = new_init
+                        moved = True
     else:
         m, status , new_init = fnlp_gdp(NT, moved_point, provide_init=True, init=init)
         if status == pe.SolverStatus.ok:
             act_obj = pe.value(m.obj)
-            if abs(act_obj - fmin) < tol:
+            if act_obj < fmin:
                 fmin = act_obj
                 best_var = moved_point
                 best_init = new_init
@@ -578,9 +586,45 @@ def move_and_evaluate(start, init, fmin, direction, optimize=False, min_allowed=
     
     return fmin, best_var, moved, best_init
 
+def dsda(NT, k):
+    #Initialize
+    route = []
+    ext_var = external_init(NT)
+    route.append(ext_var)
+    m, _, init = fnlp_gdp(NT, ext_var)
+    fmin = pe.value(m.obj)
+
+    if k == '2':
+        neighborhood = neighborhood_k_eq_2(len(ext_var))
+
+    go_1 = True
+
+    while go_1:
+
+        neighbors = my_neighbors(ext_var, neighborhood, optimize=True, min_allowed={1:1, 2:1}, max_allowed={1:5, 2:5}, cheating=True)
+        
+        fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(neighbors, init, fmin)
+
+        if improve == True:
+            go_2 = True
+            route.append(best_var)
+            while go_2:
+                fmin, best_var, moved, best_init = move_and_evaluate(best_var, best_init, fmin, neighborhood[best_dir], optimize=True, min_allowed={1:1, 2:1}, max_allowed={1:5, 2:5})
+                if moved == True:
+                    route.append(best_var)
+                else:
+                    ext_var = best_var
+                    go_2 = False
+                    
+        
+        else:
+            go_1 = False
+
+    print(route)
+
 if __name__ == "__main__":
     NT = 5
     k = '2'
-    complete_enumeration(NT)
-    #dsda(NT,k)
+    #complete_enumeration(NT)
+    dsda(NT,k)
 

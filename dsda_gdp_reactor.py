@@ -2,6 +2,7 @@ import pyomo.environ as pe
 from pyomo.gdp import (Disjunct, Disjunction)
 import numpy as np
 import time as time
+import matplotlib.pyplot as plt
 from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
 import os
@@ -437,7 +438,7 @@ def fnlp_gdp(NT, x, provide_init=False, init={}):
                             # '$onecho > baron.opt \n'
                             # 'CompIIS 1 \n'
                             # '$offecho'
-                            #'display(execError);'
+                            # 'display(execError);'
                         ])
 
     Q_init, QFR_init, F_init, FR_init, rate_init, V_init, c_init,  R_init, P_init = {
@@ -491,7 +492,29 @@ def complete_enumeration(NT):
         print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 5)))
     print('=============================')
 
+def visualization(NT, points):
+    X1, X2, aux, aux2, x = [], [], [], 1, {}
 
+    for i in range(1, NT+1):
+        X1.append(i)
+        aux.append(i)
+        X2.append(aux2)
+
+    for i in range(NT-1):
+        aux.pop(0)
+        aux2 += 1
+        for j in aux:
+            X1.append(j)
+            X2.append(aux2)
+
+    def drawArrow(A, B):
+        plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005, head_width=0.15, head_length=0.05, color='black', shape='full')
+
+    for i in range(len(points)-1):
+        drawArrow(points[i],points[i+1])
+
+    plt.scatter(X1,X2, color='gray', marker='o')
+    plt.show()
 
 # Creates all posible directions with k=2 for num_ext variables
 
@@ -510,7 +533,6 @@ def neighborhood_k_eq_2(num_ext):
     return directions
 
 
-
 # Creates neighbor of a given point
 # Optimize option will discard out of bounds points given by min and max allowed
 # Cheating will discard infeasible points for CSTR problem (X2 - X1 > 0)
@@ -521,10 +543,10 @@ def neighborhood_k_eq_2(num_ext):
 # newbors or new_newbors is type  dict starting in 0 with neighbor of a given point
 # Neighbor 0 is the actual point
 def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed={}, cheating=False):
-    neighbors = {0:start}
+    neighbors = {0: start}
     for i in neighborhood.keys():
-        neighbors[i] = list(map(sum, zip(start,list(neighborhood[i]))))
-        
+        neighbors[i] = list(map(sum, zip(start, list(neighborhood[i]))))
+
     if optimize:
         new_neighbors = {}
         num_vars = len(neighbors[0])
@@ -540,9 +562,8 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
             temp = new_neighbors
             for i in list(temp.keys()):
                 if new_neighbors[i][1] - new_neighbors[i][0] > 0:
-                    new_neighbors.pop(i,None)
+                    new_neighbors.pop(i, None)
 
-        
         return new_neighbors
     return neighbors
 
@@ -556,18 +577,19 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
 # best_var is type list and gives the best neighbor
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
-# improve is type bool and shows if an improvement was made while looking for neighbors 
+# improve is type bool and shows if an improvement was made while looking for neighbors
 def evaluate_neighbors(ext_vars, init, fmin, tol=0.00001):
-    improve =  False
+    improve = False
     best_var = ext_vars[0]
     best_dir = 0
     best_init = init
     temp = ext_vars
     temp.pop(0, None)
-    
+
     for i in temp.keys():
-        m, status , new_init = fnlp_gdp(NT, temp[i], provide_init=True, init=init)
-        
+        m, status, new_init = fnlp_gdp(
+            NT, temp[i], provide_init=True, init=init)
+
         if status == pe.SolverStatus.ok:
             act_obj = pe.value(m.obj)
             if act_obj + tol < fmin:
@@ -591,29 +613,31 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.00001):
 # best_var is type list and gives the best point (between moved and actual)
 # move is type bool and shows if an improvement was made while looking for neighbors
 # best_init is type dict and contains solved variables for the best point
-def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={}, max_allowed={},tol=0.00001):
+def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={}, max_allowed={}, tol=0.00001):
     best_var = start
     best_init = init
     moved = False
-    
+
     moved_point = list(map(sum, zip(list(start), list(direction))))
-    
+
     if optimize:
         checked = 0
         for j in range(len(moved_point)):
             if moved_point[j] >= min_allowed[j+1] and moved_point[j] <= max_allowed[j+1]:
-                    checked += 1
+                checked += 1
         if checked == len(moved_point):
-            m, status , new_init = fnlp_gdp(NT, moved_point, provide_init=True, init=init)
+            m, status, new_init = fnlp_gdp(
+                NT, moved_point, provide_init=True, init=init)
             if status == pe.SolverStatus.ok:
-                    act_obj = pe.value(m.obj)
-                    if act_obj + tol < fmin:
-                        fmin = act_obj
-                        best_var = moved_point
-                        best_init = new_init
-                        moved = True
+                act_obj = pe.value(m.obj)
+                if act_obj + tol < fmin:
+                    fmin = act_obj
+                    best_var = moved_point
+                    best_init = new_init
+                    moved = True
     else:
-        m, status , new_init = fnlp_gdp(NT, moved_point, provide_init=True, init=init)
+        m, status, new_init = fnlp_gdp(
+            NT, moved_point, provide_init=True, init=init)
         if status == pe.SolverStatus.ok:
             act_obj = pe.value(m.obj)
             if act_obj < fmin:
@@ -621,20 +645,20 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
                 best_var = moved_point
                 best_init = new_init
                 moved = True
-    
+
     return fmin, best_var, moved, best_init
 
 
-def dsda(NT, k):
-    #Initialize
-    t_start = time.process_time() 
+def dsda(NT, k, visualize=False):
+    # Initialize
+    t_start = time.process_time()
     route = []
     ext_var = external_init(NT)
     route.append(ext_var)
     m, _, init = fnlp_gdp(NT, ext_var)
     fmin = pe.value(m.obj)
-    min_allowed = {i:1 for i in range(1,len(ext_var)+1)}
-    max_allowed = {i:NT for i in range(1,len(ext_var)+1)}
+    min_allowed = {i: 1 for i in range(1, len(ext_var)+1)}
+    max_allowed = {i: NT for i in range(1, len(ext_var)+1)}
 
     # Define neighborhood
     if k == '2':
@@ -646,10 +670,12 @@ def dsda(NT, k):
     while looking_in_neighbors:
 
         # Find neighbors of the actual point
-        neighbors = my_neighbors(ext_var, neighborhood, optimize=True, min_allowed=min_allowed, max_allowed=max_allowed, cheating=True)
-        
+        neighbors = my_neighbors(ext_var, neighborhood, optimize=True,
+                                 min_allowed=min_allowed, max_allowed=max_allowed, cheating=True)
+
         # Evaluate neighbors of the actual point
-        fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(neighbors, init, fmin)
+        fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(
+            neighbors, init, fmin)
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
@@ -660,7 +686,8 @@ def dsda(NT, k):
             while line_searching:
 
                 # Move in given direction and evaluate
-                fmin, best_var, moved, best_init = move_and_evaluate(best_var, best_init, fmin, neighborhood[best_dir], optimize=True, min_allowed=min_allowed, max_allowed=max_allowed)
+                fmin, best_var, moved, best_init = move_and_evaluate(
+                    best_var, best_init, fmin, neighborhood[best_dir], optimize=True, min_allowed=min_allowed, max_allowed=max_allowed)
 
                 # Stopping condition in case no movement was done
                 if moved == True:
@@ -668,19 +695,21 @@ def dsda(NT, k):
                 else:
                     ext_var = best_var
                     line_searching = False
-                    
-        
+
         else:
             looking_in_neighbors = False
 
-    t_end = round(time.process_time() - t_start,2)
+    t_end = round(time.process_time() - t_start, 2)
+
+    if visualize:
+        visualization(NT,route)
 
     # Return visited points / final point / objective at that point / execution time
-    return route, best_var, round(fmin,5), t_end
+    return best_var, round(fmin, 5), t_end
+
 
 if __name__ == "__main__":
     NT = 5
-    k = '2'
-    #complete_enumeration(NT)
-    print(dsda(NT,k))
-
+    k = '2' # or k = 'Inf'
+    # complete_enumeration(NT)
+    print(dsda(NT, k, visualize=True))

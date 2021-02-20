@@ -584,6 +584,7 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
 def evaluate_neighbors(ext_vars, init, fmin, tol=0.0001):
     improve = False
     best_var = ext_vars[0]
+    here = ext_vars[0]
     best_dir = 0
     best_init = init
     temp = ext_vars
@@ -612,7 +613,7 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.0001):
         for i in feasibles.keys():
             ssum = 0
             for j in range(len(best_var)):
-                ssum += feasibles[i][j]**2
+                ssum += (feasibles[i][j] - here[j])**2
             ssums[i] = ssum
         key_max = max(ssums.keys(), key=(lambda k: ssums[k]))
 

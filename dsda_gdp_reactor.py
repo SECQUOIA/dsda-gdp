@@ -2,6 +2,7 @@ import pyomo.environ as pe
 from pyomo.gdp import (Disjunct, Disjunction)
 import numpy as np
 import time as time
+import itertools as it
 import matplotlib.pyplot as plt
 from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
@@ -535,7 +536,17 @@ def neighborhood_k_eq_2(num_ext):
             direct.append(neighbors[j, i])
     return directions
 
-
+def neighborhood_k_eq_inf(num_ext): # number
+    num_neigh = 3*num_ext-1
+    neighbors = list(it.product([-1,0,1], repeat=num_ext))
+    directions = {}
+    for i in range(len(neighbors)):
+        directions[i+1]=list(neighbors[i])
+    temp = directions.copy()
+    for i in directions.keys():
+        if temp[i] == [0]*num_ext:
+            temp.pop(i,None)
+    return temp
 # Creates neighbor of a given point
 # Optimize option will discard out of bounds points given by min and max allowed
 # Cheating will discard infeasible points for CSTR problem (X2 - X1 > 0)
@@ -696,8 +707,7 @@ def dsda(NT, k='inf', visualize=False):
     if k == '2':
         neighborhood = neighborhood_k_eq_2(len(ext_var))
     elif k == 'inf':
-        neighborhood = {1: [-1, -1], 2: [-1, 0], 3: [-1, 1],
-                        4: [0, -1], 5: [0, 1], 6: [1, -1], 7: [1, 0], 8: [1, 1]}
+        neighborhood = neighborhood_k_eq_inf(len(ext_var))
     elif k == 'l_flat':
         neighborhood = {1: [1, 1], 2: [-1, -1], 3: [1, 0], 4: [-1, 0], 5: [0, 1], 6: [0, -1]}
     elif k == 'm_flat':

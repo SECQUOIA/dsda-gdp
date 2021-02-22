@@ -34,10 +34,10 @@ def gdp_reactors(NT=5, visualize=False):
 
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
-    # BINARY VARIABLE
-    m.YF = pe.Var(m.N, within=pe.Binary)
-
     # BOOLEAN VARIABLES
+
+    # Unreacted feed in reactor n
+    m.YF = pe.BooleanVar(m.N)
 
     # Existence of recycle flow in unit n
     m.YR = pe.BooleanVar(m.N)
@@ -272,30 +272,33 @@ def gdp_reactors(NT=5, visualize=False):
     # Unit must be a CSTR to include a recycle
 
     def cstr_if_recycle_rule(m, n):
-        return m.YR_is_recycle[n].indicator_var <= m.YP_is_cstr[n].indicator_var
+        return m.YR[n].implies(m.YP[n])
 
-    m.cstr_if_recycle = pe.Constraint(m.N, rule=cstr_if_recycle_rule)
+    m.cstr_if_recycle = pe.LogicalConstraint(m.N, rule=cstr_if_recycle_rule)
 
     # There is only one unreacted feed
 
     def one_unreacted_feed_rule(m):
-        return sum(m.YF[n] for n in m.N) == 1
+        return pe.exactly(1,m.YF)
 
-    m.one_unreacted_feed = pe.Constraint(rule=one_unreacted_feed_rule)
+    m.one_unreacted_feed = pe.LogicalConstraint(rule=one_unreacted_feed_rule)
 
     # There is only one recycle stream
 
     def one_recycle_rule(m):
-        return sum(m.YR_is_recycle[n].indicator_var for n in m.N) == 1
+        return pe.exactly(1,m.YR)
 
-    m.one_recycle = pe.Constraint(rule=one_recycle_rule)
+    m.one_recycle = pe.LogicalConstraint(rule=one_recycle_rule)
 
     # Unit operation in n constraint
 
     def unit_in_n_rule(m, n):
-        return m.YP_is_cstr[n].indicator_var == 1 - (sum(m.YF[n2] for n2 in m.N if n2 <= n) - m.YF[n])
+        if n == 1:
+            return m.YP[n].equivalent_to(True)
+        else:
+            return m.YP[n].equivalent_to(pe.lor(pe.land(~m.YF[n2] for n2 in range(1,n)),m.YF[n]))
 
-    m.unit_in_n = pe.Constraint(m.N, rule=unit_in_n_rule)
+    m.unit_in_n = pe.LogicalConstraint(m.N, rule=unit_in_n_rule)
 
     # OBJECTIVE
 
@@ -425,4 +428,4 @@ def gdp_reactors(NT=5, visualize=False):
 if __name__ == "__main__":
     NT = 5
     # Visualization works best (aesthetically) for NT=5
-    gdp_reactors(NT, visualize=False)
+    gdp_reactors(NT, visualize=True)

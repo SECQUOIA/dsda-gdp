@@ -617,7 +617,7 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
 # improve is type bool and shows if an improvement was made while looking for neighbors
-def evaluate_neighbors(ext_vars, init, fmin, tol=0.0001):
+def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001):
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
@@ -681,7 +681,7 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.0001):
 # best_var is type list and gives the best point (between moved and actual)
 # move is type bool and shows if an improvement was made while looking for neighbors
 # best_init is type dict and contains solved variables for the best point
-def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={}, max_allowed={}, tol=0.00001):
+def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={}, max_allowed={}, tol=0.000001):
     best_var = start
     best_init = init
     moved = False

@@ -6,6 +6,11 @@ import itertools as it
 import matplotlib.pyplot as plt
 from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
+from pyomo.common.errors import InfeasibleConstraintException
+from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.contrib.gdpopt.data_class import MasterProblemResult
+from pyomo.opt import SolutionStatus
+from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
 
 
@@ -420,60 +425,73 @@ def fnlp_gdp(NT, x, provide_init=False, init={}):
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
-    # SOLVE
-    dir_path = os.path.dirname(os.path.abspath(__file__))
-    gams_path = os.path.join(dir_path, "gamsfiles/")
-    if not(os.path.exists(gams_path)):
-        print('Directory for automatically generated files ' +
-              gams_path + ' does not exist. We will create it')
-        os.makedirs(gams_path)
+    # Check equation feasibility
+    try:
+        fbbt(m)
 
-    #opt = SolverFactory('ipopt')
-    #results = opt.solve(m)
-    solvername = 'gams'
-    opt = SolverFactory(solvername, solver='msnlp')
-    results = opt.solve(m, tee=False,
-                        # Uncomment the following lines if you want to save GAMS models
-                        #keepfiles=True,
-                        #tmpdir=gams_path,
-                        #symbolic_solver_labels=True,
-                        add_options=[
-                            'option reslim = 10;'
-                            'option optcr = 0.0;'
-                            # Uncomment the following lines to setup IIS computation of BARON through option file
-                            # 'GAMS_MODEL.optfile = 1;'
-                            # '\n'
-                            # '$onecho > baron.opt \n'
-                            # 'CompIIS 1 \n'
-                            # '$offecho'
-                            # 'display(execError);'
-                        ])
+        # SOLVE
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        gams_path = os.path.join(dir_path, "gamsfiles/")
+        if not(os.path.exists(gams_path)):
+            print('Directory for automatically generated files ' +
+                gams_path + ' does not exist. We will create it')
+            os.makedirs(gams_path)
 
-    Q_init, QFR_init, F_init, FR_init, rate_init, V_init, c_init,  R_init, P_init = {
-    }, {}, {}, {}, {}, {}, {}, {}, {}
+        #opt = SolverFactory('ipopt')
+        #results = opt.solve(m)
+        solvername = 'gams'
+        opt = SolverFactory(solvername, solver='msnlp')
+        results = opt.solve(m, tee=False,
+                            # Uncomment the following lines if you want to save GAMS models
+                            #keepfiles=True,
+                            #tmpdir=gams_path,
+                            #symbolic_solver_labels=True,
+                            add_options=[
+                                'option reslim = 10;'
+                                'option optcr = 0.0;'
+                                # Uncomment the following lines to setup IIS computation of BARON through option file
+                                # 'GAMS_MODEL.optfile = 1;'
+                                # '\n'
+                                # '$onecho > baron.opt \n'
+                                # 'CompIIS 1 \n'
+                                # '$offecho'
+                                # 'display(execError);'
+                            ])
 
-    QR_init = pe.value(m.QR)
-    QP_init = pe.value(m.QP)
-    for n in m.N:
-        Q_init[n] = pe.value(m.Q[n])
-        QFR_init[n] = pe.value(m.QFR[n])
-        V_init[n] = pe.value(m.V[n])
-        c_init[n] = pe.value(m.c[n])
+        Q_init, QFR_init, F_init, FR_init, rate_init, V_init, c_init,  R_init, P_init = {
+        }, {}, {}, {}, {}, {}, {}, {}, {}
+
+        QR_init = pe.value(m.QR)
+        QP_init = pe.value(m.QP)
+        for n in m.N:
+            Q_init[n] = pe.value(m.Q[n])
+            QFR_init[n] = pe.value(m.QFR[n])
+            V_init[n] = pe.value(m.V[n])
+            c_init[n] = pe.value(m.c[n])
+
+            for i in m.I:
+                F_init[i, n] = pe.value(m.F[i, n])
+                FR_init[i, n] = pe.value(m.FR[i, n])
+                rate_init[i, n] = pe.value(m.rate[i, n])
 
         for i in m.I:
-            F_init[i, n] = pe.value(m.F[i, n])
-            FR_init[i, n] = pe.value(m.FR[i, n])
-            rate_init[i, n] = pe.value(m.rate[i, n])
+            R_init[i] = pe.value(m.R[i])
+            P_init[i] = pe.value(m.P[i])
 
-    for i in m.I:
-        R_init[i] = pe.value(m.R[i])
-        P_init[i] = pe.value(m.P[i])
+        initialization = {'Q': Q_init, 'QFR': QFR_init, 'F': F_init, 'FR': FR_init, 'rate': rate_init,
+                        'V': V_init, 'c': c_init, 'QR': QR_init, 'QP': QP_init, 'R': R_init, 'P': P_init}
 
-    initialization = {'Q': Q_init, 'QFR': QFR_init, 'F': F_init, 'FR': FR_init, 'rate': rate_init,
-                      'V': V_init, 'c': c_init, 'QR': QR_init, 'QP': QP_init, 'R': R_init, 'P': P_init}
+        return m, results.solver.status, initialization
 
-    return m, results.solver.status, initialization
+    except InfeasibleConstraintException:
+        #config.logger.debug("MIP preprocessing detected infeasibility.")
+        nlp_result = MasterProblemResult()
+        nlp_result.feasible = False
+        nlp_result.pyomo_results = SolverResults()
+        nlp_result.pyomo_results.solver.termination_condition = tc.error
+        print('Try an infeasible')
 
+        return m, 'infeasible', {}
 
 def complete_enumeration(NT):
     X1, X2, aux, aux2, x = [], [], [], 1, {}
@@ -729,7 +747,7 @@ def dsda(NT, k='inf', visualize=False):
 
         # Find neighbors of the actual point
         neighbors = my_neighbors(ext_var, neighborhood, optimize=True,
-                                 min_allowed=min_allowed, max_allowed=max_allowed, cheating=True)
+                                 min_allowed=min_allowed, max_allowed=max_allowed, cheating=False)
 
         # Evaluate neighbors of the actual point
         fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(

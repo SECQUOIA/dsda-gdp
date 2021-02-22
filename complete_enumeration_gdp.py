@@ -332,7 +332,7 @@ def fnlp_gdp(NT,x):
     # Transform the model using the BigM relaxation
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
-    pe.TransformationFactory('gdp.bigm').apply_to(m)
+    pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
     # SOLVE
     dir_path = os.path.dirname(os.path.abspath(__file__))

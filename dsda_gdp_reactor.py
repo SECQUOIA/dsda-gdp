@@ -640,17 +640,21 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001):
     key_min = min(objectives.keys(), key=(lambda k: objectives[k]))
     min_obj = objectives[key_min]
     mins = 0
+    min_points = {}
+
     for i in objectives.keys():
         if abs(objectives[i] - min_obj) < tol:
+            min_points[i] = feasibles[i]
             mins += 1
 
     if mins > 1:
         ssums = {}
-        for i in feasibles.keys():
+        for i in min_points.keys():
             ssum = 0
             for j in range(len(best_var)):
-                ssum += (feasibles[i][j] - here[j])**2
+                ssum += (min_points[i][j] - here[j])**2
             ssums[i] = ssum
+        
         key_max = max(ssums.keys(), key=(lambda k: ssums[k]))
 
         if objectives[key_max] + tol < fmin:

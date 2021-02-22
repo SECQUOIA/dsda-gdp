@@ -340,8 +340,6 @@ def fnlp_gdp(NT,x):
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
-    pe.TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
-
 
 
     # SOLVE
@@ -402,4 +400,5 @@ def complete_enumeration(NT):
 if __name__ == "__main__":
     NT = 5
     complete_enumeration(NT)
+
 

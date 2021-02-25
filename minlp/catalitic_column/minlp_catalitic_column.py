@@ -221,6 +221,81 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         c_nrtl_init[i,i] = 0
     m.c_nrtl = pe.Param(m.I, m.I, initialize=c_nrtl_init)
     
+    def alfa_nrtl_init(m, i, i2):
+        if i != i2:
+            return m.c_nrtl[i,i2]
+        else:
+            return pe.Param.Skip
+
+    m.alfa_nrtl = pe.Param(m.I, m.I, initialize=alfa_nrtl_init, within=pe.Any)
+
+    m.tao_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals)
+    @m.Constraint(m.I, m.I, m.N)
+    def Eq_tao_nrtl(m,i,i2,n):
+        return m.tao_nrtl[i,i2,n] == m.a_nrtl[i,i2] + (m.b_nrtl[i,i2]/m.Temp[n])
+
+    m.g_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals)
+    @m.Constraint(m.I, m.I, m.N)
+    def Eq_g_nrtl(m,i,i2,n):
+        if i != i2:
+            return m.g_nrtl[i,i2,n] == pe.exp(-m.alfa_nrtl[i,i2]*m.tao_nrtl[i,i2,n])
+        else:
+            return pe.Constraint.Skip
+
+    m.gamma = pe.Var(m.I, m.N, within=pe.Reals)
+    @m.Constraint(m.I, m.N)
+    def Eqgamma(m,comp,n):
+        return m.gamma[comp,n] == pe.exp(sum(m.x[comp1,n]*m.tao_nrtl[comp1,comp,n]*
+        m.g_nrtl[comp1,comp,n] for comp1 in m.I)/sum(m.x[comp1,n]*
+        m.g_nrtl[comp1,comp,n] for comp1 in m.I)+sum(m.x[comp1,n]*
+        m.g_nrtl[comp,comp1,n]/sum(m.x[comp2,n]*
+        m.g_nrtl[comp2,comp1,n] for comp2 in m.I)*(m.tao_nrtl[comp,comp1,n]-
+        sum(m.x[comp2,n]*m.tao_nrtl[comp2,comp1,n]*
+        m.g_nrtl[comp2,comp1,n] for comp2 in m.I)/sum(m.x[comp3,n]*
+        m.g_nrtl[comp3,comp1,n] for comp3 in m.I)) for comp1 in m.I))
+
+    # ______________________________ Section 6 (9) ______________________________
+    # Chemical reaction
+
+    Nu_init = {'iButene':-1, 'Ethanol':-1, 'nButene':0, 'ETBE':1}
+    m.Nu = pe.Param(m.I, initialize=Nu_init)    # Stoichiometry coeffients [*]
+    m.mcat = pe.Param(initialize=0.4)   # Catalizer mass [kg]
+    m.Ketbe = pe.Var(m.N, within=pe.Reals) # Equilibrium constant [*]
+    @m.Constraint(m.N)
+    def EqKetbe(m,n):
+        if n != NT and n != 1:
+            return m.Ketbe[n] == pe.exp(10.387+4060.59/(m.Temp[n])
+            -2.89055*pe.log(m.Temp[n])-0.01915144*m.Temp[n]
+            +0.0000528586*(m.Temp[n]**2)-0.0000000532977*(m.Temp[n]**3))
+        else:
+            return pe.Constraint.Skip
+    
+    m.Krate = pe.Var(m.N, within=pe.NonNegativeReals)   # Reaction advance rate [mol/kg_cat*min]
+    @m.Constraint(m.N)
+    def EqKrate(m,n):
+        if n != NT and n != 1:
+            return m.Krate[n] == 7.41816*10**15*pe.exp(-60400/(8.314*m.Temp[n]))*m.hour/3600
+        else:
+            return pe.Constraint.Skip
+
+    m.Ka = pe.Var(m.N, within=pe.NonNegativeReals)  # Adsorption rate
+    @m.Constraint(m.N)
+    def EqKa(m,n):
+        if n != NT and n != 1:
+            return m.Ka[n]==pe.exp(-1.0707+1323.1/m.Temp[n])
+        else:
+            return pe.Constraint.Skip
+
+    m.Rx = pe.Var(m.N, within=pe.Reals)  # Reaction rate [mol/kg_cat*min]
+    @m.Constraint(m.N)
+    def EqRx(m,n):
+        if n != NT and n != 1:
+            return m.Rx[n]*((1+m.Ka[n]*m.gamma['Ethanol',n]*m.x['Ethanol',n]/100)**3)*m.Ketbe[n] == (m.Krate[n]*(m.gamma['Ethanol',n]*m.x['Ethanol',n]/100))*((m.Ketbe[n]*m.gamma['iButene',n]*m.x['iButene',n]/100*m.gamma['Ethanol',n]*m.x['Ethanol',n]/100)-(m.gamma['ETBE',n]*m.x['ETBE',n]/100))
+        else:
+            return pe.Constraint.Skip
+
+
+
 
 
 

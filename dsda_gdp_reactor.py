@@ -493,7 +493,7 @@ def fnlp_gdp(NT, x, provide_init=False, init={}):
 
         return m, 'infeasible', {}
 
-def complete_enumeration(NT):
+def list_generator(NT):
     X1, X2, aux, aux2, x = [], [], [], 1, {}
 
     for i in range(1, NT+1):
@@ -507,6 +507,10 @@ def complete_enumeration(NT):
         for j in aux:
             X1.append(j)
             X2.append(aux2)
+    return X1, X2
+
+def complete_enumeration(NT):
+    X1, X2 = list_generator(NT)
 
     print('=============================')
     print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
@@ -520,19 +524,7 @@ def complete_enumeration(NT):
 
 
 def visualization(NT, points):
-    X1, X2, aux, aux2, x = [], [], [], 1, {}
-
-    for i in range(1, NT+1):
-        X1.append(i)
-        aux.append(i)
-        X2.append(aux2)
-
-    for i in range(NT-1):
-        aux.pop(0)
-        aux2 += 1
-        for j in aux:
-            X1.append(j)
-            X2.append(aux2)
+    X1, X2 = list_generator(NT)
 
     def drawArrow(A, B):
         plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005,
@@ -722,6 +714,7 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
 
 
 def dsda(NT, k='inf', visualize=False):
+    print('Starting D-SDA with k =',k)
     # Initialize
     t_start = time.process_time()
     route = []
@@ -791,5 +784,5 @@ def dsda(NT, k='inf', visualize=False):
 if __name__ == "__main__":
     NT = 5
     k = 'inf'  # or k = '2'
-    # complete_enumeration(NT)
+    complete_enumeration(NT)
     print(dsda(NT, k, visualize=True))

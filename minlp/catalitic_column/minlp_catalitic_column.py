@@ -296,6 +296,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
 
     # ______________________________ Section 7 (10) ______________________________
     # Phi calculation
+
     Omega_init = {'iButene':0.19484, 'Ethanol':0.643558, 'nButene':0.184495, 'ETBE':0.316231}
     m.Omega = pe.Param(m.I, initialize=Omega_init)    # Acentric factor [*]
     TcritSRK_init = {'iButene':417.9, 'Ethanol':514, 'nButene':419.5, 'ETBE':509.4}
@@ -338,7 +339,107 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def EqPhi(m,i,n):
         return m.phi[i,n] == pe.exp(((m.Z[n])-1)*m.biEOS[i]/m.bEOS[n]-pe.log((m.Z[n])-m.bEOS[n])-(m.aEOS[n]/m.bEOS[n])*(2*((m.aiEOS[i,n]/m.aEOS[n])**(1/2))-m.biEOS[i]/m.bEOS[n])*pe.log(((m.Z[n])-m.bEOS[n])/(m.Z[n])))
 
+    # ______________________________ Section 8 (11) ______________________________
+    # Entalphy calculation
+
+    # Cp constants [kJ/mol*K]
+    C1c_init = {'iButene':0.016052191, 'Ethanol':0.00901418, 'nButene':-0.00299356, 'ETBE':-0.014651654}
+    m.C1c = pe.Param(m.I, initialize=C1c_init)
+    C2c_init = {'iButene':0.000280432, 'Ethanol':0.000214071, 'nButene':0.000353198, 'ETBE':0.000698631}
+    m.C2c = pe.Param(m.I, initialize=C2c_init)
+    C3c_init = {'iButene':-0.00000010914988, 'Ethanol':-0.000000083903472, 'nButene':-0.00000019904047, 'ETBE':-0.00000044791741}
+    m.C3c = pe.Param(m.I, initialize=C3c_init)
+    C4c_init = {'iButene':0.0000000000090979164, 'Ethanol':0.0000000000013732704, 'nButene':0.000000000044631288, 'ETBE':0.00000000011636811}
+    m.C4c = pe.Param(m.I, initialize=C4c_init)
+    C5c_init = {'iButene':0, 'Ethanol':0, 'nButene':0, 'ETBE':0}
+    m.C5c = pe.Param(m.I, initialize=C5c_init)
+    C6c_init = {'iButene':0, 'Ethanol':0, 'nButene':0, 'ETBE':0}
+    m.C6c = pe.Param(m.I, initialize=C6c_init)
+    m.Tref = pe.Param(initialize=298.15)    # Reference temperature [K]
+    Hform_init = {'iButene':-16.9147, 'Ethanol':-234.963, 'nButene':-0.125604, 'ETBE':-313.9}
+    m.Hform = pe.Param(m.I, initialize=Hform_init)  # Formation enthalphy [kJ/mol]
+    Tb_init = {'iButene':341.7, 'Ethanol':421.9, 'nButene':342.6, 'ETBE':438.8}
+    m.Tb = pe.Param(m.I, initialize=Tb_init)  # Component boiling temperature @ P=9.5bar [K]
+    # Enthalphy calculation Integal(CpdT)
+    m.HVi = pe.Var(m.I, m.N, within=pe.Reals)
+    m.HV = pe.Var(m.N, within=pe.Reals)
+    @m.Constraint(m.I, m.N)
+    def EqHVi(m,i,n):
+        return m.HVi[i,n] == ((m.C1c[i]*(m.Temp[n]-m.Tref)) + ((m.C2c[i]/2)*((m.Temp[n]**2)-(m.Tref**2)))
+                            + ((m.C3c[i]/3)*((m.Temp[n]**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.Temp[n]**4)-(m.Tref**4)))
+                            + ((m.C5c[i]/5)*((m.Temp[n]**5)-(m.Tref**5))) + ((m.C6c[i]/6)*((m.Temp[n]**6)-(m.Tref**6))) + m.Hform[i]
+                            + (8.314/1000)*m.Temp[n]*(m.Z[n]-1)+(1+m.mEOS[i])*((m.aEOS[n]**0.5)/m.bEOS[n])*pe.log(m.Z[n]/(m.Z[n]+(m.bEOS[n]*m.P[n]/(0.00008314*m.Temp[n])))))
     
+    @m.Constraint(m.N)
+    def EqHV(m,n):
+        return m.HV[n]==sum(m.HVi[i,n]*m.y[i,n]/100 for i in m.I)
+
+    # Vaporization entalphy constants [kJ/mol]
+    C1v_init = {'iButene':32.614, 'Ethanol':55.789, 'nButene':33.774, 'ETBE':45.29}
+    m.C1v = pe.Param(m.I, initialize=C1v_init)
+    C2v_init = {'iButene':0.38073, 'Ethanol':0.31245, 'nButene':0.5107, 'ETBE':0.27343}
+    m.C2v = pe.Param(m.I, initialize=C2v_init)
+    C3v_init = {'iButene':0, 'Ethanol':0, 'nButene':-0.17304, 'ETBE':0.21645}
+    m.C3v = pe.Param(m.I, initialize=C3v_init)
+    C4v_init = {'iButene':0, 'Ethanol':0, 'nButene':0.05181, 'ETBE':-0.11756}
+    m.C4v = pe.Param(m.I, initialize=C4v_init)
+    C5v_init = {'iButene':0, 'Ethanol':0, 'nButene':0, 'ETBE':0}
+    m.C5v = pe.Param(m.I, initialize=C5v_init)
+
+    def Tred_init(m,i):
+        return m.Tb[i]/m.Tcrit[i]
+    m.Tred = pe.Param(m.I, initialize=Tred_init)    # Reduced temperature [*]
+
+    def alphaEOSb_init(m,i):
+        return (1+m.mEOS[i]*(1-(m.Tb[i]/m.Tcrit[i])**(1/2)))**2
+    m.alphaEOSb = pe.Param(m.I, initialize=alphaEOSb_init)
+
+    def aiEOSb_init(m,i):
+        return m.alphaEOSb[i]*0.42747*((0.00008314*m.TcritSRK[i])**2)/m.Pcrit[i]
+
+    m.aiEOSb = pe.Param(m.I, initialize=aiEOSb_init)
+
+    m.Zboil = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
+    @m.Constraint(m.I, m.N)
+    def VaporZb(m,i,n):
+        return (m.Zboil[i,n])**3-(m.Zboil[i,n])**2+(m.Zboil[i,n])*((m.aiEOSb[i]*m.P[n]/((0.00008314*m.Tb[i])**2))-(m.biEOS[i]*m.P[n]/(0.00008314*m.Tb[i]))-(m.biEOS[i]*m.P[n]/(0.00008314*m.Tb[i]))**2)-((m.aiEOSb[i]*m.P[n]/((0.00008314*m.Tb[i])**2)))*(m.biEOS[i]*m.P[n]/(0.00008314*m.Tb[i])) == 0
+
+    # Vaporization enthalpy
+    def DHVap_init(m,i):
+        return ( m.C1v[i]*( (1-m.Tred[i])**( m.C2v[i] + (m.C3v[i]*m.Tred[i]) + (m.C4v[i]*(m.Tred[i]**2)) + (m.C5v[i]*(m.Tred[i]**3)) ) ) )
+
+    m.DHVap = pe.Param(m.I, initialize=DHVap_init)    
+
+    def HVib_init(m,i):
+        return ( (m.C1c[i]*(m.Tb[i]-m.Tref)) + ((m.C2c[i]/2)*((m.Tb[i]**2)-(m.Tref**2))) + ((m.C3c[i]/3)*((m.Tb[i]**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.Tb[i]**4)-(m.Tref**4))) + ((m.C5c[i]/5)*((m.Tb[i]**5)-(m.Tref**5))) + ((m.C6c[i]/6)*((m.Tb[i]**6)-(m.Tref**6))) + m.Hform[i])
+
+    m.HVib = pe.Param(m.I, initialize=HVib_init)
+    m.depHvib = pe.Var(m.I, m.N, within=pe.Reals)
+    @m.Constraint(m.I, m.N)
+    def EqdepHvib(m,i,n):
+        return m.depHvib[i,n] == (8.314/1000)*m.Tb[i]*(m.Zboil[i,n]-1)+(1+m.mEOS[i])*((m.aiEOSb[i]**0.5)/m.biEOS[i])*pe.log(m.Zboil[i,n]/(m.Zboil[i,n]+(m.biEOS[i]*m.P[n]/(0.00008314*m.Tb[i]))))
+
+    # Cp contants of liquid [kJ/mol**K]
+    C1l_init = {'iButene':0.08768, 'Ethanol':0.10264, 'nButene':0.18205, 'ETBE':0.11096}
+    m.C1l = pe.Param(m.I, initialize=C1l_init)
+    C2l_init = {'iButene':0.0002171, 'Ethanol':-0.00013963, 'nButene':-0.001611, 'ETBE':0.00031422}
+    m.C2l = pe.Param(m.I, initialize=C2l_init)
+    C3l_init = {'iButene':-9.15300*10**-7, 'Ethanol':-3.03410*10**-8, 'nButene':1.19630*10**-5, 'ETBE':1.74800*10**-7}
+    m.C3l = pe.Param(m.I, initialize=C3l_init)
+    C4l_init = {'iButene':2.2660*10**-9, 'Ethanol':2.0386*10**-9, 'nButene':-3.7454*10**-8, 'ETBE':0}
+    m.C4l = pe.Param(m.I, initialize=C4l_init)
+    C5l_init = {'iButene':0, 'Ethanol':0, 'nButene':4.5027*10**-11, 'ETBE':0}
+    m.C5l = pe.Param(m.I, initialize=C5l_init)
+    m.HLi = pe.Var(m.I, m.N, within=pe.Reals)
+    m.HL = pe.Var(m.N, within=pe.Reals)
+    @m.Constraint(m.I, m.N)
+    def EqHLi(m,i,n):
+        return m.HLi[i,n] == m.HVib[i]-m.DHVap[i]+((m.C1l[i]*(m.Temp[n]-m.Tb[i])) + ((m.C2l[i]/2)*((m.Temp[n]**2)-(m.Tb[i]**2)))+((m.C3l[i]/3)*((m.Temp[n]**3)-(m.Tb[i]**3))) + ((m.C4l[i]/4)*((m.Temp[n]**4)-(m.Tb[i]**4)))+((m.C5l[i]/5)*((m.Temp[n]**5)-(m.Tb[i]**5))))+m.depHvib[i,n]
+
+    @m.Constraint(m.N)
+    def EqHL(m,n):
+        return m.HL[n] == sum(m.HLi[i,n]*m.x[i,n]/100 for i in m.I)
+
 
 
 

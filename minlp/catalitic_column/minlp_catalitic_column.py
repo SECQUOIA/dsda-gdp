@@ -440,9 +440,106 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def EqHL(m,n):
         return m.HL[n] == sum(m.HLi[i,n]*m.x[i,n]/100 for i in m.I)
 
+    # ______________________________ Section 9 (12) ______________________________
+    # Entalphy in feed calculation
 
+    def HV_b_init(m,i):
+        return ( (m.C1c[i]*(m.TaliB-m.Tref)) + ((m.C2c[i]/2)*((m.TaliB**2)-(m.Tref**2))) + ((m.C3c[i]/3)*((m.TaliB**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.TaliB**4)-(m.Tref**4))) + ((m.C5c[i]/5)*((m.TaliB**5)-(m.Tref**5))) + ((m.C6c[i]/6)*((m.TaliB**6)-(m.Tref**6))) + m.Hform[i])
 
+    m.HV_b = pe.Param(m.I, initialize=HV_b_init)    # Vapor entalphy of feed [kJ/mol]
 
+    def Tred_b_init(m,i):
+        return m.TaliB/m.Tcrit[i]
+
+    m.Tred_b = pe.Param(m.I, initialize=Tred_b_init)    # Reduced temperature of feed [*]
+
+    def DHVap_b_init(m,i):
+        return ( m.C1v[i]*( (1-m.Tred_b[i])**( m.C2v[i] + (m.C3v[i]*m.Tred_b[i]) + (m.C4v[i]*(m.Tred_b[i]**2)) + (m.C5v[i]*(m.Tred_b[i]**3)) ) ) )
+
+    m.DHVap_b = pe.Param(m.I, initialize=DHVap_b_init)    # Vaporization entalphy of feed [kJ/mol]
+
+    def HL_b_init(m,i):
+        return m.HV_b[i]-m.DHVap_b[i]
+
+    m.HL_b = pe.Param(m.I, initialize=HL_b_init)    # Liquid entalphy of feed [kJ/mol]
+
+    def alphaEOSbut_init(m,i):
+        return (1+m.mEOS[i]*(1-(m.TaliB/m.Tcrit[i])**(1/2)))**2
+
+    m.alphaEOSbut = pe.Param(m.I, initialize=alphaEOSbut_init)
+
+    def aiEOSbut_init(m,i):
+        return m.alphaEOSbut[i]*0.42747*((0.00008314*m.TcritSRK[i])**2)/m.Pcrit[i]
+
+    m.aiEOSbut = pe.Param(m.I, initialize=aiEOSbut_init)
+
+    m.aEOSbut = pe.Param(initialize=(sum((m.zb[i]/100)*m.biEOS[i] for i in m.I)))
+    m.bEOSbut = pe.Param(initialize=(sum(sum((m.zb[i]/100)*(m.zb[i2]/100)*(m.aiEOSbut[i]*m.aiEOSbut[i2])**0.5 for i2 in m.I) for i in m.I)))
+    m.Zbut = pe.Var(m.N, within=pe.NonNegativeReals)
+
+    @m.Constraint(m.N)
+    def VaporZbut(m,n):
+        if n != NT and n != 1:
+            return (m.Zbut[n])**3-(m.Zbut[n])**2+(m.Zbut[n])*((m.aEOSbut*m.P[n]/((0.00008314*m.TaliB)**2))-(m.bEOSbut*m.P[n]/(0.00008314*m.TaliB))-(m.bEOSbut*m.P[n]/(0.00008314*m.TaliB))**2)-((m.aEOSbut*m.P[n]/((0.00008314*m.TaliB)**2)))*(m.bEOSbut*m.P[n]/(0.00008314*m.TaliB)) == 0
+        else:
+            return pe.Constraint.Skip
+
+    m.HFB = pe.Var(m.N, within=pe.Reals)    # Butene entalpthy in feed
+    @m.Constraint(m.N)
+    def EqHFB(m,n):
+        if n != NT and n != 1:
+            return m.HFB[n] == sum((m.zb[i]/100)*(m.HL_b[i]+(8.314/1000)*m.TaliB*(m.Zbut[n]-1)+(1+m.mEOS[i])*((m.aEOSbut**0.5)/m.bEOSbut)*pe.log(m.Zbut[n]/(m.Zbut[n]+(m.bEOSbut*m.P[n]/(0.00008314*m.TaliB))))) for i in m.I)
+        else:
+            return pe.Constraint.Skip
+
+    def HV_e_init(m,i):
+        return ( (m.C1c[i]*(m.TaliE-m.Tref)) + ((m.C2c[i]/2)*((m.TaliE**2)-(m.Tref**2))) + ((m.C3c[i]/3)*((m.TaliE**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.TaliE**4)-(m.Tref**4))) + ((m.C5c[i]/5)*((m.TaliE**5)-(m.Tref**5))) + ((m.C6c[i]/6)*((m.TaliE**6)-(m.Tref**6))) + m.Hform[i])
+
+    m.HV_e = pe.Param(m.I, initialize=HV_e_init)    # Vapor entalphy of feed [kJ/mol]
+
+    def Tred_e_init(m,i):
+        return m.TaliE/m.Tcrit[i]
+
+    m.Tred_e = pe.Param(m.I, initialize=Tred_e_init)    # Reduced temperature of feed [K]
+
+    def DHVap_e_init(m,i):
+        return ( m.C1v[i]*( (1-m.Tred_e[i])**( m.C2v[i] + (m.C3v[i]*m.Tred_e[i]) + (m.C4v[i]*(m.Tred_e[i]**2)) + (m.C5v[i]*(m.Tred_e[i]**3)) ) ) )
+
+    m.DHVap_e = pe.Param(m.I, initialize=DHVap_e_init)    # Vaporization entalphy of feed [kJ/mol]
+
+    def HL_e_init(m,i):
+        return m.HV_e[i]-m.DHVap_e[i]
+
+    m.HL_e = pe.Param(m.I, initialize=HL_e_init)    # Liquid entalphy of feed [kJ/mol]
+
+    def alphaEOSeth_init(m,i):
+        return (1+m.mEOS[i]*(1-(m.TaliE/m.Tcrit[i])**(1/2)))**2
+
+    m.alphaEOSeth = pe.Param(m.I, initialize=alphaEOSeth_init)
+
+    def aiEOSeth_init(m,i):
+        return m.alphaEOSeth[i]*0.42747*((0.00008314*m.TcritSRK[i])**2)/m.Pcrit[i]
+
+    m.aiEOSeth = pe.Param(m.I, initialize=aiEOSeth_init)
+    
+    m.aEOSeth = pe.Param(initialize=(sum(sum((m.ze[i]/100)*(m.ze[i2]/100)*(m.aiEOSeth[i]*m.aiEOSeth[i2])**0.5 for i2 in m.I) for i in m.I)))
+    m.bEOSeth = pe.Param(initialize=(sum((m.ze[i]/100)*m.biEOS[i] for i in m.I)))
+    m.Zeth = pe.Var(m.N, within=pe.NonNegativeReals)
+    @m.Constraint(m.N)
+    def VaporZeth(m,n):
+        if n != NT and n != 1:
+            return (m.Zeth[n])**3-(m.Zeth[n])**2+(m.Zeth[n])*((m.aEOSeth*m.P[n]/((0.00008314*m.TaliE)**2))-(m.bEOSeth*m.P[n]/(0.00008314*m.TaliE))-(m.bEOSeth*m.P[n]/(0.00008314*m.TaliE))**2)-((m.aEOSeth*m.P[n]/((0.00008314*m.TaliE)**2)))*(m.bEOSeth*m.P[n]/(0.00008314*m.TaliE)) == 0
+        else:
+            return pe.Constraint.Skip
+
+    m.HFE = pe.Var(m.N, within=pe.Reals)    # Ethanol entalpthy in feed
+    @m.Constraint(m.N)
+    def EqHFE(m,n):
+        if n != NT and n != 1:
+            return m.HFE[n] == sum((m.ze[i]/100)*(m.HL_e[i]+(8.314/1000)*m.TaliE*(m.Zeth[n]-1)+(1+m.mEOS[i])*((m.aEOSeth**0.5)/m.bEOSeth)*pe.log(m.Zeth[n]/(m.Zeth[n]+(m.bEOSeth*m.P[n]/(0.00008314*m.TaliE))))) for i in m.I)
+        else:
+            return pe.Constraint.Skip
+    
     return m
 
 

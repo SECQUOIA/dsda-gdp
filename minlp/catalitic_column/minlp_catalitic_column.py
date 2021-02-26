@@ -539,9 +539,37 @@ def minlp_catalitic_column(NT=22,  visualize=False):
             return m.HFE[n] == sum((m.ze[i]/100)*(m.HL_e[i]+(8.314/1000)*m.TaliE*(m.Zeth[n]-1)+(1+m.mEOS[i])*((m.aEOSeth**0.5)/m.bEOSeth)*pe.log(m.Zeth[n]/(m.Zeth[n]+(m.bEOSeth*m.P[n]/(0.00008314*m.TaliE))))) for i in m.I)
         else:
             return pe.Constraint.Skip
-    
+
+    # ______________________________ Section 10 (13) ______________________________
+    # Parameter, constraint and binary variable definition
+
+    m.CASE = pe.Param(initialize=0) # 1 if there is equilibrium in reactive stages, 0 otherwise
+    m.yc = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is catalizer, 0 otherwise
+    m.yr = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is reflux, 0 otherwise  (parameter?)
+    m.yb = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is boilup, 0 otherwise
+    m.par = pe.Var(m.N, within=pe.NonNegativeReals)    # 1 if stage n exists, 0 otherwise   (real?)
+
+    @m.Constraint(m.N)
+    def eqpar(m,n):
+        if n == 1:
+            return m.par[n] == 1
+        elif n == NT:
+            return m.par[n] == 1
+        else:
+            return m.par[n] == 1 - (1-sum(m.yr[j] for j in range(2,n+1)) - (sum(m.yb[j] for j in range(2,n))))
+
+    m.ye = pe.Var(m.N, within=pe.NonNegativeReals)    # 1 if in stage n there is equilibrium, 0 otherwise   (real?)
+
+    @m.Constraint(m.N)
+    def eqyeq(m,n):
+        if n != NT and n != 1:
+            return m.ye[n] == m.par[n]*(1-m.yc[n])*m.CASE+m.par[n]*(1-m.CASE)
+        else:
+            return pe.Constraint.Skip
+
     return m
 
+    m.yf = pe.Var(m.N, m.F, within=pe.Binary)    # 1 if in stage n there is feed f, 0 otherwise
 
 
 if __name__ == "__main__":

@@ -294,9 +294,51 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
+    # ______________________________ Section 7 (10) ______________________________
+    # Phi calculation
+    Omega_init = {'iButene':0.19484, 'Ethanol':0.643558, 'nButene':0.184495, 'ETBE':0.316231}
+    m.Omega = pe.Param(m.I, initialize=Omega_init)    # Acentric factor [*]
+    TcritSRK_init = {'iButene':417.9, 'Ethanol':514, 'nButene':419.5, 'ETBE':509.4}
+    m.TcritSRK = pe.Param(m.I, initialize=TcritSRK_init)    # Critic temperature for Soave-Redlich-Kwong ecuation [K]
 
+    def mEOS_init(m,i):
+        return 0.48508+1.55171*m.Omega[i]-0.15613*pe.sqrt(m.Omega[i])
+    m.mEOS = pe.Param(m.I, initialize=mEOS_init)
 
+    def biEOS_init(m,i):
+        return 0.08664*0.00008314*m.TcritSRK[i]/m.Pcrit[i]
+    m.biEOS = pe.Param(m.I, initialize=biEOS_init)
 
+    m.alphaEOS = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
+    @m.Constraint(m.I, m.N)
+    def EqAlphaEOS(m,i,n):
+        return m.alphaEOS[i,n] == pe.sqrt(1+m.mEOS[i]*(1-(m.Temp[n]/m.Tcritm[n])**(1/2)))
+
+    m.aiEOS = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
+    @m.Constraint(m.I, m.N)
+    def EqaiEOS(m,i,n):
+        return m.aiEOS[i,n] == m.alphaEOS[i,n]*0.42747*(pe.sqrt(0.00008314*m.TcritSRK[i]))/m.Pcrit[i]
+
+    m.bEOS = pe.Var(m.N, within=pe.NonNegativeReals)
+    @m.Constraint(m.N)
+    def EqbEOS(m,n):
+        return m.bEOS[n] == sum((m.y[i,n]/100)*m.biEOS[i] for i in m.I)
+
+    m.aEOS = pe.Var(m.N, within=pe.NonNegativeReals)
+    @m.Constraint(m.N)
+    def EqaEOS(m,n):
+        return m.aEOS[n] == sum(sum((m.y[i,n]/100)*(m.y[i2,n]/100)*(m.aiEOS[i,n]*m.aiEOS[i2,n])**0.5 for i2 in m.I) for i in m.I)
+
+    @m.Constraint(m.N)
+    def EqVaporZ(m,n):
+        return (m.Z[n])**3-(m.Z[n])**2+(m.Z[n])*((m.aEOS[n]*m.P[n]/((0.00008314*m.Temp[n])**2))-(m.bEOS[n]*m.P[n]/(0.00008314*m.Temp[n]))-(m.bEOS[n]*m.P[n]/(0.00008314*m.Temp[n]))**2)-((m.aEOS[n]*m.P[n]/((0.00008314*m.Temp[n])**2)))*(m.bEOS[n]*m.P[n]/(0.00008314*m.Temp[n])) == 0
+    
+    m.phi = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
+    @m.Constraint(m.I, m.N)
+    def EqPhi(m,i,n):
+        return m.phi[i,n] == pe.exp(((m.Z[n])-1)*m.biEOS[i]/m.bEOS[n]-pe.log((m.Z[n])-m.bEOS[n])-(m.aEOS[n]/m.bEOS[n])*(2*((m.aiEOS[i,n]/m.aEOS[n])**(1/2))-m.biEOS[i]/m.bEOS[n])*pe.log(((m.Z[n])-m.bEOS[n])/(m.Z[n])))
+
+    
 
 
 

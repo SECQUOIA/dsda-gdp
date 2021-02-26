@@ -14,7 +14,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     # PYOMO MODEL
     m = pe.ConcreteModel(name='minlp_catalitic_column')
 
-    # ______________________________ Section 1 (1-4) ______________________________
+    # ______________________________ Sections 1-4 ______________________________
     # Main variables and sets for definig the system
     # Hydraulic equations calculation
 
@@ -107,7 +107,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    # ______________________________ Section 2 (5) ______________________________
+    # ______________________________ Section 5 ______________________________
     # Saturation pressures usinn Antoine equation
 
     # Constants for expanded Antoine equation
@@ -132,7 +132,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def EqPsat(m,i,n):
         return m.Psat[i,n] == pe.exp(m.C1a[i] + (m.C2a[i]/(m.Temp[n] + m.C3a[i])) + (m.C4a[i]*m.Temp[n]) + ((m.C5a[i]*pe.log(m.Temp[n])) + (m.C6a[i]*(m.Temp[n]**m.C7a[i]))))
 
-    # ______________________________ Section 3 (6) ______________________________
+    # ______________________________ Section 6 ______________________________
     # Calculation of liquid density using IK-CAPI equation
     # Calculation of liquid density using critic DIPPR equation
     # Calculation of gas density using corrected ideal gas equation
@@ -188,7 +188,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def EqrhoV(m,n):
         return m.rhoV[n] == m.P[n]/(0.00008314*m.Temp[n]*(m.Z[n]))
 
-    # ______________________________ Section 4 (7) ______________________________
+    # ______________________________ Section 7 ______________________________
     # Calculation of superficial tension using critic DIPPR equation
 
     # Constants for DIPPR equation
@@ -206,7 +206,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def Eqsigma(m,n):
         return m.sigma[n] == sum((m.x[i,n]/100)*m.C1sig[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(m.C2sig[i]+m.C3sig[i]*(m.Temp[n]/m.Tcritm[n])+m.C4sig[i]*((m.Temp[n]/m.Tcritm[n]))**2) for i in m.I)
 
-    # ______________________________ Section 5 (8) ______________________________
+    # ______________________________ Section 8 ______________________________
     # Calculation of activity coefficient using NRTL model
 
     a_nrtl_init = {(i,i2):0 for i in m.I for i2 in m.I}
@@ -254,7 +254,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         m.g_nrtl[comp2,comp1,n] for comp2 in m.I)/sum(m.x[comp3,n]*
         m.g_nrtl[comp3,comp1,n] for comp3 in m.I)) for comp1 in m.I))
 
-    # ______________________________ Section 6 (9) ______________________________
+    # ______________________________ Section 9 ______________________________
     # Chemical reaction
 
     Nu_init = {'iButene':-1, 'Ethanol':-1, 'nButene':0, 'ETBE':1}
@@ -294,7 +294,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    # ______________________________ Section 7 (10) ______________________________
+    # ______________________________ Section 10 ______________________________
     # Phi calculation
 
     Omega_init = {'iButene':0.19484, 'Ethanol':0.643558, 'nButene':0.184495, 'ETBE':0.316231}
@@ -339,7 +339,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def EqPhi(m,i,n):
         return m.phi[i,n] == pe.exp(((m.Z[n])-1)*m.biEOS[i]/m.bEOS[n]-pe.log((m.Z[n])-m.bEOS[n])-(m.aEOS[n]/m.bEOS[n])*(2*((m.aiEOS[i,n]/m.aEOS[n])**(1/2))-m.biEOS[i]/m.bEOS[n])*pe.log(((m.Z[n])-m.bEOS[n])/(m.Z[n])))
 
-    # ______________________________ Section 8 (11) ______________________________
+    # ______________________________ Section 11 ______________________________
     # Entalphy calculation
 
     # Cp constants [kJ/mol*K]
@@ -440,7 +440,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def EqHL(m,n):
         return m.HL[n] == sum(m.HLi[i,n]*m.x[i,n]/100 for i in m.I)
 
-    # ______________________________ Section 9 (12) ______________________________
+    # ______________________________ Section 12 ______________________________
     # Entalphy in feed calculation
 
     def HV_b_init(m,i):
@@ -540,7 +540,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    # ______________________________ Section 10 (13) ______________________________
+    # ______________________________ Section 13 ______________________________
     # Parameter, constraint and binary variable definition
 
     m.CASE = pe.Param(initialize=0) # 1 if there is equilibrium in reactive stages, 0 otherwise
@@ -570,6 +570,98 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     return m
 
     m.yf = pe.Var(m.N, m.F, within=pe.Binary)    # 1 if in stage n there is feed f, 0 otherwise
+
+    # ______________________________ Section 14 ______________________________
+    # Logic constraints
+
+    m.cmej = pe.Param(initialize=1)
+    m.NCmax = pe.Param(initialize=KT)   # Maximum number of reactive stages
+
+    @m.Constraint(m.N)
+    def logic1(m,n):    # The boilup is below the reflux stage
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yr[j] for j in range(2,n+1)) >= m.yb[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint()
+    def logic2(m):    # There is only one reflux stage
+        return m.cmej*sum(m.yr[j] for j in range(2,NT)) == 1*m.cmej
+
+    @m.Constraint()
+    def logic3(m):    # There is only one boil-up stage
+        return m.cmej*sum(m.yb[j] for j in range(2,NT)) == 1*m.cmej
+
+    @m.Constraint(m.F)
+    def logic4(m,f):    # There is only one stage per feed
+        return m.cmej*sum(m.yf[j,f] for j in range(2,NT)) == 1*m.cmej
+
+    @m.Constraint()
+    def logic6(m):    # There is maximum number of catalitic stages
+        return m.cmej*sum(m.yc[j] for j in range(2,NT)) == m.NCmax*m.cmej
+
+    @m.Constraint(m.N, m.F)
+    def logic7(m,n,f):    # The feed stages are below reflux stage
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yr[j] for j in range(2,n+1)) >= m.yf[n,f]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N, m.F)
+    def logic8(m,n,f):    # The boil-up stage is below feed stages
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yf[j,f] for j in range(2,n+1)) >= m.yb[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+    
+    @m.Constraint(m.N)
+    def logic9(m,n):    # The ethanol feed is above the butenes feed
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yf[j,1] for j in range(2,n+1)) >= m.yf[n,2]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic10(m,n):    # The catalitic stages are below the ethanol feed stage
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yf[j,1] for j in range(2,n+1)) >= m.yc[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic11(m,n):    # The catalitic stages are above the butenes feed stage
+        if n != NT and n != 1:
+            return m.cmej*(sum(m.yf[j,2] for j in range(2,n+1)) - m.yf[n,2] )<= m.cmej*(1-m.yc[n])
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic12(m,n):    # The catalitic stages are below reflux stage
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yr[j] for j in range(2,n+1)) >= m.yc[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic13(m,n):    # The catalitic stages are above boil-up stage
+        if n != NT and n != 1:
+            return m.cmej*(sum(m.yb[j] for j in range(2,n+1)) - m.yb[n] )<= m.cmej*(1-m.yc[n])
+        else:
+            return pe.Constraint.Skip
+    
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    return m
 
 
 if __name__ == "__main__":

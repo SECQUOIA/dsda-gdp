@@ -678,6 +678,71 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def fixedL(m):
         return m.L[1] == 0
 
+    # ______________________________ Section 16 ______________________________
+    # Initial point column equations
+
+    # Initial conditions for steady-state
+    @m.Constraint(m.N)
+    def BalMass0(m,n):
+        if n != NT and n != 1:
+            return 0 == m.yf[n,1]*m.FE+m.yf[n,2]*m.FB+m.RR*m.V[1]*m.yr[n]+m.BR*m.L[NT]*m.yb[n]+m.L[n-1]+m.V[n+1]-m.L[n]-m.V[n]+m.yc[n]*(sum(m.Nu[i] for i in m.I)*m.mcat*m.Rx[n])
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.I, m.N)
+    def BalMassPartial0(m,i,n):
+        if n != NT and n != 1:
+            return 0 == m.yf[n,1]*m.FE*m.ze[i]+m.yf[n,2]*m.FB*m.zb[i]+m.RR*m.V[1]*m.yr[n]*m.x[i,1]+m.BR*m.L[NT]*m.yb[n]*m.y[i,NT]+m.L[n-1]*m.x[i,n-1]+m.V[n+1]*m.y[i,n+1]-m.L[n]*m.x[i,n]-m.V[n]*m.y[i,n]+100*m.yc[n]*(m.Nu[i]*m.mcat*m.Rx[n])
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def Sum0(m,n):
+        if n != NT and n != 1:
+            return sum(m.x[i,n]-m.y[i,n] for i in m.I) == 0
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def BalEnergy0(m,n):
+        if n != NT and n != 1:
+            return 0 == m.yf[n,1]*m.FE*m.HFE[n]+m.yf[n,2]*m.FB*m.HFB[n]+m.RR*m.V[1]*m.yr[n]*m.HL[1]+m.BR*m.L[NT]*m.yb[n]*m.HV[NT]+m.L[n-1]*m.HL[n-1]+m.V[n+1]*m.HV[n+1]-m.L[n]*m.HL[n]-m.V[n]*m.HV[n]
+        else:
+            return pe.Constraint.Skip
+
+    # Equilibrium relations
+    @m.Constraint(m.I, m.N)
+    def Equilibrium10(m,i,n):
+        if n != NT and n != 1:
+            return 0 == m.ye[n]*((m.y[[i,n]]*m.P[n]*m.phi[i,n])-(m.Psat[i,n]*m.gamma[i,n]*m.x[i,n]))
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.I, m.N)
+    def Equilibrium20(m,i,n):
+        if n != NT and n != 1 and i != 'iButene':
+            return sum(m.yr[j] for j in range(2,n+1))*(1-m.ye[n])*(m.y[i,n]-m.y[i,n+1]) == 0
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.I, m.N)
+    def Equilibrium30(m,i,n):
+        if n != NT and n != 1 and i != 'iButene':
+            return (1-sum(m.yr[j] for j in range(2,n+1)))*(1-m.ye[n])*(m.x[i,n]-m.x[i,n-1]) == 0
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def Equilibrium40(m,n):
+        if n != NT and n != 1:
+            return 0 == (1-m.ye[n])*(m.V[n]-m.V[n+1]-m.BR*m.L[NT]*m.yb[n])
+        else:
+            return pe.Constraint.Skip
+
+    
+
+
+
     
     
 

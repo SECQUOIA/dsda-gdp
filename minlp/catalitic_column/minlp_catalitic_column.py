@@ -648,15 +648,40 @@ def minlp_catalitic_column(NT=22,  visualize=False):
             return m.cmej*(sum(m.yb[j] for j in range(2,n+1)) - m.yb[n] )<= m.cmej*(1-m.yc[n])
         else:
             return pe.Constraint.Skip
+
+    # ______________________________ Section 15 ______________________________
+    # Condenser equations
+
+    # Steady-state equations
+    @m.Constraint()
+    def BalMassC0(m):
+        return 0 == m.V[2]-m.V[1]*(1+m.RR)
+
+    @m.Constraint(m.I)
+    def BalMassPartialC0(m,i):
+        return 0 == m.V[2]*m.y[i,2]-m.V[1]*m.x[i,1]*(1+m.RR)
+
+    @m.Constraint()
+    def SumC0(m):
+        return sum(m.y[i,1]-m.x[i,1] for i in m.I) == 0
+        
+    @m.Constraint(m.I)
+    def EquilibriumC0(m,i):
+        return m.y[i,1]*m.P[1]*m.phi[i] == m.Psat[i,1]*m.gamma[i,1]*m.x[i,1]
+
+    @m.Constraint()
+    def BalEnergyC0(m):
+        return 0 == m.V[2]*m.HV[2]-m.V[1]*(1+m.RR)*m.HL[1]-m.QC
+
+    # Fixed liquid flow 
+    @m.Constraint()
+    def fixedL(m):
+        return m.L[1] == 0
+
+    
     
 
-
     
-
-    
-
-    
-
     
 
     

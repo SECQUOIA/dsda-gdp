@@ -304,6 +304,68 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def EqHL(m,n):
         return m.HL[n] == sum(m.HLi[i,n]*m.x[i,n]/100 for i in m.I)
 
+    # ______________________________ Section 12 ______________________________
+    # Entalphy in feed calculation
+
+    # Azeotropic feed
+    def HV_Az_init(m,i):
+        return ( (m.C1c[i]*(m.Tali2-m.Tref)) + ((m.C2c[i]/2)*((m.Tali2**2)-(m.Tref**2))) + ((m.C3c[i]/3)*((m.Tali2**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.Tali2**4)-(m.Tref**4))))/m.Hscale
+
+    m.HV_Az = pe.Param(m.I, initialize=HV_Az_init)  # Vapor enthalphy in feed [kJ/mol]
+
+    def Tred_Az_init(m,i):
+        return m.Tali2/m.Tcrit[i]
+
+    m.Tred_Az = pe.Param(m.I, initialize=Tred_Az_init)  # Reduced temperature in feed [*]
+
+    def DHVap_Az_init(m,i):
+        return ( m.C1v[i]*( (1-m.Tred_Az[i])**( m.C2v[i] + (m.C3v[i]*m.Tred_Az[i]) + (m.C4v[i]*(m.Tred_Az[i]**2)) ) ) )/m.Hscale
+
+    m.DHVap_Az = pe.Param(m.I, initialize=DHVap_Az_init)  # Vaporization enthalphy in feed [kJ/mol]
+
+    def HL_Az_init(m,i):
+        return m.HV_Az[i]-m.DHVap_Az[i]
+
+    m.HL_Az = pe.Param(m.I, initialize=HL_Az_init)  # Liquid phase enthalphy in feed [kJ/mol]
+
+    m.HFAz = pe.Var(m.N, within=pe.Reals) # Azeotropic feed enthalpy
+
+    @m.Constraint(m.N)
+    def EqHFAz(m,n):
+        if n != NT and n != 1:
+            return m.HFAz[n] == sum((m.zAz[i]/100)*(m.HL_Az[i]) for i in m.I)
+        else:
+            return pe.Constraint.Skip
+
+    # Glycerol feed
+    def HV_g_init(m,i):
+        return ( (m.C1c[i]*(m.Tali1-m.Tref)) + ((m.C2c[i]/2)*((m.Tali1**2)-(m.Tref**2))) + ((m.C3c[i]/3)*((m.Tali1**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.Tali1**4)-(m.Tref**4))))/m.Hscale
+        
+    m.HV_g = pe.Param(m.I, initialize=HV_g_init)  # Vapor enthalphy in feed [kJ/mol]
+
+    def Tred_g_init(m,i):
+        return m.Tali1/m.Tcrit[i]
+
+    m.Tred_g = pe.Param(m.I, initialize=Tred_g_init)  # Reduced temperature in feed [*]
+
+    def DHVap_g_init(m,i):
+        return ( m.C1v[i]*( (1-m.Tred_g[i])**( m.C2v[i] + (m.C3v[i]*m.Tred_g[i]) + (m.C4v[i]*(m.Tred_g[i]**2)) ) ) )/m.Hscale
+
+    m.DHVap_g = pe.Param(m.I, initialize=DHVap_g_init)  # Vaporization enthalphy in feed [kJ/mol]
+
+    def HL_g_init(m,i):
+        return m.HV_g[i]-m.DHVap_g[i]
+
+    m.HL_g = pe.Param(m.I, initialize=HL_g_init)  # Liquid phase enthalphy in feed [kJ/mol]
+
+    m.HFG = pe.Var(m.N, within=pe.Reals) # Azeotropic feed enthalpy
+
+    @m.Constraint(m.N)
+    def EqHFG(m,n):
+        if n != NT and n != 1:
+            return m.HFG[n] == sum((m.zg[i]/100)*(m.HL_g[i]) for i in m.I)
+        else:
+            return pe.Constraint.Skip
 
 
 

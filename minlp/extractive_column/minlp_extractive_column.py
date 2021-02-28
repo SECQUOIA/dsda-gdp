@@ -247,9 +247,62 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def EqPhi(m,i,n):
         return m.phi[i,n] == 0.985
 
+    # ______________________________ Section 11 ______________________________
+    # Entalphy calculation
 
+    # Cp constants [kJ/mol*K]
+    C1c_init = {'Water':35.86, 'Ethanol':6.638866920, 'Glycerol':12.02602320}
+    m.C1c = pe.Param(m.I, initialize=C1c_init)
+    C2c_init = {'Water':-0.0229, 'Ethanol':0.2249913420, 'Glycerol':0.4250839170}
+    m.C2c = pe.Param(m.I, initialize=C2c_init)
+    C3c_init = {'Water':6*10**-5, 'Ethanol':-1.0887479*10**-4, 'Glycerol':-2.8316157*10**-4}
+    m.C3c = pe.Param(m.I, initialize=C3c_init)
+    C4c_init = {'Water':-4*10**-8, 'Ethanol':1.83461616*10**-8, 'Glycerol':7.58362604*10**-8}
+    m.C4c = pe.Param(m.I, initialize=C4c_init)
+    m.Tref = pe.Param(initialize=298.15)    # Reference temperature [K]
+    m.Hscale = pe.Param(initialize=1000)    # Scaling factor for entalphy
 
+    m.HVi = pe.Var(m.I, m.N, within=pe.Reals, bounds=(-400, 1000))
+    m.HV = pe.Var(m.N, within=pe.Reals, bounds=(-400, 1000))
+    @m.Constraint(m.I, m.N)
+    def EqHVi(m,i,n):
+        return m.HVi[i,n] == ( (m.C1c[i]*(m.Temp[n]-m.Tref)) + ((m.C2c[i]/2)*((m.Temp[n]**2)-(m.Tref**2)))+ ((m.C3c[i]/3)*((m.Temp[n]**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.Temp[n]**4)-(m.Tref**4))))/m.Hscale
 
+    @m.Constraint(m.N)
+    def EqHV(m,n):
+        return m.HV[n]==sum(m.HVi[i,n]*m.y[i,n]/100 for i in m.I)
+
+    # Vaporization entalphy constants [kJ/mol]
+    C1v_init = {'Water':51546.000, 'Ethanol':55789.00, 'Glycerol':1.106700*10**5}
+    m.C1v = pe.Param(m.I, initialize=C1v_init)
+    C2v_init = {'Water':0.2840200, 'Ethanol':0.312450, 'Glycerol':0.4831900}
+    m.C2v = pe.Param(m.I, initialize=C2v_init)
+    C3v_init = {'Water':-0.1584300, 'Ethanol':0, 'Glycerol':0}
+    m.C3v = pe.Param(m.I, initialize=C3v_init)
+    C4v_init = {'Water':0.237500, 'Ethanol':0, 'Glycerol':0}
+    m.C4v = pe.Param(m.I, initialize=C4v_init)
+    Tb_init = {'Water':100, 'Ethanol':78.29, 'Glycerol':287.85}
+    m.Tb = pe.Param(m.I, initialize=Tb_init)  # Component boiling temperature @1atm [C]
+
+    def Tred_init(m,i):
+        return m.Tb[i]/m.Tcrit[i]
+    m.Tred = pe.Param(m.I, initialize=Tred_init)  # Reduced temperature [*]
+
+    m.DHvap = pe.Var(m.I, m.N, within=pe.Reals) # Vaporization entalphy [kJ/mol]
+    @m.Constraint(m.I, m.N)
+    def EqdHvap(m,i,n):
+        return m.DHvap[i,n] == (m.C1v[i]*((1-(m.Temp[n]/m.Tcrit[i])))**(m.C2v[i]+m.C3v[i]*(m.Temp[n]/m.Tcrit[i])+(m.C4v[i]*(m.Temp[n]/m.Tcrit[i]))))/m.Hscale
+
+    # Liquid phase entalphy [kJ/mol]
+    m.HLi = pe.Var(m.I, m.N, within=pe.Reals, bounds=(-1000, 1000))
+    m.HL = pe.Var(m.N, within=pe.Reals, bounds=(-1000, 1000))
+    @m.Constraint(m.I, m.N)
+    def EqHLi(m,i,n):
+        return m.HLi[i,n] == m.HVi[i,n]-m.DHvap[i,n]
+
+    @m.Constraint(m.N)
+    def EqHL(m,n):
+        return m.HL[n] == sum(m.HLi[i,n]*m.x[i,n]/100 for i in m.I)
 
 
 

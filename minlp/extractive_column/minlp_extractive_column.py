@@ -237,7 +237,20 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def Eqgamma(m,comp,n):
         return m.gamma[comp,n] == pe.exp(sum(m.x[comp1,n]*m.tao_nrtl[comp1,comp,n]*m.g_nrtl[comp1,comp,n] for comp1 in m.I)/sum(m.x[comp1,n]*m.g_nrtl[comp1,comp,n] for comp1 in m.I)+sum(m.x[comp1,n]*m.g_nrtl[comp,comp1,n]/sum(m.x[comp2,n]*m.g_nrtl[comp2,comp1,n] for comp2 in m.I)*(m.tao_nrtl[comp,comp1,n]-sum(m.x[comp2,n]*m.tao_nrtl[comp2,comp1,n]*m.g_nrtl[comp2,comp1,n] for comp2 in  m.I)/sum(m.x[comp3,n]*m.g_nrtl[comp3,comp1,n] for comp3 in m.I)) for comp1 in m.I))
 
-    
+    # ______________________________ Section 10 ______________________________
+    # Phi calculation
+
+    Omega_init = {'Water':0.344861, 'Ethanol':0.643558, 'Glycerol':0.51269}
+    m.Omega = pe.Param(m.I, initialize=Omega_init)    # Acentric factor [*]
+    m.phi = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(0, 2))
+    @m.Constraint(m.I, m.N)
+    def EqPhi(m,i,n):
+        return m.phi[i,n] == 0.985
+
+
+
+
+
 
 
 

@@ -23,18 +23,21 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m.F = pe.RangeSet(1, FT)  # Set of feeds
     m.N = pe.RangeSet(1, NT)  # Set of all stages in the column
 
+    # Operation pressure
+    m.Pop = pe.Param(initialize=9.5)   # [bar]
+
     # Variables
-    m.L = pe.Var(m.N,  within=pe.NonNegativeReals)  # Flow of liquid [mol/min]
-    m.V = pe.Var(m.N,  within=pe.NonNegativeReals)  # Flow of vapor [mol/min]
-    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals)  # Molar composition of liquid [*]
-    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals)  # Molar composition of vapor [*]
-    m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals)   # Operation temperature [K]
-    m.P = pe.Var(m.N,  within=pe.NonNegativeReals)  # Stage pressure [bar]
-    m.Z = pe.Var(m.N,  within=pe.NonNegativeReals)  # Compressibility coefficient [*]
-    m.RR = pe.Var(within=pe.NonNegativeReals)   # Reflux ratio [*]
-    m.Qc = pe.Var(within=pe.NonNegativeReals)   # Condensator duty [kJ/min]
-    m.Qr = pe.Var(within=pe.NonNegativeReals)   # Reboiler duty [kJ/min]
-    m.BR = pe.Var(within=pe.NonNegativeReals)   # Boil up [*]
+    m.L = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 200))  # Flow of liquid [mol/min]
+    m.V = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 200))  # Flow of vapor [mol/min]
+    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100))  # Molar composition of liquid [*]
+    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100))  # Molar composition of vapor [*]
+    m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(200, 417.89))   # Operation temperature [K]
+    m.P = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(m.Pop, 10))  # Stage pressure [bar]
+    m.Z = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0.5, 1.3))  # Compressibility coefficient [*]
+    m.RR = pe.Var(within=pe.NonNegativeReals, bounds=(1, 10))   # Reflux ratio [*]
+    m.Qc = pe.Var(within=pe.NonNegativeReals, bounds=(0, 900))   # Condensator duty [kJ/min]
+    m.Qr = pe.Var(within=pe.NonNegativeReals, bounds=(100, 400))   # Reboiler duty [kJ/min]
+    m.BR = pe.Var(within=pe.NonNegativeReals, bounds=(0, 10))   # Boil up [*]
 
     # Hydraulic parameters
     m.da = pe.Param(initialize=0.002)   # Plate hole diameter [m]
@@ -45,14 +48,14 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m.K0 = pe.Param(initialize=(880.6-(67.7*m.da/m.ep)+(7.32*((m.da/m.ep)**2))-(0.338*((m.da/m.ep)**3)))*0.001) # Hole coefficient [*]
 
     # Hydraulic variables
-    m.D = pe.Var(within=pe.NonNegativeReals)   # Column diameter [m]
-    m.hw = pe.Var(within=pe.NonNegativeReals)   # Weir height [m]
-    m.HS = pe.Var(within=pe.NonNegativeReals)   # Plate height [m]
-    m.Htotal = pe.Var(within=pe.NonNegativeReals)   # Total column height [m]
-    m.At = pe.Var(within=pe.NonNegativeReals)   # Active area [m**2]
-    m.Ad = pe.Var(within=pe.NonNegativeReals)   # Weir area [m**2]
-    m.Lw = pe.Var(within=pe.NonNegativeReals)   # Weir lenght [m]
-    m.A0 = pe.Var(within=pe.NonNegativeReals)   # Holed area [m**2]
+    m.D = pe.Var(within=pe.NonNegativeReals, bounds=(0.1, 0.3))   # Column diameter [m]
+    m.hw = pe.Var(within=pe.NonNegativeReals, bounds=(0.0001, 0.1))   # Weir height [m]
+    m.HS = pe.Var(within=pe.NonNegativeReals, bounds=(0.1, 0.3))   # Plate height [m]
+    m.Htotal = pe.Var(within=pe.NonNegativeReals, bounds=(0, 10))   # Total column height [m]
+    m.At = pe.Var(within=pe.NonNegativeReals, bounds=(10**-6, 0.1))   # Active area [m**2]
+    m.Ad = pe.Var(within=pe.NonNegativeReals, bounds=(0.0001, 0.01))   # Weir area [m**2]
+    m.Lw = pe.Var(within=pe.NonNegativeReals, bounds=(0, 1))   # Weir lenght [m]
+    m.A0 = pe.Var(within=pe.NonNegativeReals, bounds=(10**-12, 0.01))   # Holed area [m**2]
 
     # Hydraulic constraints
     @m.Constraint()
@@ -91,7 +94,6 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m.ze = pe.Param(m.I, initialize=ze_init)
 
     # Operation parameters
-    m.Pop = pe.Param(initialize=9.5)   # Condenser pressure [bar]
     m.TaliB = pe.Param(initialize=323)   # Butene feed temperature [K]
     m.TaliE = pe.Param(initialize=342.38)   # Ethanol feed temperature [K]
     m.xBetbe = pe.Param(initialize=83)   # Desired composition of ETBE in bottom [*]
@@ -127,7 +129,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m.C7a = pe.Param(m.I, initialize=C7a_init)
 
     # Antoine equation
-    m.Psat = pe.Var(m.I, m.N, within=pe.NonNegativeReals)   # Saturation pressure [bar]
+    m.Psat = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(0, 100))   # Saturation pressure [bar]
     @m.Constraint(m.I, m.N)
     def EqPsat(m,i,n):
         return m.Psat[i,n] == pe.exp(m.C1a[i] + (m.C2a[i]/(m.Temp[n] + m.C3a[i])) + (m.C4a[i]*m.Temp[n]) + ((m.C5a[i]*pe.log(m.Temp[n])) + (m.C6a[i]*(m.Temp[n]**m.C7a[i]))))
@@ -173,17 +175,17 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     C4r_init = {'iButene':0, 'Ethanol':0, 'nButene':0, 'ETBE':0}
     m.C4r = pe.Param(m.I, initialize=C4r_init)
 
-    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(417.9, 600))
     @m.Constraint(m.N)
     def EqTcritm(m,n):
         return m.Tcritm[n] == (pe.sqrt(sum((m.x[i,n]/100)*m.Tcrit[i]/(m.Pcrit[i]**0.5) for i in m.I))) / (sum((m.x[i,n]/100)*m.Tcrit[i]/m.Pcrit[i] for i in m.I))
     
-    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals) # Liquid molar density [mol/m**3]
+    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(8000, 25000)) # Liquid molar density [mol/m**3]
     @m.Constraint(m.I, m.N)
     def Eqrho(m,i,n):
         return m.rho[i,n] == (m.C1r[i]/(m.C2r[i]**(1+((1-(m.Temp[n]/m.Tcritm[n]))**m.C4r[i]))))*1000
 
-    m.rhoV = pe.Var(m.N, within=pe.NonNegativeReals) # Vapor molar density [mol/m**3]
+    m.rhoV = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(m.Pop/(0.00008314*417.89*(1.3)), 500)) # Vapor molar density [mol/m**3]
     @m.Constraint(m.N)
     def EqrhoV(m,n):
         return m.rhoV[n] == m.P[n]/(0.00008314*m.Temp[n]*(m.Z[n]))
@@ -201,7 +203,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     C4sig_init = {'iButene':0, 'Ethanol':0, 'nButene':0, 'ETBE':0.76657}
     m.C4sig = pe.Param(m.I, initialize=C4sig_init)
 
-    m.sigma = pe.Var(m.N, within=pe.NonNegativeReals) # Liquid-vapor superficial tension [N/m]
+    m.sigma = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.005, 0.03)) # Liquid-vapor superficial tension [N/m]
     @m.Constraint(m.N)
     def Eqsigma(m,n):
         return m.sigma[n] == sum((m.x[i,n]/100)*m.C1sig[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(m.C2sig[i]+m.C3sig[i]*(m.Temp[n]/m.Tcritm[n])+m.C4sig[i]*((m.Temp[n]/m.Tcritm[n]))**2) for i in m.I)
@@ -229,12 +231,12 @@ def minlp_catalitic_column(NT=22,  visualize=False):
 
     m.alfa_nrtl = pe.Param(m.I, m.I, initialize=alfa_nrtl_init, within=pe.Any)
 
-    m.tao_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals)
+    m.tao_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals, bounds=(-5, 5))
     @m.Constraint(m.I, m.I, m.N)
     def Eq_tao_nrtl(m,i,i2,n):
         return m.tao_nrtl[i,i2,n] == m.a_nrtl[i,i2] + (m.b_nrtl[i,i2]/m.Temp[n])
 
-    m.g_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals)
+    m.g_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals, bounds=(0, 2))
     @m.Constraint(m.I, m.I, m.N)
     def Eq_g_nrtl(m,i,i2,n):
         if i != i2:
@@ -242,7 +244,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.gamma = pe.Var(m.I, m.N, within=pe.Reals)
+    m.gamma = pe.Var(m.I, m.N, within=pe.Reals, bounds=(0, 50))
     @m.Constraint(m.I, m.N)
     def Eqgamma(m,comp,n):
         return m.gamma[comp,n] == pe.exp(sum(m.x[comp1,n]*m.tao_nrtl[comp1,comp,n]*
@@ -260,7 +262,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     Nu_init = {'iButene':-1, 'Ethanol':-1, 'nButene':0, 'ETBE':1}
     m.Nu = pe.Param(m.I, initialize=Nu_init)    # Stoichiometry coeffients [*]
     m.mcat = pe.Param(initialize=0.4)   # Catalizer mass [kg]
-    m.Ketbe = pe.Var(m.N, within=pe.Reals) # Equilibrium constant [*]
+    m.Ketbe = pe.Var(m.N, within=pe.Reals, bounds=(0, 100)) # Equilibrium constant [*]
     @m.Constraint(m.N)
     def EqKetbe(m,n):
         if n != NT and n != 1:
@@ -270,7 +272,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
     
-    m.Krate = pe.Var(m.N, within=pe.NonNegativeReals)   # Reaction advance rate [mol/kg_cat*min]
+    m.Krate = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 1000000000))   # Reaction advance rate [mol/kg_cat*min]
     @m.Constraint(m.N)
     def EqKrate(m,n):
         if n != NT and n != 1:
@@ -278,7 +280,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.Ka = pe.Var(m.N, within=pe.NonNegativeReals)  # Adsorption rate
+    m.Ka = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 100))  # Adsorption rate
     @m.Constraint(m.N)
     def EqKa(m,n):
         if n != NT and n != 1:
@@ -286,7 +288,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.Rx = pe.Var(m.N, within=pe.Reals)  # Reaction rate [mol/kg_cat*min]
+    m.Rx = pe.Var(m.N, within=pe.Reals, bounds=(-100000, 10))  # Reaction rate [mol/kg_cat*min]
     @m.Constraint(m.N)
     def EqRx(m,n):
         if n != NT and n != 1:
@@ -310,22 +312,30 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         return 0.08664*0.00008314*m.TcritSRK[i]/m.Pcrit[i]
     m.biEOS = pe.Param(m.I, initialize=biEOS_init)
 
-    m.alphaEOS = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
+    # Get biEOS minimum
+    biEOS_min = 10000
+    for i in m.I:
+        temp = 0.08664*0.00008314*m.TcritSRK[i]/m.Pcrit[i]
+        if temp < biEOS_min:
+            biEOS_min = temp
+
+
+    m.alphaEOS = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(0, 5))
     @m.Constraint(m.I, m.N)
     def EqAlphaEOS(m,i,n):
         return m.alphaEOS[i,n] == pe.sqrt(1+m.mEOS[i]*(1-(m.Temp[n]/m.Tcritm[n])**(1/2)))
 
-    m.aiEOS = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
+    m.aiEOS = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(10**-6, 10**-3))
     @m.Constraint(m.I, m.N)
     def EqaiEOS(m,i,n):
         return m.aiEOS[i,n] == m.alphaEOS[i,n]*0.42747*(pe.sqrt(0.00008314*m.TcritSRK[i]))/m.Pcrit[i]
 
-    m.bEOS = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.bEOS = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(biEOS_min, 0.01))
     @m.Constraint(m.N)
     def EqbEOS(m,n):
         return m.bEOS[n] == sum((m.y[i,n]/100)*m.biEOS[i] for i in m.I)
 
-    m.aEOS = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.aEOS = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(10**-6, 10**-3))
     @m.Constraint(m.N)
     def EqaEOS(m,n):
         return m.aEOS[n] == sum(sum((m.y[i,n]/100)*(m.y[i2,n]/100)*(m.aiEOS[i,n]*m.aiEOS[i2,n])**0.5 for i2 in m.I) for i in m.I)
@@ -334,7 +344,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def EqVaporZ(m,n):
         return (m.Z[n])**3-(m.Z[n])**2+(m.Z[n])*((m.aEOS[n]*m.P[n]/((0.00008314*m.Temp[n])**2))-(m.bEOS[n]*m.P[n]/(0.00008314*m.Temp[n]))-(m.bEOS[n]*m.P[n]/(0.00008314*m.Temp[n]))**2)-((m.aEOS[n]*m.P[n]/((0.00008314*m.Temp[n])**2)))*(m.bEOS[n]*m.P[n]/(0.00008314*m.Temp[n])) == 0
     
-    m.phi = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
+    m.phi = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(0, 2))
     @m.Constraint(m.I, m.N)
     def EqPhi(m,i,n):
         return m.phi[i,n] == pe.exp(((m.Z[n])-1)*m.biEOS[i]/m.bEOS[n]-pe.log((m.Z[n])-m.bEOS[n])-(m.aEOS[n]/m.bEOS[n])*(2*((m.aiEOS[i,n]/m.aEOS[n])**(1/2))-m.biEOS[i]/m.bEOS[n])*pe.log(((m.Z[n])-m.bEOS[n])/(m.Z[n])))
@@ -361,8 +371,8 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     Tb_init = {'iButene':341.7, 'Ethanol':421.9, 'nButene':342.6, 'ETBE':438.8}
     m.Tb = pe.Param(m.I, initialize=Tb_init)  # Component boiling temperature @ P=9.5bar [K]
     # Enthalphy calculation Integal(CpdT)
-    m.HVi = pe.Var(m.I, m.N, within=pe.Reals)
-    m.HV = pe.Var(m.N, within=pe.Reals)
+    m.HVi = pe.Var(m.I, m.N, within=pe.Reals, bounds=(-1000, 1000))
+    m.HV = pe.Var(m.N, within=pe.Reals, bounds=(-1000, 1000))
     @m.Constraint(m.I, m.N)
     def EqHVi(m,i,n):
         return m.HVi[i,n] == ((m.C1c[i]*(m.Temp[n]-m.Tref)) + ((m.C2c[i]/2)*((m.Temp[n]**2)-(m.Tref**2)))
@@ -399,7 +409,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
 
     m.aiEOSb = pe.Param(m.I, initialize=aiEOSb_init)
 
-    m.Zboil = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
+    m.Zboil = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(0.7, 1.5))
     @m.Constraint(m.I, m.N)
     def VaporZb(m,i,n):
         return (m.Zboil[i,n])**3-(m.Zboil[i,n])**2+(m.Zboil[i,n])*((m.aiEOSb[i]*m.P[n]/((0.00008314*m.Tb[i])**2))-(m.biEOS[i]*m.P[n]/(0.00008314*m.Tb[i]))-(m.biEOS[i]*m.P[n]/(0.00008314*m.Tb[i]))**2)-((m.aiEOSb[i]*m.P[n]/((0.00008314*m.Tb[i])**2)))*(m.biEOS[i]*m.P[n]/(0.00008314*m.Tb[i])) == 0
@@ -414,7 +424,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         return ( (m.C1c[i]*(m.Tb[i]-m.Tref)) + ((m.C2c[i]/2)*((m.Tb[i]**2)-(m.Tref**2))) + ((m.C3c[i]/3)*((m.Tb[i]**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.Tb[i]**4)-(m.Tref**4))) + ((m.C5c[i]/5)*((m.Tb[i]**5)-(m.Tref**5))) + ((m.C6c[i]/6)*((m.Tb[i]**6)-(m.Tref**6))) + m.Hform[i])
 
     m.HVib = pe.Param(m.I, initialize=HVib_init)
-    m.depHvib = pe.Var(m.I, m.N, within=pe.Reals)
+    m.depHvib = pe.Var(m.I, m.N, within=pe.Reals, bounds=(-10, 10))
     @m.Constraint(m.I, m.N)
     def EqdepHvib(m,i,n):
         return m.depHvib[i,n] == (8.314/1000)*m.Tb[i]*(m.Zboil[i,n]-1)+(1+m.mEOS[i])*((m.aiEOSb[i]**0.5)/m.biEOS[i])*pe.log(m.Zboil[i,n]/(m.Zboil[i,n]+(m.biEOS[i]*m.P[n]/(0.00008314*m.Tb[i]))))
@@ -430,8 +440,8 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m.C4l = pe.Param(m.I, initialize=C4l_init)
     C5l_init = {'iButene':0, 'Ethanol':0, 'nButene':4.5027*10**-11, 'ETBE':0}
     m.C5l = pe.Param(m.I, initialize=C5l_init)
-    m.HLi = pe.Var(m.I, m.N, within=pe.Reals)
-    m.HL = pe.Var(m.N, within=pe.Reals)
+    m.HLi = pe.Var(m.I, m.N, within=pe.Reals, bounds=(-1000, 1000))
+    m.HL = pe.Var(m.N, within=pe.Reals, bounds=(-1000, 1000))
     @m.Constraint(m.I, m.N)
     def EqHLi(m,i,n):
         return m.HLi[i,n] == m.HVib[i]-m.DHVap[i]+((m.C1l[i]*(m.Temp[n]-m.Tb[i])) + ((m.C2l[i]/2)*((m.Temp[n]**2)-(m.Tb[i]**2)))+((m.C3l[i]/3)*((m.Temp[n]**3)-(m.Tb[i]**3))) + ((m.C4l[i]/4)*((m.Temp[n]**4)-(m.Tb[i]**4)))+((m.C5l[i]/5)*((m.Temp[n]**5)-(m.Tb[i]**5))))+m.depHvib[i,n]
@@ -475,7 +485,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
 
     m.aEOSbut = pe.Param(initialize=(sum((m.zb[i]/100)*m.biEOS[i] for i in m.I)))
     m.bEOSbut = pe.Param(initialize=(sum(sum((m.zb[i]/100)*(m.zb[i2]/100)*(m.aiEOSbut[i]*m.aiEOSbut[i2])**0.5 for i2 in m.I) for i in m.I)))
-    m.Zbut = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.Zbut = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.5, 1.5))
 
     @m.Constraint(m.N)
     def VaporZbut(m,n):
@@ -484,7 +494,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.HFB = pe.Var(m.N, within=pe.Reals)    # Butene entalpthy in feed
+    m.HFB = pe.Var(m.N, within=pe.Reals, bounds=(-50, 1))    # Butene entalpthy in feed
     @m.Constraint(m.N)
     def EqHFB(m,n):
         if n != NT and n != 1:
@@ -524,7 +534,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     
     m.aEOSeth = pe.Param(initialize=(sum(sum((m.ze[i]/100)*(m.ze[i2]/100)*(m.aiEOSeth[i]*m.aiEOSeth[i2])**0.5 for i2 in m.I) for i in m.I)))
     m.bEOSeth = pe.Param(initialize=(sum((m.ze[i]/100)*m.biEOS[i] for i in m.I)))
-    m.Zeth = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.Zeth = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.5, 1.5))
     @m.Constraint(m.N)
     def VaporZeth(m,n):
         if n != NT and n != 1:
@@ -532,7 +542,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.HFE = pe.Var(m.N, within=pe.Reals)    # Ethanol entalpthy in feed
+    m.HFE = pe.Var(m.N, within=pe.Reals, bounds=(-500, 0))    # Ethanol entalpthy in feed
     @m.Constraint(m.N)
     def EqHFE(m,n):
         if n != NT and n != 1:
@@ -776,7 +786,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m.fracEnvelop = pe.Param(initialize=0.5)
 
     # Define vapor velocity
-    m.far = pe.Var(m.N, within=pe.NonNegativeReals)     # Aeration facotr [*]
+    m.far = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.1, 2))     # Aeration factor [*]
     @m.Constraint(m.N)
     def Eqfa(m,n):
         if n != NT and n != 1:
@@ -784,7 +794,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
     
-    m.hD = pe.Var(m.N, within=pe.NonNegativeReals)     # Liquid height over divisor [m]
+    m.hD = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.0001, 0.1))     # Liquid height over divisor [m]
     @m.Constraint(m.N)
     def EqhD(m,n):
         if n != NT and n != 1:
@@ -792,7 +802,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.uhv = pe.Var(m.N, within=pe.NonNegativeReals)     # Vapor velocity in hole [m/s]
+    m.uhv = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.4, 10))     # Vapor velocity in hole [m/s]
     @m.Constraint(m.N)
     def Equhv(m,n):
         if n != NT and n != 1:
@@ -800,7 +810,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.unv = pe.Var(m.N, within=pe.NonNegativeReals)     # Vapor velocity in plate  [m/s]
+    m.unv = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.01, 0.89))     # Vapor velocity in plate  [m/s]
     @m.Constraint(m.N)
     def Equnv(m,n):
         if n != NT and n != 1:
@@ -808,7 +818,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.ul = pe.Var(m.N, within=pe.NonNegativeReals)     # Liquid velocity in weir  [m/s]
+    m.ul = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.001, 30))     # Liquid velocity in weir  [m/s]
     @m.Constraint(m.N)
     def Equl(m,n):
         if n != NT and n != 1:
@@ -818,7 +828,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
 
     # Liquid load
     m.consmach = pe.Param(initialize=1*10**-20)
-    m.hcl = pe.Var(m.N, within=pe.NonNegativeReals)     # Liquid height in spray regime  [m]
+    m.hcl = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(10**-6, 0.1))     # Liquid height in spray regime  [m]
     @m.Constraint(m.N)
     def Eqhcl(m,n):
         if n != NT and n != 1:
@@ -826,7 +836,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.Csbf = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.Csbf = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.1, 0.2))
     @m.Constraint(m.N)
     def EqCsbf(m,n):
         if n != NT and n != 1:
@@ -834,7 +844,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.Lload = pe.Var(m.N, within=pe.NonNegativeReals)   # Liquid load in catalitic stages [m_s]
+    m.Lload = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 0.008333))   # Liquid load in catalitic stages [m_s]
     @m.Constraint(m.N)
     def eqLload(m,n):
         if n != NT and n != 1:
@@ -842,7 +852,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.Ffactor = pe.Var(m.N, within=pe.NonNegativeReals)   # Vapor flow factor for all catalitic stages [Pa**0.5]
+    m.Ffactor = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 3.575))   # Vapor flow factor for all catalitic stages [Pa**0.5]
     @m.Constraint(m.N)
     def eqFfactor(m,n):
         if n != NT and n != 1:
@@ -851,7 +861,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
             return pe.Constraint.Skip
 
     # Pressure drop
-    m.DPL = pe.Var(m.N, within=pe.NonNegativeReals)   # Pressure drop due to liquid presence [bar]
+    m.DPL = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 0.1))   # Pressure drop due to liquid presence [bar]
     @m.Constraint(m.N)
     def EqDPL(m,n):
         if n != NT and n != 1:
@@ -859,7 +869,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.DPS = pe.Var(m.N, within=pe.NonNegativeReals)   # Pressure drop due to hole presence (dry) [bar]
+    m.DPS = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 0.01))   # Pressure drop due to hole presence (dry) [bar]
     @m.Constraint(m.N)
     def EqDPS(m,n):
         if n != NT and n != 1:
@@ -867,7 +877,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.DPq = pe.Var(m.N, within=pe.NonNegativeReals)   # Pressure drop at weir [bar]
+    m.DPq = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 0.1))   # Pressure drop at weir [bar]
     @m.Constraint(m.N)
     def EqDPq(m,n):
         if n != NT and n != 1:
@@ -875,8 +885,8 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.DP = pe.Var(m.N, within=pe.NonNegativeReals)   # Total pressure drop [bar]
-    m.dPcat = pe.Var(m.N, within=pe.NonNegativeReals)   # Pressure drop due to to catalizer in catalitic stage [bar]
+    m.DP = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 0.1))   # Total pressure drop [bar]
+    m.dPcat = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 10))   # Pressure drop due to to catalizer in catalitic stage [bar]
 
     # Defin stage pressure
     @m.Constraint()
@@ -994,7 +1004,9 @@ def minlp_catalitic_column(NT=22,  visualize=False):
 
     m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)
     
-    
+    # ______________________________ Section 20 ______________________________
+    # Variable bounds were established in declaration
+
 
     
 

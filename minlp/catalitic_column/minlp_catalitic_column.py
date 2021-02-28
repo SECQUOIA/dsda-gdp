@@ -15,7 +15,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m = pe.ConcreteModel(name='minlp_catalitic_column')
 
     # ______________________________ Sections 1-4 ______________________________
-    # Main variables and sets for definig the system
+    # Main variables and sets for defining the system
     # Hydraulic equations calculation
 
     # Sets
@@ -102,12 +102,10 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m.hour = pe.Param(initialize=60)   # Seconds in an hour [60]
 
     # Composition restriction in bottoms
-    @m.Constraint(m.N)
-    def pureza0(m,n):
-        if n == NT:
-            return m.x['ETBE',n] >= m.xBetbe
-        else:
-            return pe.Constraint.Skip
+    @m.Constraint()
+    def pureza0(m):
+        return m.x['ETBE',NT] >= m.xBetbe
+
 
     # ______________________________ Section 5 ______________________________
     # Saturation pressures usinn Antoine equation
@@ -1010,7 +1008,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     # Model solution
 
     solvername = 'gams'
-    opt = SolverFactory(solvername, solver='baron')
+    opt = SolverFactory(solvername, solver='dicopt')
     results = opt.solve(m, tee=True,
                         # Uncomment the following lines if you want to save GAMS models
                         # keepfiles=True,
@@ -1020,6 +1018,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
                         add_options=[
                             'option reslim = 600;'
                             'option optcr = 0.0;'
+                            'option nlp = conopt'
                             # Uncomment the following lines to setup IIS computation of BARON through option file
                             # 'GAMS_MODEL.optfile = 1;'
                             # '\n'

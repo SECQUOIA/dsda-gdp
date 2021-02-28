@@ -99,6 +99,31 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def pureza0(m):
         return m.x['Ethanol',1] >= m.xReth
 
+    # ______________________________ Section 5 ______________________________
+    # Saturation pressures usinn Antoine equation
+
+    # Constants for expanded Antoine equation
+    C1a_init = {'Water':62.12291155, 'Ethanol':61.77791155, 'Glycerol':88.45991155}
+    m.C1a = pe.Param(m.I, initialize=C1a_init)
+    C2a_init = {'Water':-7258.200000, 'Ethanol':-7122.300000, 'Glycerol':-13808.00000}
+    m.C2a = pe.Param(m.I, initialize=C2a_init)
+    C3a_init = {'Water':0, 'Ethanol':0, 'Glycerol':0}
+    m.C3a = pe.Param(m.I, initialize=C3a_init)
+    C4a_init = {'Water':0, 'Ethanol':0, 'Glycerol':0}
+    m.C4a = pe.Param(m.I, initialize=C4a_init)
+    C5a_init = {'Water':-7.303700000, 'Ethanol':-7.142400000, 'Glycerol':-10.08800000}
+    m.C5a = pe.Param(m.I, initialize=C5a_init)
+    C6a_init = {'Water':4.16530000*10**-6, 'Ethanol':2.88530000*10**-6, 'Glycerol':3.5712000*10**-19}
+    m.C6a = pe.Param(m.I, initialize=C6a_init)
+    C7a_init = {'Water':2, 'Ethanol':2, 'Glycerol':6}
+    m.C7a = pe.Param(m.I, initialize=C7a_init)
+
+    # Antoine equation
+    m.Psat = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(0, 100))   # Saturation pressure [atm]
+    @m.Constraint(m.I, m.N)
+    def EqPsat(m,i,n):
+        return m.Psat[i,n] == 1/1.01325*pe.exp(m.C1a[i] + (m.C2a[i]/(m.Temp[n]+m.C3a[i])) + (m.C4a[i]*m.Temp[n]) + (m.C5a[i]*pe.log(m.Temp[n]) + (m.C6a[i]*(m.Temp[n]**m.C7a[i]))) )
+
     
 
     return m

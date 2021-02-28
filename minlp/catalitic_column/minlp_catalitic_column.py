@@ -967,23 +967,32 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     def DtoLratio(m):     
         return m.htotal/m.D <= 20
 
-    
+    # ______________________________ Section 19 ______________________________
+    # Objective function
 
-    
+    m.year = pe.Param(initalize=8000)  # Operational hours in a year [hr/yr]
+    m.alfa1 = pe.Param(initalize=10**4)  # Weight for ETBE quality
+    m.alfa2 = pe.Param(initalize=500)  # Weight for reboiler load
+    m.alfa3 = pe.Param(initalize=10**4)  # Weight for reflux relation 
+    m.CostQr = pe.Param(initalize=146.8/m.hour)  # Cost for reboiler duty [$/yr]
+    m.CostQc = pe.Param(initalize=24.5/m.hour)  # Cost for condenser duty [$/yr]
+    m.CostB = pe.Param(initalize=25.3*3600*m.year/(1000*m.hour))  # ETBE utilities at bottoms [$/yr]
+    m.CostEth = pe.Param(initalize=15*3600*m.year/(1000*m.hour))  # Cost of ethanol feed [$/yr]
+    m.CostBut = pe.Param(initalize=8.25*3600*m.year/(1000*m.hour))  # Cost of butenes feed [$/yr]
+    m.CostCat = pe.Param(initalize=7.7)  # Cost of catalizer [$/kg]
+    m.AF = pe.Param(initalize=(0.05/(1-1/(1+0.05)**5)))  # Anualization factor with 5% rate [1/yr]
+    m.MS = pe.Param(initalize=1050) # Marshall & Swift coeffcient
+    m.FM = pe.Param(initalize=1) # Material factor (carbon steel)
+    m.FPres = pe.Param(initalize=1.15) # Pressure factor (up to 200psi=13.78bar)
+    m.C0 = pe.Param(initalize=10000) # Cost of initial inversion AF(Cr1+Cr2) [$]
+    m.CT = pe.Param(initalize=m.AF*(m.MS/280)*4.7*m.Fcol) # Cost of inversion per stages [$]
+    m.Csh = pe.Param(initalize=m.AF*(m.MS/280)*101.9*(2.18+m.Fcol)) # Cost of shell inversion [$]
+    m.Fcol = pe.Param(initalize=m.FM*m.FPres) # Factor of column cost [*]
 
+    def obj_rule(m):
+        return ((((m.CostEth*m.FE+m.CostBut*m.FB+(m.CostQr*m.Qr)+(m.CostQc*m.Qc))/m.year)*m.year)+(m.C0+m.AF*(m.mcat*m.CostCat*sum(m.yc[n] for n in m.N)+m.CT*((m.D/0.3048)**1.55)*(sum(m.HS*m.par[n] for n in m.N)/0.3048)+m.Csh*((m.D/0.3048)**1.066)*((m.Htotal/0.3048)**0.802)))-((((m.CostB*m.L[NT]))/m.year)*m.year))
 
-    
-
-    
-
-
-    
-
-
-    
-    
-    
-
+    m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)
     
     
 

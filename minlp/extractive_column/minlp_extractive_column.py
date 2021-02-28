@@ -192,6 +192,54 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def Eqsigma(m,n):
         return m.sigma[n] == sum((m.x[i,n]/100)*m.C1sig[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(m.C2sig[i]+m.C3sig[i]*(m.Temp[n]/m.Tcritm[n])+m.C4sig[i]*((m.Temp[n]/m.Tcritm[n]))**2) for i in m.I)
 
+    # ______________________________ Sections 8-9 ______________________________
+    # Calculation of activity coefficient using NRTL model
+
+    a_nrtl_init= {('Water','Water'):0, ('Water','Ethanol'):3.4578, ('Water','Glycerol'):-1.2515,
+                   ('Ethanol','Water'):-0.8009, ('Ethanol','Ethanol'):0, ('Ethanol','Glycerol'):0,
+                   ('Glycerol','Water'):-0.7318, ('Glycerol','Ethanol'):0, ('Glycerol','Glycerol'):0}
+    m.a_nrtl = pe.Param(m.I, m.I, initialize=a_nrtl_init)
+    b_nrtl_init= {('Water','Water'):0, ('Water','Ethanol'):-586.0809, ('Water','Glycerol'):272.6075,
+                   ('Ethanol','Water'):246.18, ('Ethanol','Ethanol'):0, ('Ethanol','Glycerol'):442.713,
+                   ('Glycerol','Water'):170.9167, ('Glycerol','Ethanol'):36.139, ('Glycerol','Glycerol'):0}
+    m.b_nrtl = pe.Param(m.I, m.I, initialize=b_nrtl_init)
+    c_nrtl_init = {(i,i2):0.3 for i in m.I for i2 in m.I}
+    for i in m.I:
+        c_nrtl_init[i,i] = 0
+    m.c_nrtl = pe.Param(m.I, m.I, initialize=c_nrtl_init)
+    
+    def alfa_nrtl_init(m, i, i2):
+        if i != i2:
+            return m.c_nrtl[i,i2]
+        else:
+            return pe.Param.Skip
+
+    m.alfa_nrtl = pe.Param(m.I, m.I, initialize=alfa_nrtl_init, within=pe.Any)
+
+    m.tao_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals, bounds=(-5, 5))
+    @m.Constraint(m.I, m.I, m.N)
+    def Eq_tao_nrtl(m,i,i2,n):
+        if i == i2:
+            return m.tao_nrtl[i,i2,n] == 0
+        else:
+            return m.tao_nrtl[i,i2,n] == m.a_nrtl[i,i2] + (m.b_nrtl[i,i2]/m.Temp[n])
+    
+    m.g_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals, bounds=(0, 2))
+    @m.Constraint(m.I, m.I, m.N)
+    def Eq_g_nrtl(m,i,i2,n):
+        if i == i2:
+            return m.g_nrtl[i,i2,n] == 1
+        else:
+            return m.g_nrtl[i,i2,n] == pe.exp(-m.alfa_nrtl[i,i2]*m.tao_nrtl[i,i2,n])
+    
+    m.gamma = pe.Var(m.I, m.N, within=pe.Reals, bounds=(0, 50))
+    @m.Constraint(m.I, m.N)
+    def Eqgamma(m,comp,n):
+        return m.gamma[comp,n] == pe.exp(sum(m.x[comp1,n]*m.tao_nrtl[comp1,comp,n]*m.g_nrtl[comp1,comp,n] for comp1 in m.I)/sum(m.x[comp1,n]*m.g_nrtl[comp1,comp,n] for comp1 in m.I)+sum(m.x[comp1,n]*m.g_nrtl[comp,comp1,n]/sum(m.x[comp2,n]*m.g_nrtl[comp2,comp1,n] for comp2 in m.I)*(m.tao_nrtl[comp,comp1,n]-sum(m.x[comp2,n]*m.tao_nrtl[comp2,comp1,n]*m.g_nrtl[comp2,comp1,n] for comp2 in  m.I)/sum(m.x[comp3,n]*m.g_nrtl[comp3,comp1,n] for comp3 in m.I)) for comp1 in m.I))
+
+    
+
+
 
     return m
 

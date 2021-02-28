@@ -124,7 +124,59 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def EqPsat(m,i,n):
         return m.Psat[i,n] == 1/1.01325*pe.exp(m.C1a[i] + (m.C2a[i]/(m.Temp[n]+m.C3a[i])) + (m.C4a[i]*m.Temp[n]) + (m.C5a[i]*pe.log(m.Temp[n]) + (m.C6a[i]*(m.Temp[n]**m.C7a[i]))) )
 
+    # ______________________________ Section 6 ______________________________
+    # Calculation of liquid density using IK-CAPI equation
+    # Calculation of liquid density using critic DIPPR equation
+    # Calculation of gas density using corrected ideal gas equation
+
+    # Constants for DIPPR equation
+    MW_init = {'Water':18.01528, 'Ethanol':46.06904, 'Glycerol':92.09382}
+    m.MW = pe.Param(m.I, initialize=MW_init)    # Molecular weight [kg/kmol]
+    Tcrit_init = {'Water':647.096, 'Ethanol':514.00, 'Glycerol':850.00}
+    m.Tcrit = pe.Param(m.I, initialize=Tcrit_init) # Critic temperature [K]
+    Pcrit_init = {'Water':220.6351, 'Ethanol':63.00, 'Glycerol':75.00}
+    m.Pcrit = pe.Param(m.I, initialize=Pcrit_init) # Critic pressure [bar]
+    C1r_init = {'Water':17.863, 'Ethanol':1.6288, 'Glycerol':0.92382}
+    m.C1r = pe.Param(m.I, initialize=C1r_init)
+    C2r_init = {'Water':58.606, 'Ethanol':0.27469, 'Glycerol':0.24386}
+    m.C2r = pe.Param(m.I, initialize=C2r_init)
+    C3r_init = {'Water':-95.396, 'Ethanol':515, 'Glycerol':850}
+    m.C3r = pe.Param(m.I, initialize=C3r_init)
+    C4r_init = {'Water':213.89, 'Ethanol':0.23178, 'Glycerol':0.22114}
+    m.C4r = pe.Param(m.I, initialize=C4r_init)
+    m.C5r = pe.Param(initialize=-141.26)
+
+    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(417.9, 600))
+    @m.Constraint(m.N)
+    def EqTcritm(m,n):
+        return m.Tcritm[n] == (pe.sqrt(sum((m.x[i,n]/100)*m.Tcrit[i]/(m.Pcrit[i]**0.5) for i in m.I)))/(sum((m.x[i,n]/100)*m.Tcrit[i]/m.Pcrit[i] for i in m.I))
     
+    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(15000, 10000)) # Liquid molar density [mol/m**3]
+    @m.Constraint(m.I, m.N)
+    def Eqrho12(m,i,n):
+        if i != 'Water':
+            return m.rho[i,n] == ( m.C1r[i]/(m.C2r[i]**(1+((1-(m.Temp[n]/m.Tcritm[n]))**m.C4r[i]))) )*1000
+        else:
+            return m.rho[i,n] == ( m.C1r[i]+(m.C2r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(0.35))+(m.C3r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(2/3))+(m.C4r[i]*(1-(m.Temp[n]/m.Tcritm[n]))) + (m.C5r*(1-(m.Temp[n]/m.Tcritm[n]))**(4/3)) )*1000
+
+    m.rhoV = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(60, 500)) # Vapor molar density [mol/m**3]
+    @m.Constraint(m.N)
+    def EqrhoV(m,n):
+        return m.rhoV[n] == m.P[n]/(m.R/101325*m.Temp[n])
+
+    m.Qliq = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(6, 100)) # Liquid volumetric flow [m**3/hr]
+    @m.Constraint(m.N)
+    def EqQliq(m,n):
+        return m.Qliq[n] == m.L[n]/sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)
+
+    m.Qvap = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(4100, 50000)) # Vapor volumetric flow [m**3/hr]
+    @m.Constraint(m.N)
+    def EqQvap(m,n):
+        return m.Qvap[n] == m.V[n]/m.rhoV[n]
+
+    
+    
+
 
     return m
 

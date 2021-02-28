@@ -577,8 +577,6 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    return m
-
     m.yf = pe.Var(m.N, m.F, within=pe.Binary)    # 1 if in stage n there is feed f, 0 otherwise
 
     # ______________________________ Section 14 ______________________________
@@ -608,7 +606,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
 
     @m.Constraint()
     def logic6(m):    # There is maximum number of catalitic stages
-        return m.cmej*sum(m.yc[j] for j in range(2,NT)) == m.NCmax*m.cmej
+        return m.cmej*sum(m.yc[j] for j in range(2,NT)) == m.NCmax*m.cmej 
 
     @m.Constraint(m.N, m.F)
     def logic7(m,n,f):    # The feed stages are below reflux stage
@@ -677,11 +675,11 @@ def minlp_catalitic_column(NT=22,  visualize=False):
         
     @m.Constraint(m.I)
     def EquilibriumC0(m,i):
-        return m.y[i,1]*m.P[1]*m.phi[i] == m.Psat[i,1]*m.gamma[i,1]*m.x[i,1]
+        return m.y[i,1]*m.P[1]*m.phi[i,1] == m.Psat[i,1]*m.gamma[i,1]*m.x[i,1]
 
     @m.Constraint()
     def BalEnergyC0(m):
-        return 0 == m.V[2]*m.HV[2]-m.V[1]*(1+m.RR)*m.HL[1]-m.QC
+        return 0 == m.V[2]*m.HV[2]-m.V[1]*(1+m.RR)*m.HL[1]-m.Qc
 
     # Fixed liquid flow 
     @m.Constraint()
@@ -724,7 +722,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     @m.Constraint(m.I, m.N)
     def Equilibrium10(m,i,n):
         if n != NT and n != 1:
-            return 0 == m.ye[n]*((m.y[[i,n]]*m.P[n]*m.phi[i,n])-(m.Psat[i,n]*m.gamma[i,n]*m.x[i,n]))
+            return 0 == m.ye[n]*((m.y[i,n]*m.P[n]*m.phi[i,n])-(m.Psat[i,n]*m.gamma[i,n]*m.x[i,n]))
         else:
             return pe.Constraint.Skip
 
@@ -771,7 +769,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
 
     @m.Constraint()
     def BalEnergyR0(m):
-        return 0 == m.QR+m.L[NT-1]*m.HL[NT-1]-m.L[NT]*m.HL[NT]-m.BR*m.L[NT]*m.HV[NT]
+        return 0 == m.Qr+m.L[NT-1]*m.HL[NT-1]-m.L[NT]*m.HL[NT]-m.BR*m.L[NT]*m.HV[NT]
 
     # Fixed vapor flow in last stage
     @m.Constraint()
@@ -790,7 +788,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     @m.Constraint(m.N)
     def Eqfa(m,n):
         if n != NT and n != 1:
-            return m.par[n]*(m.far[n]) == m.par[n]*(0.981*pe.exp(-0.411*((m.V[n]/(m.rhoV[n])/m.hour)*(m.rhoV[n]*sum(m.MW[n]*m.y[i,n]/100 for i in m.I)/1000)**(0.5))/m.At))
+            return m.par[n]*(m.far[n]) == m.par[n]*(0.981*pe.exp(-0.411*((m.V[n]/(m.rhoV[n])/m.hour)*(m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000)**(0.5))/m.At))
         else:
             return pe.Constraint.Skip
     
@@ -856,7 +854,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     @m.Constraint(m.N)
     def eqFfactor(m,n):
         if n != NT and n != 1:
-            return (1-m.fracvol)*(3.1415926/4)*(m.D**2)*(((m.rhov[n])*(sum((m.y[i,n]/100)*m.MW[i] for i in m.I))*(1/1000))**(1/2))*(m.Ffactor[n])==(m.V[n]*(1/60))*(sum((m.y[i,n]/100)*m.MW[i]*(1/1000) for i in m.I))
+            return (1-m.fracvol)*(3.1415926/4)*(m.D**2)*(((m.rhoV[n])*(sum((m.y[i,n]/100)*m.MW[i] for i in m.I))*(1/1000))**(1/2))*(m.Ffactor[n])==(m.V[n]*(1/60))*(sum((m.y[i,n]/100)*m.MW[i]*(1/1000) for i in m.I))
         else:
             return pe.Constraint.Skip
 
@@ -896,7 +894,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     @m.Constraint(m.N)
     def EqdPcat(m,n):
         if n != NT and n != 1:
-            return m.dPcat[n] == m.hs*m.fracEnvelop*(0.001)*((5.69228924748553E-06)*((m.Lload[n]*60*60)**3.05308055949085)*((m.Ffactor[n])**7.851695947) + 1.367015225*((m.Ffactor[n])**1.764157687))
+            return m.dPcat[n] == m.HS*m.fracEnvelop*(0.001)*((5.69228924748553E-06)*((m.Lload[n]*60*60)**3.05308055949085)*((m.Ffactor[n])**7.851695947) + 1.367015225*((m.Ffactor[n])**1.764157687))
         else:
             return pe.Constraint.Skip
 
@@ -928,7 +926,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     @m.Constraint(m.N)
     def DownFlood(m,n):     
         if n != NT and n != 1:
-            return 0 >= ((m.HD[n]+((m.DP[n]+m.DPq[n])*100000)/(9.81*(((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000))-(m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000))))-(m.HS))*m.par[n]
+            return 0 >= ((m.hD[n]+((m.DP[n]+m.DPq[n])*100000)/(9.81*(((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000))-(m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000))))-(m.HS))*m.par[n]
         else:
             return pe.Constraint.Skip
 
@@ -951,14 +949,14 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     @m.Constraint(m.N)
     def Weep(m,n):     
         if n != NT and n != 1:
-            return 0 >= (((0.68-0.12)/(((m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000)/((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000)*9.81*m.far[n]*(m.hw+m.hd[n])))**0.5))-(m.uhv[n]))*m.par[n]
+            return 0 >= (((0.68-0.12)/(((m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000)/((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000)*9.81*m.far[n]*(m.hw+m.hD[n])))**0.5))-(m.uhv[n]))*m.par[n]
         else:
             return pe.Constraint.Skip
 
     # Catalyst flooding
     @m.Constraint(m.N)
     def catflood(m,n):     
-        return m.yc[n]*(m.dPcat[n]-(12E-3)*m.hs*m.fracEnvelop) <= 0
+        return m.yc[n]*(m.dPcat[n]-(12E-3)*m.HS*m.fracEnvelop) <= 0
 
     # Column construction
 
@@ -970,34 +968,35 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     # Available space for catalizer
     @m.Constraint()
     def ammountcat(m):     
-        return m.mcat <= (m.fracvol)*((3.1415926/4)*(m.D**2))*(m.hs*m.fracEnvelop)*770
+        return m.mcat <= (m.fracvol)*((3.1415926/4)*(m.D**2))*(m.HS*m.fracEnvelop)*770
 
     # Diameter-height relation
     @m.Constraint()
     def DtoLratio(m):     
-        return m.htotal/m.D <= 20
+        return m.Htotal/m.D <= 20
 
     # ______________________________ Section 19 ______________________________
     # Objective function
 
-    m.year = pe.Param(initalize=8000)  # Operational hours in a year [hr/yr]
-    m.alfa1 = pe.Param(initalize=10**4)  # Weight for ETBE quality
-    m.alfa2 = pe.Param(initalize=500)  # Weight for reboiler load
-    m.alfa3 = pe.Param(initalize=10**4)  # Weight for reflux relation 
-    m.CostQr = pe.Param(initalize=146.8/m.hour)  # Cost for reboiler duty [$/yr]
-    m.CostQc = pe.Param(initalize=24.5/m.hour)  # Cost for condenser duty [$/yr]
-    m.CostB = pe.Param(initalize=25.3*3600*m.year/(1000*m.hour))  # ETBE utilities at bottoms [$/yr]
-    m.CostEth = pe.Param(initalize=15*3600*m.year/(1000*m.hour))  # Cost of ethanol feed [$/yr]
-    m.CostBut = pe.Param(initalize=8.25*3600*m.year/(1000*m.hour))  # Cost of butenes feed [$/yr]
-    m.CostCat = pe.Param(initalize=7.7)  # Cost of catalizer [$/kg]
-    m.AF = pe.Param(initalize=(0.05/(1-1/(1+0.05)**5)))  # Anualization factor with 5% rate [1/yr]
-    m.MS = pe.Param(initalize=1050) # Marshall & Swift coeffcient
-    m.FM = pe.Param(initalize=1) # Material factor (carbon steel)
-    m.FPres = pe.Param(initalize=1.15) # Pressure factor (up to 200psi=13.78bar)
-    m.C0 = pe.Param(initalize=10000) # Cost of initial inversion AF(Cr1+Cr2) [$]
-    m.CT = pe.Param(initalize=m.AF*(m.MS/280)*4.7*m.Fcol) # Cost of inversion per stages [$]
-    m.Csh = pe.Param(initalize=m.AF*(m.MS/280)*101.9*(2.18+m.Fcol)) # Cost of shell inversion [$]
-    m.Fcol = pe.Param(initalize=m.FM*m.FPres) # Factor of column cost [*]
+    m.year = pe.Param(initialize=8000)  # Operational hours in a year [hr/yr]
+    m.alfa1 = pe.Param(initialize=10**4)  # Weight for ETBE quality
+    m.alfa2 = pe.Param(initialize=500)  # Weight for reboiler load
+    m.alfa3 = pe.Param(initialize=10**4)  # Weight for reflux relation 
+    m.CostQr = pe.Param(initialize=146.8/m.hour)  # Cost for reboiler duty [$/yr]
+    m.CostQc = pe.Param(initialize=24.5/m.hour)  # Cost for condenser duty [$/yr]
+    m.CostB = pe.Param(initialize=25.3*3600*m.year/(1000*m.hour))  # ETBE utilities at bottoms [$/yr]
+    m.CostEth = pe.Param(initialize=15*3600*m.year/(1000*m.hour))  # Cost of ethanol feed [$/yr]
+    m.CostBut = pe.Param(initialize=8.25*3600*m.year/(1000*m.hour))  # Cost of butenes feed [$/yr]
+    m.CostCat = pe.Param(initialize=7.7)  # Cost of catalizer [$/kg]
+    m.AF = pe.Param(initialize=(0.05/(1-1/(1+0.05)**5)))  # Anualization factor with 5% rate [1/yr]
+    m.MS = pe.Param(initialize=1050) # Marshall & Swift coeffcient
+    m.FM = pe.Param(initialize=1) # Material factor (carbon steel)
+    m.FPres = pe.Param(initialize=1.15) # Pressure factor (up to 200psi=13.78bar)
+    m.C0 = pe.Param(initialize=10000) # Cost of initial inversion AF(Cr1+Cr2) [$]
+    m.Fcol = pe.Param(initialize=m.FM*m.FPres) # Factor of column cost [*]
+    m.CT = pe.Param(initialize=m.AF*(m.MS/280)*4.7*m.Fcol) # Cost of inversion per stages [$]
+    m.Csh = pe.Param(initialize=m.AF*(m.MS/280)*101.9*(2.18+m.Fcol)) # Cost of shell inversion [$]
+    
 
     def obj_rule(m):
         return ((((m.CostEth*m.FE+m.CostBut*m.FB+(m.CostQr*m.Qr)+(m.CostQc*m.Qc))/m.year)*m.year)+(m.C0+m.AF*(m.mcat*m.CostCat*sum(m.yc[n] for n in m.N)+m.CT*((m.D/0.3048)**1.55)*(sum(m.HS*m.par[n] for n in m.N)/0.3048)+m.Csh*((m.D/0.3048)**1.066)*((m.Htotal/0.3048)**0.802)))-((((m.CostB*m.L[NT]))/m.year)*m.year))
@@ -1007,12 +1006,34 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     # ______________________________ Section 20 ______________________________
     # Variable bounds were established in declaration
 
+    # ______________________________ Section 21 ______________________________
+    # Model solution
 
-    
+    solvername = 'gams'
+    opt = SolverFactory(solvername, solver='baron')
+    results = opt.solve(m, tee=True,
+                        # Uncomment the following lines if you want to save GAMS models
+                        # keepfiles=True,
+                        # tmpdir=gams_path,
+                        # symbolic_solver_labels=True,
+
+                        add_options=[
+                            'option reslim = 600;'
+                            'option optcr = 0.0;'
+                            # Uncomment the following lines to setup IIS computation of BARON through option file
+                            # 'GAMS_MODEL.optfile = 1;'
+                            # '\n'
+                            # '$onecho > baron.opt \n'
+                            # 'CompIIS 1 \n'
+                            # '$offecho'
+                        ])
+
+    print('Objective:', round(pe.value(m.obj), 3))
+
 
     return m
 
 
 if __name__ == "__main__":
     NT = 22
-    results = minlp_catalitic_column(NT)
+    m = minlp_catalitic_column(NT)

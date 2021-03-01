@@ -14,7 +14,15 @@ from column import build_column
 def main():
 
 #---solve  (write DSDA instead)
-    m = build_column(min_trays=8, max_trays=17, xD=0.95, xB=0.95,x_input=[16,2], provide_init=False, init={})
+    m = build_column(
+        min_trays=8,
+        max_trays=17,
+        xD=0.95,
+        xB=0.95,
+        # x_input=[16,2], # Original initialization
+        x_input=[13,4], # To find optimal solution in PSE paper
+        provide_init=False,
+        init={})
 
 #---display results
     display_column(m[0])
@@ -72,7 +80,9 @@ def display_column(m):
 # Show value of Boolean variables
     for k in m.conditional_trays:
        print(str(m.tray[k].indicator_var)+'='+str(m.tray[k].indicator_var.value))
+          
 
 if __name__ == "__main__":
     m = main()
+
 

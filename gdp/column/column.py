@@ -3,7 +3,7 @@
 from __future__ import division
 
 from pyomo.environ import (
-    Block, ConcreteModel, Constraint, log, minimize, NonNegativeReals, Objective, RangeSet, Set, Var,TransformationFactory,SolverFactory,value )
+    Block, ConcreteModel, Constraint, log, minimize, NonNegativeReals, Objective, RangeSet, Set, Var, TransformationFactory, SolverFactory, value)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 from initialize import initialize
@@ -15,8 +15,7 @@ from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
 
 
-
-def build_column(min_trays, max_trays, xD, xB,x_input, provide_init=False, init={}):
+def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init={}):
     """Builds the column model."""
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene'])
@@ -45,15 +44,12 @@ def build_column(min_trays, max_trays, xD, xB,x_input, provide_init=False, init=
                     'D': 0, 'E': 0}}
     m.dH_vap = {'benzene': 33.770E3, 'toluene': 38.262E3}  # J/mol
 
-
     m.trays = RangeSet(max_trays, doc='Set of potential trays')
     m.conditional_trays = Set(
         initialize=m.trays - [m.condens_tray, m.feed_tray, m.reboil_tray],
-        doc="Trays that may be turned on and off.")    
+        doc="Trays that may be turned on and off.")
     m.tray = Disjunct(m.conditional_trays, doc='Disjunct for tray existence')
     m.no_tray = Disjunct(m.conditional_trays, doc='Disjunct for tray absence')
-
-
 
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not')
     def tray_no_tray(b, t):
@@ -64,170 +60,169 @@ def build_column(min_trays, max_trays, xD, xB,x_input, provide_init=False, init=
         >= min_trays)
 
     if provide_init:
-	    m.T_feed = Var(
-		doc='Feed temperature [K]', domain=NonNegativeReals,
-		bounds=(min_T, max_T), initialize=init['T_feed'])
-	    m.feed_vap_frac = Var(
-		doc='Vapor fraction of feed',
-		initialize=init['feed_vap_frac'], bounds=(0, 1))
-	    m.feed = Var(
-		m.comps, doc='Total component feed flow [mol/s]',initialize=init['feed'])
-	    m.x = Var(m.comps, m.trays, doc='Liquid mole fraction',
-		      bounds=(0, 1), domain=NonNegativeReals, initialize=init['x'])
-	    m.y = Var(m.comps, m.trays, doc='Vapor mole fraction',
-		      bounds=(0, 1), domain=NonNegativeReals, initialize=init['y'])
-	    m.L = Var(m.comps, m.trays,
-		      doc='component liquid flows from tray in kmol',
-		      domain=NonNegativeReals, bounds=(0, max_flow),
-		      initialize=init['L'])
-	    m.V = Var(m.comps, m.trays,
-		      doc='component vapor flows from tray in kmol',
-		      domain=NonNegativeReals, bounds=(0, max_flow),
-		      initialize=init['V'])
-	    m.liq = Var(m.trays, domain=NonNegativeReals,
-		        doc='liquid flows from tray in kmol', initialize=init['liq'],
-		        bounds=(0, max_flow))
-	    m.vap = Var(m.trays, domain=NonNegativeReals,
-		        doc='vapor flows from tray in kmol', initialize=init['vap'],
-		        bounds=(0, max_flow))
-	    m.B = Var(m.comps, domain=NonNegativeReals,
-		      doc='bottoms component flows in kmol',
-		      bounds=(0, max_flow), initialize=init['B'])
-	    m.D = Var(m.comps, domain=NonNegativeReals,
-		      doc='distillate component flows in kmol',
-		      bounds=(0, max_flow), initialize=init['D'])
-	    m.bot = Var(domain=NonNegativeReals, initialize=init['bot'], bounds=(0, 100),
-		        doc='bottoms flow in kmol')
-	    m.dis = Var(domain=NonNegativeReals, initialize=init['dis'],
-		        doc='distillate flow in kmol', bounds=(0, 100))
-	    m.reflux_ratio = Var(domain=NonNegativeReals, bounds=(0.5, 4),
-		                 doc='reflux ratio', initialize=init['reflux_ratio'])
-	    m.reboil_ratio = Var(domain=NonNegativeReals, bounds=(1.3, 4),
-		                 doc='reboil ratio', initialize=init['reboil_ratio'])
-	    m.reflux_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
-		                doc='reflux fractions',initialize=init['reflux_frac'])
-	    m.boilup_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
-		                doc='boilup fraction',initialize=init['boilup_frac'])
-	    m.Kc = Var(
-		m.comps, m.trays, doc='Phase equilibrium constant',
-		domain=NonNegativeReals, initialize=init['Kc'], bounds=(0, 1000))
-	    m.T = Var(m.trays, doc='Temperature [K]',
-		      domain=NonNegativeReals,
-		      bounds=(min_T, max_T),initialize=init['T'])
-	    m.P = Var(doc='Pressure [bar]',
-		      bounds=(0, 5),initialize=init['P'])
-	    m.gamma = Var(
-		m.comps, m.trays,
-		doc='liquid activity coefficent of component on tray',
-		domain=NonNegativeReals, bounds=(0, 10), initialize=init['gamma'])
-	    m.Pvap = Var(
-		m.comps, m.trays,
-		doc='pure component vapor pressure of component on tray in bar',
-		domain=NonNegativeReals, bounds=(1E-3, 5), initialize=init['Pvap'])
-	    m.Pvap_X = Var(
-		m.comps, m.trays,
-		doc='Related to fraction of critical temperature (1 - T/Tc)',
-		bounds=(0.25, 0.5), initialize=init['Pvap_X'])
-	    m.H_L = Var(
-		m.comps, m.trays, bounds=(0.1, 16),
-		doc='Liquid molar enthalpy of component in tray (kJ/mol)',initialize=init['H_L'])
-	    m.H_V = Var(
-		m.comps, m.trays, bounds=(30, 16 + 40),
-		doc='Vapor molar enthalpy of component in tray (kJ/mol)',initialize=init['H_V'])
-	    m.H_L_spec_feed = Var(
-		m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]',
-		initialize=init['H_L_spec_feed'], bounds=(0.1, 16))
-	    m.H_V_spec_feed = Var(
-		m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]',
-		initialize=init['H_V_spec_feed'], bounds=(30, 16 + 40))
-	    m.Qb = Var(domain=NonNegativeReals, doc='reboiler duty (MJ/s)',
-		       initialize=init['Qb'], bounds=(0, 8))
-	    m.Qc = Var(domain=NonNegativeReals, doc='condenser duty (MJ/s)',
-		       initialize=init['Qc'], bounds=(0, 8))
+        m.T_feed = Var(
+            doc='Feed temperature [K]', domain=NonNegativeReals,
+            bounds=(min_T, max_T), initialize=init['T_feed'])
+        m.feed_vap_frac = Var(
+            doc='Vapor fraction of feed',
+            initialize=init['feed_vap_frac'], bounds=(0, 1))
+        m.feed = Var(
+            m.comps, doc='Total component feed flow [mol/s]', initialize=init['feed'])
+        m.x = Var(m.comps, m.trays, doc='Liquid mole fraction',
+                  bounds=(0, 1), domain=NonNegativeReals, initialize=init['x'])
+        m.y = Var(m.comps, m.trays, doc='Vapor mole fraction',
+                  bounds=(0, 1), domain=NonNegativeReals, initialize=init['y'])
+        m.L = Var(m.comps, m.trays,
+                  doc='component liquid flows from tray in kmol',
+                  domain=NonNegativeReals, bounds=(0, max_flow),
+                  initialize=init['L'])
+        m.V = Var(m.comps, m.trays,
+                  doc='component vapor flows from tray in kmol',
+                  domain=NonNegativeReals, bounds=(0, max_flow),
+                  initialize=init['V'])
+        m.liq = Var(m.trays, domain=NonNegativeReals,
+                    doc='liquid flows from tray in kmol', initialize=init['liq'],
+                    bounds=(0, max_flow))
+        m.vap = Var(m.trays, domain=NonNegativeReals,
+                    doc='vapor flows from tray in kmol', initialize=init['vap'],
+                    bounds=(0, max_flow))
+        m.B = Var(m.comps, domain=NonNegativeReals,
+                  doc='bottoms component flows in kmol',
+                  bounds=(0, max_flow), initialize=init['B'])
+        m.D = Var(m.comps, domain=NonNegativeReals,
+                  doc='distillate component flows in kmol',
+                  bounds=(0, max_flow), initialize=init['D'])
+        m.bot = Var(domain=NonNegativeReals, initialize=init['bot'], bounds=(0, 100),
+                    doc='bottoms flow in kmol')
+        m.dis = Var(domain=NonNegativeReals, initialize=init['dis'],
+                    doc='distillate flow in kmol', bounds=(0, 100))
+        m.reflux_ratio = Var(domain=NonNegativeReals, bounds=(0.5, 4),
+                             doc='reflux ratio', initialize=init['reflux_ratio'])
+        m.reboil_ratio = Var(domain=NonNegativeReals, bounds=(1.3, 4),
+                             doc='reboil ratio', initialize=init['reboil_ratio'])
+        m.reflux_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
+                            doc='reflux fractions', initialize=init['reflux_frac'])
+        m.boilup_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
+                            doc='boilup fraction', initialize=init['boilup_frac'])
+        m.Kc = Var(
+            m.comps, m.trays, doc='Phase equilibrium constant',
+            domain=NonNegativeReals, initialize=init['Kc'], bounds=(0, 1000))
+        m.T = Var(m.trays, doc='Temperature [K]',
+                  domain=NonNegativeReals,
+                  bounds=(min_T, max_T), initialize=init['T'])
+        m.P = Var(doc='Pressure [bar]',
+                  bounds=(0, 5), initialize=init['P'])
+        m.gamma = Var(
+            m.comps, m.trays,
+            doc='liquid activity coefficent of component on tray',
+            domain=NonNegativeReals, bounds=(0, 10), initialize=init['gamma'])
+        m.Pvap = Var(
+            m.comps, m.trays,
+            doc='pure component vapor pressure of component on tray in bar',
+            domain=NonNegativeReals, bounds=(1E-3, 5), initialize=init['Pvap'])
+        m.Pvap_X = Var(
+            m.comps, m.trays,
+            doc='Related to fraction of critical temperature (1 - T/Tc)',
+            bounds=(0.25, 0.5), initialize=init['Pvap_X'])
+        m.H_L = Var(
+            m.comps, m.trays, bounds=(0.1, 16),
+            doc='Liquid molar enthalpy of component in tray (kJ/mol)', initialize=init['H_L'])
+        m.H_V = Var(
+            m.comps, m.trays, bounds=(30, 16 + 40),
+            doc='Vapor molar enthalpy of component in tray (kJ/mol)', initialize=init['H_V'])
+        m.H_L_spec_feed = Var(
+            m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]',
+            initialize=init['H_L_spec_feed'], bounds=(0.1, 16))
+        m.H_V_spec_feed = Var(
+            m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]',
+            initialize=init['H_V_spec_feed'], bounds=(30, 16 + 40))
+        m.Qb = Var(domain=NonNegativeReals, doc='reboiler duty (MJ/s)',
+                   initialize=init['Qb'], bounds=(0, 8))
+        m.Qc = Var(domain=NonNegativeReals, doc='condenser duty (MJ/s)',
+                   initialize=init['Qc'], bounds=(0, 8))
 
     else:
 
-	    m.T_feed = Var(
-		doc='Feed temperature [K]', domain=NonNegativeReals,
-		bounds=(min_T, max_T), initialize=368)
-	    m.feed_vap_frac = Var(
-		doc='Vapor fraction of feed',
-		initialize=0, bounds=(0, 1))
-	    m.feed = Var(
-		m.comps, doc='Total component feed flow [mol/s]', initialize=50)
-	    m.x = Var(m.comps, m.trays, doc='Liquid mole fraction',
-		      bounds=(0, 1), domain=NonNegativeReals, initialize=0.5)
-	    m.y = Var(m.comps, m.trays, doc='Vapor mole fraction',
-		      bounds=(0, 1), domain=NonNegativeReals, initialize=0.5)
-	    m.L = Var(m.comps, m.trays,
-		      doc='component liquid flows from tray in kmol',
-		      domain=NonNegativeReals, bounds=(0, max_flow),
-		      initialize=50)
-	    m.V = Var(m.comps, m.trays,
-		      doc='component vapor flows from tray in kmol',
-		      domain=NonNegativeReals, bounds=(0, max_flow),
-		      initialize=50)
-	    m.liq = Var(m.trays, domain=NonNegativeReals,
-		        doc='liquid flows from tray in kmol', initialize=100,
-		        bounds=(0, max_flow))
-	    m.vap = Var(m.trays, domain=NonNegativeReals,
-		        doc='vapor flows from tray in kmol', initialize=100,
-		        bounds=(0, max_flow))
-	    m.B = Var(m.comps, domain=NonNegativeReals,
-		      doc='bottoms component flows in kmol',
-		      bounds=(0, max_flow), initialize=50)
-	    m.D = Var(m.comps, domain=NonNegativeReals,
-		      doc='distillate component flows in kmol',
-		      bounds=(0, max_flow), initialize=50)
-	    m.bot = Var(domain=NonNegativeReals, initialize=50, bounds=(0, 100),
-		        doc='bottoms flow in kmol')
-	    m.dis = Var(domain=NonNegativeReals, initialize=50,
-		        doc='distillate flow in kmol', bounds=(0, 100))
-	    m.reflux_ratio = Var(domain=NonNegativeReals, bounds=(0.5, 4),
-		                 doc='reflux ratio', initialize=1.4)
-	    m.reboil_ratio = Var(domain=NonNegativeReals, bounds=(1.3, 4),
-		                 doc='reboil ratio', initialize=0.9527)
-	    m.reflux_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
-		                doc='reflux fractions')
-	    m.boilup_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
-		                doc='boilup fraction')
-	    m.Kc = Var(
-		m.comps, m.trays, doc='Phase equilibrium constant',
-		domain=NonNegativeReals, initialize=1, bounds=(0, 1000))
-	    m.T = Var(m.trays, doc='Temperature [K]',
-		      domain=NonNegativeReals,
-		      bounds=(min_T, max_T))
-	    m.P = Var(doc='Pressure [bar]',
-		      bounds=(0, 5))
-	    m.gamma = Var(
-		m.comps, m.trays,
-		doc='liquid activity coefficent of component on tray',
-		domain=NonNegativeReals, bounds=(0, 10), initialize=1)
-	    m.Pvap = Var(
-		m.comps, m.trays,
-		doc='pure component vapor pressure of component on tray in bar',
-		domain=NonNegativeReals, bounds=(1E-3, 5), initialize=0.4)
-	    m.Pvap_X = Var(
-		m.comps, m.trays,
-		doc='Related to fraction of critical temperature (1 - T/Tc)',
-		bounds=(0.25, 0.5), initialize=0.4)
-	    m.H_L = Var(
-		m.comps, m.trays, bounds=(0.1, 16),
-		doc='Liquid molar enthalpy of component in tray (kJ/mol)')
-	    m.H_V = Var(
-		m.comps, m.trays, bounds=(30, 16 + 40),
-		doc='Vapor molar enthalpy of component in tray (kJ/mol)')
-	    m.H_L_spec_feed = Var(
-		m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]',
-		initialize=0, bounds=(0.1, 16))
-	    m.H_V_spec_feed = Var(
-		m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]',
-		initialize=0, bounds=(30, 16 + 40))
-	    m.Qb = Var(domain=NonNegativeReals, doc='reboiler duty (MJ/s)',
-		       initialize=1, bounds=(0, 8))
-	    m.Qc = Var(domain=NonNegativeReals, doc='condenser duty (MJ/s)',
-		       initialize=1, bounds=(0, 8))
-
+        m.T_feed = Var(
+            doc='Feed temperature [K]', domain=NonNegativeReals,
+            bounds=(min_T, max_T), initialize=368)
+        m.feed_vap_frac = Var(
+            doc='Vapor fraction of feed',
+            initialize=0, bounds=(0, 1))
+        m.feed = Var(
+            m.comps, doc='Total component feed flow [mol/s]', initialize=50)
+        m.x = Var(m.comps, m.trays, doc='Liquid mole fraction',
+                  bounds=(0, 1), domain=NonNegativeReals, initialize=0.5)
+        m.y = Var(m.comps, m.trays, doc='Vapor mole fraction',
+                  bounds=(0, 1), domain=NonNegativeReals, initialize=0.5)
+        m.L = Var(m.comps, m.trays,
+                  doc='component liquid flows from tray in kmol',
+                  domain=NonNegativeReals, bounds=(0, max_flow),
+                  initialize=50)
+        m.V = Var(m.comps, m.trays,
+                  doc='component vapor flows from tray in kmol',
+                  domain=NonNegativeReals, bounds=(0, max_flow),
+                  initialize=50)
+        m.liq = Var(m.trays, domain=NonNegativeReals,
+                    doc='liquid flows from tray in kmol', initialize=100,
+                    bounds=(0, max_flow))
+        m.vap = Var(m.trays, domain=NonNegativeReals,
+                    doc='vapor flows from tray in kmol', initialize=100,
+                    bounds=(0, max_flow))
+        m.B = Var(m.comps, domain=NonNegativeReals,
+                  doc='bottoms component flows in kmol',
+                  bounds=(0, max_flow), initialize=50)
+        m.D = Var(m.comps, domain=NonNegativeReals,
+                  doc='distillate component flows in kmol',
+                  bounds=(0, max_flow), initialize=50)
+        m.bot = Var(domain=NonNegativeReals, initialize=50, bounds=(0, 100),
+                    doc='bottoms flow in kmol')
+        m.dis = Var(domain=NonNegativeReals, initialize=50,
+                    doc='distillate flow in kmol', bounds=(0, 100))
+        m.reflux_ratio = Var(domain=NonNegativeReals, bounds=(0.5, 4),
+                             doc='reflux ratio', initialize=1.4)
+        m.reboil_ratio = Var(domain=NonNegativeReals, bounds=(1.3, 4),
+                             doc='reboil ratio', initialize=0.9527)
+        m.reflux_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
+                            doc='reflux fractions')
+        m.boilup_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
+                            doc='boilup fraction')
+        m.Kc = Var(
+            m.comps, m.trays, doc='Phase equilibrium constant',
+            domain=NonNegativeReals, initialize=1, bounds=(0, 1000))
+        m.T = Var(m.trays, doc='Temperature [K]',
+                  domain=NonNegativeReals,
+                  bounds=(min_T, max_T))
+        m.P = Var(doc='Pressure [bar]',
+                  bounds=(0, 5))
+        m.gamma = Var(
+            m.comps, m.trays,
+            doc='liquid activity coefficent of component on tray',
+            domain=NonNegativeReals, bounds=(0, 10), initialize=1)
+        m.Pvap = Var(
+            m.comps, m.trays,
+            doc='pure component vapor pressure of component on tray in bar',
+            domain=NonNegativeReals, bounds=(1E-3, 5), initialize=0.4)
+        m.Pvap_X = Var(
+            m.comps, m.trays,
+            doc='Related to fraction of critical temperature (1 - T/Tc)',
+            bounds=(0.25, 0.5), initialize=0.4)
+        m.H_L = Var(
+            m.comps, m.trays, bounds=(0.1, 16),
+            doc='Liquid molar enthalpy of component in tray (kJ/mol)')
+        m.H_V = Var(
+            m.comps, m.trays, bounds=(30, 16 + 40),
+            doc='Vapor molar enthalpy of component in tray (kJ/mol)')
+        m.H_L_spec_feed = Var(
+            m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]',
+            initialize=0, bounds=(0.1, 16))
+        m.H_V_spec_feed = Var(
+            m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]',
+            initialize=0, bounds=(30, 16 + 40))
+        m.Qb = Var(domain=NonNegativeReals, doc='reboiler duty (MJ/s)',
+                   initialize=1, bounds=(0, 8))
+        m.Qc = Var(domain=NonNegativeReals, doc='condenser duty (MJ/s)',
+                   initialize=1, bounds=(0, 8))
 
     m.partial_cond = Disjunct()
     m.total_cond = Disjunct()
@@ -323,14 +318,14 @@ def build_column(min_trays, max_trays, xD, xB,x_input, provide_init=False, init=
     m.partial_cond.deactivate()
     m.total_cond.indicator_var.fix(1)
 
-#-----------End of model declaration. These changes are required to run the DSDA--------------
+# -----------End of model declaration. These changes are required to run the DSDA--------------
 
-    #FIX Indicatior variables according to input
-    ext_var_1 =  x_input[0]
-    ext_var_2 =  x_input[1]
+    # FIX Indicator variables according to input
+    ext_var_1 = x_input[0]
+    ext_var_2 = x_input[1]
     YR_fixed = {}
-    YB_fixed= {}
-    
+    YB_fixed = {}
+
     for n in m.trays - [m.condens_tray, m.reboil_tray]:
         if n == ext_var_1:
             YR_fixed[n] = 1
@@ -340,93 +335,90 @@ def build_column(min_trays, max_trays, xD, xB,x_input, provide_init=False, init=
             YB_fixed[n] = 1
         else:
             YB_fixed[n] = 0
-    for n in m.trays - [m.condens_tray, m.reboil_tray]:    
-        temp=1-(1-sum(YR_fixed[j] for j in m.trays if j>=n and j<=max_trays-1))-(sum(YB_fixed[j] for j in m.trays if j>=n and j<=max_trays-1)-YB_fixed[n])
-
-        if temp==1 and n!=m.feed_tray:
+    for n in m.trays - [m.condens_tray, m.reboil_tray]:
+        temp = 1-(1-sum(YR_fixed[j] for j in m.trays if j >= n and j <= max_trays-1))-(
+            sum(YB_fixed[j] for j in m.trays if j >= n and j <= max_trays-1)-YB_fixed[n])
+        if temp == 1 and n != m.feed_tray:
             m.tray[n].indicator_var.fix(True)
             m.no_tray[n].indicator_var.fix(False)
-	elif temp==0 and n!=m.feed_tray:
+        elif temp == 0 and n != m.feed_tray:
             m.tray[n].indicator_var.fix(False)
             m.no_tray[n].indicator_var.fix(True)
-
 
     # Transform the model
 
     TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
-
     # Check equation feasibility
     try:
-	    fbbt(m)
+        fbbt(m)
 
-            # SOLVE
-	    if provide_init==False:
-	    	initialize(m)
-	    log_infeasible_constraints(m, tol=1E-3)
-	    results=SolverFactory('ipopt').solve(
-		m, tee=True)
+        # SOLVE
+        if provide_init == False:
+            initialize(m)
 
-            # Save results (for initialization)
+        log_infeasible_constraints(m, tol=1E-3)
+        results = SolverFactory('ipopt').solve(m, tee=True)
+        # Save results (for initialization)
+        T_feed_init, feed_vap_frac_init, feed_init, x_init, y_init, L_init, V_init, liq_init, vap_init, B_init, D_init, bot_init, dis_init, reflux_ratio_init = {
+        }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+        reboil_ratio_init, reflux_frac_init, boilup_frac_init, Kc_init, T_init, P_init, gamma_init = {
+        }, {}, {}, {}, {}, {}, {}
+        Pvap_init, Pvap_X_init, H_L_init, H_V_init, H_L_spec_feed_init, H_V_spec_feed_init, Qb_init, Qc_init = {
+        }, {}, {}, {}, {}, {}, {}, {}
+          
+        T_feed_init = value(m.T_feed)
+        feed_vap_frac_init = value(m.feed_vap_frac)
+        bot_init = value(m.bot)
+        dis_init = value(m.dis)
+        reflux_ratio_init = value(m.reflux_ratio)
+        reboil_ratio_init = value(m.reboil_ratio)
+        reflux_frac_init = value(m.reflux_frac)
+        boilup_frac_init = value(m.boilup_frac)
+        Qb_init = value(m.Qb)
+        Qc_init = value(m.Qc)
+        P_init = value(m.P)
 
-            T_feed_init,feed_vap_frac_init,feed_init,x_init,y_init,L_init,V_init,liq_init,vap_init,B_init,D_init,bot_init,dis_init,reflux_ratio_init={},{},{},{},{},{},{},{},{},{},{},{},{},{}
-            reboil_ratio_init,reflux_frac_init,boilup_frac_init,Kc_init,T_init,P_init,gamma_init={},{},{},{},{},{},{}
-            Pvap_init,Pvap_X_init,H_L_init,H_V_init,H_L_spec_feed_init,H_V_spec_feed_init,Qb_init,Qc_init={},{},{},{},{},{},{},{}
+        for i in m.comps:
+            feed_init[i] = value(m.feed[i])
+            B_init[i] = value(m.B[i])
+            D_init[i] = value(m.D[i])
+            H_L_spec_feed_init[i] = value(m.H_L_spec_feed[i])
+            H_V_spec_feed_init[i] = value(m.H_V_spec_feed[i])
 
-            T_feed_init=value(m.T_feed)
-            feed_vap_frac_init=value(m.feed_vap_frac)
-	    bot_init=value(m.bot)
-	    dis_init=value(m.dis)
-	    reflux_ratio_init=value(m.reflux_ratio)
-	    reboil_ratio_init=value(m.reboil_ratio)
-	    reflux_frac_init=value(m.reflux_frac)
-	    boilup_frac_init=value(m.boilup_frac)
-            Qb_init=value(m.Qb)
-            Qc_init=value(m.Qc)
-            P_init=value(m.P)
+        for n in m.trays:
+            liq_init[n] = value(m.liq[n])
+            vap_init[n] = value(m.vap[n])
+            T_init[n] = value(m.T[n])
 
-            for i in m.comps:
-		feed_init[i]=value(m.feed[i])
-		B_init[i]=value(m.B[i])
-		D_init[i]=value(m.D[i])
-		H_L_spec_feed_init[i]=value(m.H_L_spec_feed[i])
-		H_V_spec_feed_init[i]=value(m.H_V_spec_feed[i])
+        for i in m.comps:
+            for n in m.trays:
+                x_init[i, n] = value(m.x[i, n])
+                y_init[i, n] = value(m.y[i, n])
+                L_init[i, n] = value(m.L[i, n])
+                V_init[i, n] = value(m.V[i, n])
+                Kc_init[i, n] = value(m.Kc[i, n])
+                gamma_init[i, n] = value(m.gamma[i, n])
+                Pvap_init[i, n] = value(m.Pvap[i, n])
+                Pvap_X_init[i, n] = value(m.Pvap_X[i, n])
+                H_L_init[i, n] = value(m.H_L[i, n])
+                H_V_init[i, n] = value(m.H_V[i, n])
 
-            for n in m.trays: 
-		liq_init[n]=value(m.liq[n])
-		vap_init[n]=value(m.vap[n])
-		T_init[n]=value(m.T[n])
+        initialization = {'T_feed': T_feed_init, 'feed_vap_frac': feed_vap_frac_init, 'feed': feed_init, 'x': x_init, 'y': y_init, 'L': L_init, 'V': V_init, 'liq': liq_init, 'vap': vap_init, 'B': B_init, 'D': D_init, 'bot': bot_init, 'dis': dis_init, 'reflux_ratio': reflux_ratio_init, 'reboil_ratio': reboil_ratio_init,
+                          'reflux_frac': reflux_frac_init, 'boilup_frac': boilup_frac_init, 'Kc': Kc_init, 'T': T_init, 'P': P_init, 'gamma': gamma_init, 'Pvap': Pvap_init, 'Pvap_X': Pvap_X_init, 'H_L': H_L_init, 'H_V': H_V_init, 'H_L_spec_feed': H_L_spec_feed_init, 'H_V_spec_feed': H_V_spec_feed_init, 'Qb': Qb_init, 'Qc': Qc_init}
 
-            for i in m.comps:
-		for n in m.trays:
-			x_init[i,n]=value(m.x[i,n])
-			y_init[i,n]=value(m.y[i,n])
-			L_init[i,n]=value(m.L[i,n])
-			V_init[i,n]=value(m.V[i,n])
-			Kc_init[i,n]=value(m.Kc[i,n])
-			gamma_init[i,n]=value(m.gamma[i,n])
-			Pvap_init[i,n]=value(m.Pvap[i,n])
-			Pvap_X_init[i,n]=value(m.Pvap_X[i,n])
-			H_L_init[i,n]=value(m.H_L[i,n])
-			H_V_init[i,n]=value(m.H_V[i,n])
-
-
-            initialization = {'T_feed':T_feed_init,'feed_vap_frac':feed_vap_frac_init,'feed':feed_init,'x':x_init,'y':y_init,'L':L_init,'V':V_init,'liq':liq_init,'vap':vap_init,'B':B_init,'D':D_init,'bot':bot_init,'dis':dis_init,'reflux_ratio':reflux_ratio_init,'reboil_ratio':reboil_ratio_init,'reflux_frac':reflux_frac_init,'boilup_frac':boilup_frac_init,'Kc':Kc_init,'T':T_init,'P':P_init,'gamma':gamma_init,'Pvap':Pvap_init,'Pvap_X':Pvap_X_init,'H_L':H_L_init,'H_V':H_V_init,'H_L_spec_feed':H_L_spec_feed_init,'H_V_spec_feed':H_V_spec_feed_init,'Qb':Qb_init,'Qc':Qc_init}
-            
-            return m, results.solver.status, initialization
-    
+        return m, results.solver.status, initialization
 
     except InfeasibleConstraintException:
 
-            #config.logger.debug("MIP preprocessing detected infeasibility.")
-            nlp_result = MasterProblemResult()
-            nlp_result.feasible = False
-            nlp_result.pyomo_results = SolverResults()
-            nlp_result.pyomo_results.solver.termination_condition = tc.error
-            print('Try an infeasible')
+        # config.logger.debug("MIP preprocessing detected infeasibility.")
+        nlp_result = MasterProblemResult()
+        nlp_result.feasible = False
+        nlp_result.pyomo_results = SolverResults()
+        nlp_result.pyomo_results.solver.termination_condition = tc.error
+        print('Try an infeasible')
 
-            return m, 'infeasible', {}
-
+        return m, 'infeasible', {}
 
 
 # ---------Other functions do define the model-------------------------------------------------

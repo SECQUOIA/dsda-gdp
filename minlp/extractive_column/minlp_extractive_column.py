@@ -25,8 +25,8 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Variables
     m.L = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of liquid [mol/hr]
     m.V = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of vapor [mol/hr]
-    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100))  # Molar composition of liquid [*]
-    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100))  # Molar composition of vapor [*]
+    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=1/3)  # Molar composition of liquid [*]
+    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=1/3)  # Molar composition of vapor [*]
     m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(300, 500))   # Operation temperature [K]
     m.P = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(m.Pop, 2))  # Stage pressure [atm]
     m.Z = pe.Var(m.N,  within=pe.NonNegativeReals)  # Compressibility coefficient [*]
@@ -226,7 +226,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return m.tao_nrtl[i,i2,n] == m.a_nrtl[i,i2] + (m.b_nrtl[i,i2]/m.Temp[n])
     
-    m.g_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals)
+    m.g_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals, initialize=2)
     @m.Constraint(m.I, m.I, m.N)
     def Eq_g_nrtl(m,i,i2,n):
         if i == i2:
@@ -910,17 +910,24 @@ def minlp_extractive_column(NT=30,  visualize=False):
 
     # ______________________________ Section 21 ______________________________
     # Model solution
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    gams_path = os.path.join(dir_path, "gamsfiles/")
+    if not(os.path.exists(gams_path)):
+        print('Directory for automatically generated files ' +
+            gams_path + ' does not exist. We will create it')
+        os.makedirs(gams_path)
     solvername = 'gams'
-    opt = SolverFactory(solvername, solver='baron')
+    opt = SolverFactory(solvername, solver='dicopt')
     results = opt.solve(m, tee=True,
                         # Uncomment the following lines if you want to save GAMS models
-                        # keepfiles=True,
-                        # tmpdir=gams_path,
-                        # symbolic_solver_labels=True,
+                        keepfiles=True,
+                        tmpdir=gams_path,
+                        symbolic_solver_labels=True,
 
                         add_options=[
                             'option reslim = 600;'
                             'option optcr = 0.0;'
+                            'option nlp = conopt4'
                             # Uncomment the following lines to setup IIS computation of BARON through option file
                             # 'GAMS_MODEL.optfile = 1;'
                             # '\n'

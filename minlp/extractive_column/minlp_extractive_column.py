@@ -367,6 +367,21 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
+    # ______________________________ Section 13 ______________________________
+    # Parameter, constraint and binary variable definition
+
+    def yr_init(m,n):
+        if n == 2:
+            return 1
+        else:
+            return 0
+
+    m.yr = pe.Param(m.N, initialize=yr_init)    # 1 if in stage n there is reflux, 0 otherwise
+    m.yb = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is boilup, 0 otherwise
+    m.par = pe.Var(m.N, within=pe.Binary)    # 1 if stage n exists, 0 otherwise   (real?)
+    m.yfG = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is Glycerol feed, 0 otherwise
+    m.yfAz = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is Azeotrope feed, 0 otherwise
+
 
 
     return m

@@ -884,7 +884,7 @@ def minlp_catalitic_column(NT=22,  visualize=False):
     m.DP = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 0.1))   # Total pressure drop [bar]
     m.dPcat = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 10))   # Pressure drop due to to catalizer in catalitic stage [bar]
 
-    # Defin stage pressure
+    # Define stage pressure
     @m.Constraint()
     def EqDPR(m):
         return m.DP[NT] == m.DP[NT-1]

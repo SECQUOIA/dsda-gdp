@@ -372,17 +372,37 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # ______________________________ Section 13 ______________________________
     # Parameter, constraint and binary variable definition
 
-    def yr_init(m,n):
-        if n == 2:
-            return 1
-        else:
-            return 0
+    yfG_init = {n:0 for n in m.N}
+    yfG_init[2] = 1
+
+    yfAz_init = {n:0 for n in m.N}
+    yfAz_init[13] = 1
+
+    yb_init = {n:0 for n in m.N}
+    yb_init[16] = 1
+
+    yr_init = {n:0 for n in m.N}
+    yr_init[2] = 1
+
+    par_init = {n:1 for n in m.N}
+    for j in range(1,17):
+        par_init[j] = 0
+
 
     m.yr = pe.Var(m.N, within=pe.Binary, initialize=yr_init)    # 1 if in stage n there is reflux, 0 otherwise (Binary?)
-    m.yb = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is boilup, 0 otherwise
-    m.par = pe.Var(m.N, within=pe.Binary)    # 1 if stage n exists, 0 otherwise
-    m.yfG = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is Glycerol feed, 0 otherwise
-    m.yfAz = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is Azeotrope feed, 0 otherwise
+    m.yb = pe.Var(m.N, within=pe.Binary, initialize=yb_init)    # 1 if in stage n there is boilup, 0 otherwise
+    m.par = pe.Var(m.N, within=pe.Binary, initialize=par_init)    # 1 if stage n exists, 0 otherwise
+    m.yfG = pe.Var(m.N, within=pe.Binary, initialize=yfG_init)    # 1 if in stage n there is Glycerol feed, 0 otherwise
+    m.yfAz = pe.Var(m.N, within=pe.Binary, initialize=yfAz_init)    # 1 if in stage n there is Azeotrope feed, 0 otherwise
+
+    @m.Constraint(m.N)
+    def eqpar(m,n):
+        if n == 1:
+            return m.par[n] == 1
+        elif n == NT:
+            return m.par[n] == 1
+        else:
+            return m.par[n] == 1 - (1-sum(m.yr[j] for j in range(2,n+1)) - (sum(m.yb[j] for j in range(2,n))))
 
     # ______________________________ Section 14 ______________________________
     # Logic constraints
@@ -887,6 +907,29 @@ def minlp_extractive_column(NT=30,  visualize=False):
 
     # ______________________________ Section 20 ______________________________
     # Variable bounds were established in declaration
+
+    # ______________________________ Section 21 ______________________________
+    # Model solution
+    solvername = 'gams'
+    opt = SolverFactory(solvername, solver='baron')
+    results = opt.solve(m, tee=True,
+                        # Uncomment the following lines if you want to save GAMS models
+                        # keepfiles=True,
+                        # tmpdir=gams_path,
+                        # symbolic_solver_labels=True,
+
+                        add_options=[
+                            'option reslim = 600;'
+                            'option optcr = 0.0;'
+                            # Uncomment the following lines to setup IIS computation of BARON through option file
+                            # 'GAMS_MODEL.optfile = 1;'
+                            # '\n'
+                            # '$onecho > baron.opt \n'
+                            # 'CompIIS 1 \n'
+                            # '$offecho'
+                        ])
+
+    print('Objective:', round(pe.value(m.obj), 3))
 
 
     return m

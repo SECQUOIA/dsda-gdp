@@ -1,3 +1,4 @@
 *.GDX
 *.lst
+*.pyc
 gamsfiles/*

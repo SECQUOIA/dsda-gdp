@@ -376,11 +376,89 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return 0
 
-    m.yr = pe.Param(m.N, initialize=yr_init)    # 1 if in stage n there is reflux, 0 otherwise
+    m.yr = pe.Var(m.N, within=pe.Binary, initialize=yr_init)    # 1 if in stage n there is reflux, 0 otherwise (Binary?)
     m.yb = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is boilup, 0 otherwise
-    m.par = pe.Var(m.N, within=pe.Binary)    # 1 if stage n exists, 0 otherwise   (real?)
+    m.par = pe.Var(m.N, within=pe.Binary)    # 1 if stage n exists, 0 otherwise
     m.yfG = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is Glycerol feed, 0 otherwise
     m.yfAz = pe.Var(m.N, within=pe.Binary)    # 1 if in stage n there is Azeotrope feed, 0 otherwise
+
+    # ______________________________ Section 14 ______________________________
+    # Logic constraints
+
+    m.cmej = pe.Param(initialize=1)
+
+    @m.Constraint(m.N)
+    def logic1(m,n):    # The boilup is below the reflux stage
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yr[j] for j in range(2,n+1)) >= m.yb[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint()
+    def logic2(m):    # There is only one reflux stage
+        return m.cmej*sum(m.yr[j] for j in range(2,NT)) == 1*m.cmej
+
+    @m.Constraint()
+    def logic3(m):    # There is only one boil-up stage
+        return m.cmej*sum(m.yb[j] for j in range(2,NT)) == 1*m.cmej
+
+    @m.Constraint()
+    def logic4(m):    # There is only one feed of Glycerol
+        return m.cmej*sum(m.yfG[j] for j in range(2,NT)) == 1*m.cmej
+
+    @m.Constraint()
+    def logic5(m):    # There is only one feed of Azeotrope
+        return m.cmej*sum(m.yfAz[j] for j in range(2,NT)) == 1*m.cmej
+
+    @m.Constraint(m.N)
+    def logic6(m,n):    # Glycerol feed is below the reflux
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yr[j] for j in range(2,n+1)) >= m.yfG[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic7(m,n):    # Azetropic feed is below the reflux
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yr[j] for j in range(2,n+1)) >= m.yfAz[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic8(m,n):    # Boil-up stage is below Glycerol feed stage
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yfG[j] for j in range(2,n+1)) >= m.yb[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic9(m,n):    # Boil-up stage is below Azeotropic feed stage
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yfAz[j] for j in range(2,n+1)) >= m.yb[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic10(m,n):    # Glycerol feed is above the Azeotropic feed
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yfG[j] for j in range(2,n+1)) >= m.yfAz[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic11(m,n):    # Glycerol feed stage is below reflux
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yr[j] for j in range(2,n+1)) >= m.yfG[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def logic12(m,n):    # Azeotropic feed stage is below reflux
+        if n != NT and n != 1:
+            return m.cmej*sum(m.yr[j] for j in range(2,n+1)) >= m.yfAz[n]*m.cmej
+        else:
+            return pe.Constraint.Skip
+
 
 
 

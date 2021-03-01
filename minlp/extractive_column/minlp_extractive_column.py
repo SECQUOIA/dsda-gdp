@@ -77,7 +77,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
         return m.A_col == pe.sqrt(m.D/2)*pi
 
     # Azeotropic feed
-    m.Faz = pe.Param(initialize=100)   # Azeotrope feed [kmol/hr]
+    m.FAz = pe.Param(initialize=100)   # Azeotrope feed [kmol/hr]
     zaz_Eth = 85
     zAz_init = {'Water':100-zaz_Eth, 'Ethanol':zaz_Eth, 'Glycerol':0}
     m.zAz = pe.Param(m.I, initialize=zAz_init)  # Molar composition
@@ -487,6 +487,67 @@ def minlp_extractive_column(NT=30,  visualize=False):
     @m.Constraint()
     def fixedL(m):
         return m.L[1] == 0
+
+    # ______________________________ Section 16 ______________________________
+    # Initial point column equations
+
+    # Initial conditions for steady-state
+    @m.Constraint(m.N)
+    def BalMass0(m,n):
+        if n != NT and n != 1:
+            return 0 == m.yfG[n]*m.FG*1000 + m.yfAz[n]*m.FAz*1000 + m.RR*m.V[1]*m.yr[n] +m.BR*m.L[NT]*m.yb[n]+ m.L[n-1] +m.V[n+1] -m.L[n] -m.V[n]
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.I, m.N)
+    def BalMassPartial0(m,i,n):
+        if n != NT and n != 1:
+            return 0 == m.yfG[n]*m.FG*m.zg[i]*1000 + m.yfAz[n]*m.FAz*m.zAz[i]*1000 + m.RR*m.V[1]*m.yr[n]*m.x[i,1] + m.BR*m.L[NT]*m.yb[n]*m.y[i,NT] + m.L[n-1]*m.x[i,n-1] + m.V[n+1]*m.y[i,n+1] - m.L[n]*m.x[i,n] - m.V[n]*m.y[i,n]
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def Sum0(m,n):
+        if n != NT and n != 1:
+            return sum(m.x[i,n]-m.y[i,n] for i in m.I) == 0
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def BalEnergy0(m,n):
+        if n != NT and n != 1:
+            return 0 == m.yfG[n]*m.FG*m.HFG[n]*1000 + m.yfAz[n]*m.FAz*m.HFAz[n]*1000 + m.RR*m.V[1]*m.yr[n]*m.HL[1] + m.BR*m.L[NT]*m.yb[n]*m.HV[NT] +m.L[n-1]*m.HL[n-1] + m.V[n+1]*m.HV[n+1] - m.L[n]*m.HL[n] - m.V[n]*m.HV[n]
+        else:
+            return pe.Constraint.Skip
+
+    # Equilibrium relations
+    @m.Constraint(m.I, m.N)
+    def Equilibrium10(m,i,n):
+        if n != NT and n != 1:
+            return 0 == m.par[n]*((m.y[i,n]*m.P[n]*m.phi[i,1])-(m.Psat[i,n]*m.gamma[i,n]*m.x[i,n]))
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.I, m.N)
+    def Equilibrium20(m,i,n):
+        if n != NT and n != 1 and i != 'Water':
+            return sum(m.yr[j] for j in range(2,n+1))*(1-m.par[n])*(m.y[i,n]-m.y[i,n+1]) == 0
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.I, m.N)
+    def Equilibrium30(m,i,n):
+        if n != NT and n != 1 and i != 'Water':
+            return (1-sum(m.yr[j] for j in range(2,n+1)))*(1-m.par[n])*(m.x[i,n]-m.x[i,n-1]) == 0
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def Equilibrium40(m,n):
+        if n != NT and n != 1:
+            return 0 == (1-m.par[n])*(m.V[n]-m.V[n+1]-m.BR*m.L[NT]*m.yb[n])
+        else:
+            return pe.Constraint.Skip
 
 
 

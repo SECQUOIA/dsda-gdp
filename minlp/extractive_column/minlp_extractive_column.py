@@ -549,6 +549,35 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
+    # ______________________________ Section 17 ______________________________
+    # Reboiler equations
+
+    # Initial conditions for steady-state
+    @m.Constraint()
+    def BalMassR0(m):
+        return 0 == m.L[NT-1]-m.L[NT]*(1+m.BR)
+
+    @m.Constraint(m.I)
+    def BalMassPartialR0(m,i):
+        return 0 == m.L[NT-1]*m.x[i,NT-1]-m.L[NT]*(m.x[i,NT]+m.BR*m.y[i,NT])
+
+    @m.Constraint()
+    def SumR0(m):
+        return sum(m.y[i,NT]-m.x[i,NT] for i in m.I) == 0
+        
+    @m.Constraint(m.I)
+    def EquilibriumR0(m,i):
+        return m.y[i,NT]*m.P[NT]*m.phi[i,NT] == m.Psat[i,NT]*m.gamma[i,NT]*m.x[i,NT]
+
+    @m.Constraint()
+    def BalEnergyR0(m):
+        return 0 == m.Qr+m.L[NT-1]*m.HL[NT-1]-m.L[NT]*m.HL[NT]-m.BR*m.L[NT]*m.HV[NT]
+
+    # Fixed vapor flow in last stage
+    @m.Constraint()
+    def fixedV(m):
+        return m.V[NT] == 0
+
 
 
     return m

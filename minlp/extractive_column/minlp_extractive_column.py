@@ -19,18 +19,21 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.I = pe.Set(initialize=['Water', 'Ethanol', 'Glycerol'])  # Set of components
     m.N = pe.RangeSet(1, NT)  # Set of all stages in the column
 
+    # Operation pressure
+    m.Pop = pe.Param(initialize=1)   # Pressure at condenser [atm]
+
     # Variables
-    m.L = pe.Var(m.N,  within=pe.NonNegativeReals)  # Flow of liquid [mol/hr]
-    m.V = pe.Var(m.N,  within=pe.NonNegativeReals)  # Flow of vapor [mol/hr]
-    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals)  # Molar composition of liquid [*]
-    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals)  # Molar composition of vapor [*]
-    m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals)   # Operation temperature [K]
-    m.P = pe.Var(m.N,  within=pe.NonNegativeReals)  # Stage pressure [atm]
+    m.L = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of liquid [mol/hr]
+    m.V = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of vapor [mol/hr]
+    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100))  # Molar composition of liquid [*]
+    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100))  # Molar composition of vapor [*]
+    m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(300, 500))   # Operation temperature [K]
+    m.P = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(m.Pop, 2))  # Stage pressure [atm]
     m.Z = pe.Var(m.N,  within=pe.NonNegativeReals)  # Compressibility coefficient [*]
-    m.RR = pe.Var(within=pe.NonNegativeReals)   # Reflux ratio [*]
-    m.Qc = pe.Var(within=pe.NonNegativeReals)   # Condensator duty [kJ/hr]
-    m.Qr = pe.Var(within=pe.NonNegativeReals)   # Reboiler duty [kJ/hr]
-    m.BR = pe.Var(within=pe.NonNegativeReals)   # Boil up [*]
+    m.RR = pe.Var(within=pe.NonNegativeReals, bounds=(10**-4, 10), initialize=0.01)   # Reflux ratio [*]
+    m.Qc = pe.Var(within=pe.NonNegativeReals, bounds=(6*10**4, 2*10**8), initialize=4*10**6)   # Condensator duty [kJ/hr]
+    m.Qr = pe.Var(within=pe.NonNegativeReals, bounds=(10**5, 10**8), initialize=6*10**6)   # Reboiler duty [kJ/hr]
+    m.BR = pe.Var(within=pe.NonNegativeReals, bounds=(0, 20), initialize=2)   # Boil up [*]
 
     # Hydraulic parameters
     m.d_hole = pe.Param(initialize=0.0127)   # Hole diameter [m]
@@ -42,14 +45,14 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.K0 = pe.Param(initialize=(880.6-(67.7*m.d_hole/m.tray_t)+(7.32*((m.d_hole/m.tray_t)**2))-(0.338*((m.d_hole/m.tray_t)**3)))*10**-3) # Hole coefficient [*]
 
     # Hydraulic variables
-    m.D = pe.Var(within=pe.NonNegativeReals)   # Column diameter [m]
-    m.Htotal = pe.Var(within=pe.NonNegativeReals)   # Total column height [m]
-    m.At = pe.Var(within=pe.NonNegativeReals)   # Active area [m**2]
-    m.Ad = pe.Var(within=pe.NonNegativeReals)   # Weir area [m**2]
-    m.A0 = pe.Var(within=pe.NonNegativeReals)   # Holed area [m**2]
-    m.poro = pe.Var(within=pe.NonNegativeReals)   # Plate porosity [*]
-    m.pitch = pe.Var(within=pe.NonNegativeReals)   # Distance between plate holes [m]
-    m.A_col = pe.Var(within=pe.NonNegativeReals)   # Cross section area [m**2]
+    m.D = pe.Var(within=pe.NonNegativeReals, bounds=(0.01, 10), initialize=1.23)   # Column diameter [m]
+    m.Htotal = pe.Var(within=pe.NonNegativeReals, bounds=(6, 30), initialize=10)   # Total column height [m]
+    m.At = pe.Var(within=pe.NonNegativeReals, initialize=0.299)   # Active area [m**2]
+    m.Ad = pe.Var(within=pe.NonNegativeReals, initialize=0.1*0.37)   # Weir area [m**2]
+    m.A0 = pe.Var(within=pe.NonNegativeReals, initialize=0.3*0.04)   # Holed area [m**2]
+    m.poro = pe.Var(within=pe.NonNegativeReals, initialize=0.907*sqrt(m.d_hole/(0.12*0.5)))   # Plate porosity [*]
+    m.pitch = pe.Var(within=pe.NonNegativeReals, initialize=0.12*0.6)   # Distance between plate holes [m]
+    m.A_col = pe.Var(within=pe.NonNegativeReals, initialize=0.373)   # Cross section area [m**2]
 
     # Hydraulic constraints
     @m.Constraint()
@@ -88,7 +91,6 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.zg = pe.Param(m.I, initialize=zg_init)
 
     # Operation parameters
-    m.Pop = pe.Param(initialize=1)   # Pressure at condenser [atm]
     m.Tali1 = pe.Param(initialize=305)   # Glycerol feed temperature [K]
     m.Tali2 = pe.Param(initialize=293.15)   # Azeotrope feed temperature [K]
     m.xReth = pe.Param(initialize=99.5)   # Desired composition of Ethanol in bottom [*]
@@ -146,12 +148,12 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.C4r = pe.Param(m.I, initialize=C4r_init)
     m.C5r = pe.Param(initialize=-141.26)
 
-    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(510, 860))
     @m.Constraint(m.N)
     def EqTcritm(m,n):
         return m.Tcritm[n] == (pe.sqrt(sum((m.x[i,n]/100)*m.Tcrit[i]/(m.Pcrit[i]**0.5) for i in m.I)))/(sum((m.x[i,n]/100)*m.Tcrit[i]/m.Pcrit[i] for i in m.I))
     
-    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals) # Liquid molar density [mol/m**3]
+    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(1000, 7000), initialize={'Water':50000, 'Ethanol':15000, 'Glycerol':15000}) # Liquid molar density [mol/m**3]
     @m.Constraint(m.I, m.N)
     def Eqrho12(m,i,n):
         if i != 'Water':
@@ -159,17 +161,17 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return m.rho[i,n] == ( m.C1r[i]+(m.C2r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(0.35))+(m.C3r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(2/3))+(m.C4r[i]*(1-(m.Temp[n]/m.Tcritm[n]))) + (m.C5r*(1-(m.Temp[n]/m.Tcritm[n]))**(4/3)) )*1000
 
-    m.rhoV = pe.Var(m.N, within=pe.NonNegativeReals) # Vapor molar density [mol/m**3]
+    m.rhoV = pe.Var(m.N, within=pe.NonNegativeReals, initialize=60) # Vapor molar density [mol/m**3]
     @m.Constraint(m.N)
     def EqrhoV(m,n):
         return m.rhoV[n] == m.P[n]/(m.R/101325*m.Temp[n])
 
-    m.Qliq = pe.Var(m.N, within=pe.NonNegativeReals) # Liquid volumetric flow [m**3/hr]
+    m.Qliq = pe.Var(m.N, within=pe.NonNegativeReals, initialize=6) # Liquid volumetric flow [m**3/hr]
     @m.Constraint(m.N)
     def EqQliq(m,n):
         return m.Qliq[n] == m.L[n]/sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)
 
-    m.Qvap = pe.Var(m.N, within=pe.NonNegativeReals) # Vapor volumetric flow [m**3/hr]
+    m.Qvap = pe.Var(m.N, within=pe.NonNegativeReals, initialize=4100) # Vapor volumetric flow [m**3/hr]
     @m.Constraint(m.N)
     def EqQvap(m,n):
         return m.Qvap[n] == m.V[n]/m.rhoV[n]
@@ -262,8 +264,8 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.Tref = pe.Param(initialize=298.15)    # Reference temperature [K]
     m.Hscale = pe.Param(initialize=1000)    # Scaling factor for entalphy
 
-    m.HVi = pe.Var(m.I, m.N, within=pe.Reals)
-    m.HV = pe.Var(m.N, within=pe.Reals)
+    m.HVi = pe.Var(m.I, m.N, within=pe.Reals, initialize=-400)
+    m.HV = pe.Var(m.N, within=pe.Reals, initialize=-400)
     @m.Constraint(m.I, m.N)
     def EqHVi(m,i,n):
         return m.HVi[i,n] == ( (m.C1c[i]*(m.Temp[n]-m.Tref)) + ((m.C2c[i]/2)*((m.Temp[n]**2)-(m.Tref**2)))+ ((m.C3c[i]/3)*((m.Temp[n]**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.Temp[n]**4)-(m.Tref**4))))/m.Hscale
@@ -582,7 +584,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Hydraulic relations por all internal stages
 
     # Define vapor velocity
-    m.far = pe.Var(m.N, within=pe.NonNegativeReals)     # Aeration factor [*]
+    m.far = pe.Var(m.N, within=pe.NonNegativeReals, initialize={n:0.35 for n in m.N if n != NT and n != 1})     # Aeration factor [*]
     @m.Constraint(m.N)
     def Eqfa(m,n):
         if n != NT and n != 1:
@@ -590,7 +592,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.hD = pe.Var(m.N, within=pe.NonNegativeReals)     # Liquid height over divisor [m]
+    m.hD = pe.Var(m.N, within=pe.NonNegativeReals, initialize=10**-2)     # Liquid height over divisor [m]
     @m.Constraint(m.N)
     def EqhD(m,n):
         if n != NT and n != 1:
@@ -641,7 +643,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
             return pe.Constraint.Skip
 
     # Pressure drop
-    m.DPL = pe.Var(m.N, within=pe.NonNegativeReals)   # Pressure drop due to liquid presence [atm]
+    m.DPL = pe.Var(m.N, within=pe.NonNegativeReals, initialize=9*10**-5)   # Pressure drop due to liquid presence [atm]
     @m.Constraint(m.N)
     def EqDPL(m,n):
         if n != NT and n != 1:
@@ -649,7 +651,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.DPS = pe.Var(m.N, within=pe.NonNegativeReals)   # Pressure drop due to hole presence (dry) [atm]
+    m.DPS = pe.Var(m.N, within=pe.NonNegativeReals, initialize=10**-4)   # Pressure drop due to hole presence (dry) [atm]
     @m.Constraint(m.N)
     def EqDPS(m,n):
         if n != NT and n != 1:
@@ -770,8 +772,8 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.anfact = pe.Param(initialize=0.25)    # Anualizing factor
 
     # Exchanger dimensions
-    m.Area_cond = pe.Var(within=pe.NonNegativeReals)  # Condenser area [m**2]
-    m.Area_reb = pe.Var(within=pe.NonNegativeReals)  # Reboiler area [m**2]
+    m.Area_cond = pe.Var(within=pe.NonNegativeReals, initialize=0.373)  # Condenser area [m**2]
+    m.Area_reb = pe.Var(within=pe.NonNegativeReals, initialize=73.94)  # Reboiler area [m**2]
 
     @m.Constraint()
     def def_a_cond(m):
@@ -784,11 +786,11 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Column design
     m.dliqprom = pe.Var(within=pe.NonNegativeReals)    # Average liquid density [kmol/m**3]
     m.dvapprom = pe.Var(within=pe.NonNegativeReals)    # Average vapor density [kmol/m**3]
-    m.mwpromliq = pe.Var(within=pe.NonNegativeReals)    # Average liquid molecular weight [kg/kmol]
-    m.mwpromvap = pe.Var(within=pe.NonNegativeReals)    # Average vapor molecular weight [kg/kmol]
+    m.mwpromliq = pe.Var(within=pe.NonNegativeReals, initialize=6/100)    # Average liquid molecular weight [kg/kmol]
+    m.mwpromvap = pe.Var(within=pe.NonNegativeReals, initialize=3/100)    # Average vapor molecular weight [kg/kmol]
     m.FP_prom = pe.Var(within=pe.NonNegativeReals)  # Average flow factor
     m.V_prom = pe.Var(within=pe.NonNegativeReals)   # Average vapor flow [kmol/hr]
-    m.cap_par = pe.Var(within=pe.NonNegativeReals)   # Capacity parameter
+    m.cap_par = pe.Var(within=pe.NonNegativeReals, initialize=410.7)   # Capacity parameter
     m.f_flood = pe.Var(within=pe.NonNegativeReals)   # Flooding parameter
     m.scaleflood = pe.Param(initialize=1000)    # Scaling factor for flooding
 
@@ -829,10 +831,10 @@ def minlp_extractive_column(NT=30,  visualize=False):
         return pe.sqrt(m.A_col*0.6*m.f_flood*m.scaleflood)*m.dvapprom*m.mwpromvap == pe.sqrt(m.mwpromvap*m.V_prom)
 
     # Construction costs
-    m.cost_cond = pe.Var(within=pe.NonNegativeReals)    # Cost of condenser [1E5 $]
-    m.cost_reb = pe.Var(within=pe.NonNegativeReals)    # Cost of reboiler [1E5 $]
-    m.cost_col = pe.Var(within=pe.NonNegativeReals)    # Cost of column [1E5 $]
-    m.cost_sta = pe.Var(within=pe.NonNegativeReals)    # Cost of stages [1E5 $]
+    m.cost_cond = pe.Var(within=pe.NonNegativeReals, initialize=20523)    # Cost of condenser [1E5 $]
+    m.cost_reb = pe.Var(within=pe.NonNegativeReals, initialize=10000)    # Cost of reboiler [1E5 $]
+    m.cost_col = pe.Var(within=pe.NonNegativeReals, initialize=20000)    # Cost of column [1E5 $]
+    m.cost_sta = pe.Var(within=pe.NonNegativeReals, initialize=10000)    # Cost of stages [1E5 $]
     m.tot_inf = pe.Var(within=pe.NonNegativeReals)    # Cost of infrastructure [1E5 $]
     m.scale_cost = pe.Param(initialize=100000)    # Scaling factor for costs
 
@@ -882,6 +884,9 @@ def minlp_extractive_column(NT=30,  visualize=False):
         return (m.CostMP + m.CostQr + m.CostQc - m.GanEth) +(m.tot_inf)
 
     m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)
+
+    # ______________________________ Section 20 ______________________________
+    # Variable bounds were established in declaration
 
 
     return m

@@ -578,6 +578,167 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def fixedV(m):
         return m.V[NT] == 0
 
+    # ______________________________ Section 18 ______________________________
+    # Hydraulic relations por all internal stages
+
+    # Define vapor velocity
+    m.far = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.35, 2))     # Aeration factor [*]
+    @m.Constraint(m.N)
+    def Eqfa(m,n):
+        if n != NT and n != 1:
+            return m.par[n]*(m.far[n])==m.par[n]*(0.981*pe.exp(-0.411*(m.Qvap[n]/3600)/m.At*(m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000)**(0.5)))
+        else:
+            return pe.Constraint.Skip
+
+    m.hD = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.01, 0.1))     # Liquid height over divisor [m]
+    @m.Constraint(m.N)
+    def EqhD(m,n):
+        if n != NT and n != 1:
+            return (m.hD[n]) == 0.6*((m.Qliq[n]/3600/m.Lw)**(2/3))
+        else:
+            return pe.Constraint.Skip
+
+    m.uhv = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.4, 10))     # Vapor velocity in hole [m/s]
+    @m.Constraint(m.N)
+    def Equhv(m,n):
+        if n != NT and n != 1:
+            return m.par[n]*(m.uhv[n]*m.A0) == m.par[n]*((m.V[n]/(m.rhoV[n])))/3600
+        else:
+            return pe.Constraint.Skip
+
+    m.unv = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.01, 0.89))     # Vapor velocity in plate  [m/s]
+    @m.Constraint(m.N)
+    def Equnv(m,n):
+        if n != NT and n != 1:
+            return m.par[n]*m.unv[n]*m.At == m.par[n]*((m.V[n]/(m.rhoV[n])))/3600
+        else:
+            return pe.Constraint.Skip
+
+    m.ul = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.001, 30))     # Liquid velocity in weir  [m/s]
+    @m.Constraint(m.N)
+    def Equl(m,n):
+        if n != NT and n != 1:
+            return m.par[n]*m.ul[n]*m.Ad == m.par[n]*((m.L[n]/sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)))/3600
+        else:
+            return pe.Constraint.Skip
+
+    # Liquid load
+    m.consmach = pe.Param(initialize=1*10**-20)
+    m.hcl = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(10**-6, 0.1))     # Liquid height in spray regime  [m]
+    @m.Constraint(m.N)
+    def Eqhcl(m,n):
+        if n != NT and n != 1:
+            return m.par[n]*m.hcl[n] == m.par[n]*((0.157*((m.poro+m.consmach)**(-0.791))/(1+1.04E-4*(((((m.L[n]+m.consmach)/sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)))/3600/m.Lw)**(-0.59))*((m.poro+m.consmach)**(-1.791))))*(m.d_hole**0.833)*(996/(sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000))**(0.5*(1-0.91*m.d_hole/(m.poro+m.consmach))))
+        else:
+            return pe.Constraint.Skip
+
+    m.Csbf = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0.1, 0.2))
+    @m.Constraint(m.N)
+    def EqCsbf(m,n):
+        if n != NT and n != 1:
+            return m.par[n]*(m.Csbf[n]) == m.par[n]*0.15
+        else:
+            return pe.Constraint.Skip
+
+    # Pressure drop
+    m.DPL = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(9*10**-5, 0.1))   # Pressure drop due to liquid presence [atm]
+    @m.Constraint(m.N)
+    def EqDPL(m,n):
+        if n != NT and n != 1:
+            return (m.DPL[n])==((m.far[n]*9.81*(sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000)*(m.hD[n]+m.hw))/101325)
+        else:
+            return pe.Constraint.Skip
+
+    m.DPS = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(1*10**-4, 0.01))   # Pressure drop due to hole presence (dry) [atm]
+    @m.Constraint(m.N)
+    def EqDPS(m,n):
+        if n != NT and n != 1:
+            return m.DPS[n] == 0.0001
+        else:
+            return pe.Constraint.Skip
+
+    m.DPq = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 0.1))   # Pressure drop at weir [atm]
+    @m.Constraint(m.N)
+    def EqDPq(m,n):
+        if n != NT and n != 1:
+            return m.DPq[n]*101325==1.62*((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000))/(pe.sqrt(m.Lw*m.hw))*(pe.sqrt((m.L[n]/sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)/3600))+pe.sqrt((m.V[n]/(m.rhoV[n])/3600)))
+        else:
+            return pe.Constraint.Skip
+
+    m.DP = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(0, 0.1))   # Total pressure drop [atm]
+    
+    # Define stage pressure
+    @m.Constraint()
+    def EqDPR(m):
+        return m.DP[NT] == m.DP[NT-1]
+
+    @m.Constraint(m.N)
+    def EqDP(m,n):
+        if n != NT and n != 1:
+            return (m.DP[n]) == (m.DPS[n]+m.DPL[n])
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def EqP(m,n):
+        if n != NT and n != 1:
+            return m.P[n] == m.P[n-1]+m.par[n]*m.DP[n]
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint()
+    def EqPC(m):
+        return m.P[1] == m.Pop
+
+    @m.Constraint()
+    def EqPR(m):
+        return m.P[NT] == m.P[NT-1]
+
+    # Undesired effects in the column
+    m.downF = pe.Var(m.N, within=pe.Reals)
+    @m.Constraint(m.N)
+    def DownFlood(m,n):     
+        if n != NT and n != 1:
+            return m.downF[n]*m.par[n]==((m.hD[n]+((m.DP[n]*101325+m.DPq[n]))/(9.81*(((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000))-(m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000))))-(m.HS))*m.par[n]
+        else:
+            return pe.Constraint.Skip
+
+    # Entrainment flooding
+    m.EntrainFloodLVar = pe.Var(m.N, within=pe.Reals)
+    m.EntrainFloodVVar = pe.Var(m.N, within=pe.Reals)
+    @m.Constraint(m.N)
+    def EntrainFloodV(m,n):     
+        if n != NT and n != 1:
+            return m.EntrainFloodVVar[n]*m.par[n] == m.par[n]*((m.unv[n])-(m.Csbf[n]*(((((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000))-(m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000)))/(m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000))**0.5))
+        else:
+            return pe.Constraint.Skip
+
+    @m.Constraint(m.N)
+    def EntrainFloodL(m,n):     
+        if n != NT and n != 1:
+            return m.EntrainFloodLVar[n]*m.par[n] == m.par[n]*((m.ul[n])-((m.sigma[n]*9.81*(((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000))-(m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000))/((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000)**2))**(1/4)))
+        else:
+            return pe.Constraint.Skip
+
+    # Weeping
+    @m.Constraint(m.N)
+    def Weep(m,n):     
+        if n != NT and n != 1:
+            return 0 >= (((0.68+0.12)/(((m.rhoV[n]*sum(m.MW[i]*m.y[i,n]/100 for i in m.I)/1000)/((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000)*9.81*m.far[n]*(m.hw+m.hD[n])))**0.5))-(m.uhv[n]))*m.par[n]
+        else:
+            return pe.Constraint.Skip
+    
+    # Column construction
+
+    # Column size
+    @m.Constraint()
+    def Size(m):     
+        return m.Htotal == ((1+m.Sfactor)*sum(m.HS*m.par[j] for j in range(2,NT)))
+
+    # Diameter-height relation
+    @m.Constraint()
+    def DtoLratio(m):     
+        return m.Htotal/m.D <= 20
 
 
     return m

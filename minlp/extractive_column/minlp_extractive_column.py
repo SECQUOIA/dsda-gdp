@@ -920,9 +920,9 @@ def minlp_extractive_column(NT=30,  visualize=False):
     opt = SolverFactory(solvername, solver='baron')
     results = opt.solve(m, tee=True,
                         # Uncomment the following lines if you want to save GAMS models
-                        keepfiles=True,
-                        tmpdir=gams_path,
-                        symbolic_solver_labels=True,
+                        #keepfiles=True,
+                        #tmpdir=gams_path,
+                        #symbolic_solver_labels=True,
 
                         add_options=[
                             'option reslim = 600;'

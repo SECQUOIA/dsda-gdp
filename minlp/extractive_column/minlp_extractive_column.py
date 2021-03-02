@@ -182,7 +182,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Constants for DIPPR equation
     C1sig_init = {'Water':0.17766, 'Ethanol':0.0241005, 'Glycerol':0.0645335}
     m.C1sig = pe.Param(m.I, initialize=C1sig_init)
-    C2sig_init = {'Water':2.567, 'Ethanol':-7.75658*10**-5, 'Glycerol':-5.38024}
+    C2sig_init = {'Water':2.567, 'Ethanol':-7.75658*10**-5, 'Glycerol':-5.38024*10**-5}
     m.C2sig = pe.Param(m.I, initialize=C2sig_init)
     C3sig_init = {'Water':-3.3377, 'Ethanol':-1.025*10**-7, 'Glycerol':-2.1558*10**-7}
     m.C3sig = pe.Param(m.I, initialize=C3sig_init)

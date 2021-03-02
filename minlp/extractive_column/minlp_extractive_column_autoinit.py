@@ -1,6 +1,7 @@
 import pyomo.environ as pe
 import networkx as nx
 import matplotlib.pyplot as plt
+import numpy as np
 from math import (sqrt, pi, exp, log)
 from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
@@ -25,12 +26,26 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Dependences
     # D / Temp / x / y
 
+    x_init = {}
+    y_init = {}
+    for n in m.N:
+        #x_init[(i,n)] = 30
+        #y_init[(i,n)] = 30
+
+        x_init[('Water',n)] = 1.03159004
+        y_init[('Water',n)] = 0.48
+        x_init[('Ethanol',n)] = 30.1285211
+        y_init[('Ethanol',n)] = 99.5
+        x_init[('Glycerol',n)] = 68.8398887
+        y_init[('Glycerol',n)] = 0.01
+
+
     # Variables
-    m.L = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of liquid [mol/hr]
-    m.V = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of vapor [mol/hr]
-    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=30)  # Molar composition of liquid [*]
-    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=30)  # Molar composition of vapor [*]
-    m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(300, 500), initialize=400)   # Operation temperature [K]
+    m.L = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6), initialize=75500)  # Flow of liquid [mol/hr]
+    m.V = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6), initialize=90300)  # Flow of vapor [mol/hr]
+    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=x_init)  # Molar composition of liquid [*]
+    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=y_init)  # Molar composition of vapor [*]
+    m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(300, 500), initialize=368.92)   # Operation temperature [K]
     m.P = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(m.Pop, 2), initialize=1)  # Stage pressure [atm]
     m.Z = pe.Var(m.N,  within=pe.NonNegativeReals)  # Compressibility coefficient [*]
     m.RR = pe.Var(within=pe.NonNegativeReals, bounds=(10**-4, 10), initialize=0.01)   # Reflux ratio [*]
@@ -130,6 +145,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
             Psat_init[(i,n)]=1/1.01325*exp(m.C1a[i] + (m.C2a[i]/(pe.value(m.Temp[n])+m.C3a[i])) + (m.C4a[i]*pe.value(m.Temp[n])) + (m.C5a[i]*log(pe.value(m.Temp[n])) + (m.C6a[i]*(pe.value(m.Temp[n])**m.C7a[i]))) )
 
     m.Psat = pe.Var(m.I, m.N, within=pe.NonNegativeReals, initialize=Psat_init)   # Saturation pressure [atm]
+
     @m.Constraint(m.I, m.N)
     def EqPsat(m,i,n):
         return m.Psat[i,n] == 1/1.01325*pe.exp(m.C1a[i] + (m.C2a[i]/(m.Temp[n]+m.C3a[i])) + (m.C4a[i]*m.Temp[n]) + (m.C5a[i]*pe.log(m.Temp[n]) + (m.C6a[i]*(m.Temp[n]**m.C7a[i]))) )
@@ -158,32 +174,55 @@ def minlp_extractive_column(NT=30,  visualize=False):
 
     Tcritm_init = {}
     for n in m.N:
-        
+        Tcritm_init[n] = sum((pe.value(m.x[i,n])/100)*m.Tcrit[i] for i in m.I)
+ 
+    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(510, 860), initialize=Tcritm_init)   #745
 
-    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(510, 860), initialize=750)
     @m.Constraint(m.N)
     def EqTcritm(m,n):
-        return m.Tcritm[n] == (pe.sqrt(sum((m.x[i,n]/100)*m.Tcrit[i]/(m.Pcrit[i]**0.5) for i in m.I)))/(sum((m.x[i,n]/100)*m.Tcrit[i]/m.Pcrit[i] for i in m.I))
+        return m.Tcritm[n] == (sum((m.x[i,n]/100)*m.Tcrit[i] for i in m.I))
+
+    rho_init = {}
+    for n in m.N:
+        for i in m.I:
+            if i != 'Water':
+                rho_init[(i,n)] = np.real(( m.C1r[i]/(m.C2r[i]**(1+((1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**m.C4r[i]))) )*1000)
+            else:
+                rho_init[(i,n)] = np.real(( m.C1r[i]+(m.C2r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(0.35))+(m.C3r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(2/3))+(m.C4r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))) + (pe.value(m.C5r)*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(4/3)) )*1000)
+
     
-    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(1000, 70000), initialize=30000) # Liquid molar density [mol/m**3]
+    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(1000, 70000), initialize=rho_init) # Liquid molar density [mol/m**3]
+
     @m.Constraint(m.I, m.N)
     def Eqrho12(m,i,n):
         if i != 'Water':
-            return m.rho[i,n] == ( m.C1r[i]/(m.C2r[i]**(1+((1-(m.Temp[n]/m.Tcritm[n]))**m.C4r[i]))) )*1000
+            return m.rho[i,n] == np.real( m.C1r[i]/(m.C2r[i]**(1+((1-(m.Temp[n]/m.Tcritm[n]))**m.C4r[i]))) )*1000
         else:
-            return m.rho[i,n] == ( m.C1r[i]+(m.C2r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(0.35))+(m.C3r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(2/3))+(m.C4r[i]*(1-(m.Temp[n]/m.Tcritm[n]))) + (m.C5r*(1-(m.Temp[n]/m.Tcritm[n]))**(4/3)) )*1000
+            return m.rho[i,n] == np.real( m.C1r[i]+(m.C2r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(0.35))+(m.C3r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(2/3))+(m.C4r[i]*(1-(m.Temp[n]/m.Tcritm[n]))) + (m.C5r*(1-(m.Temp[n]/m.Tcritm[n]))**(4/3)) )*1000
 
-    m.rhoV = pe.Var(m.N, within=pe.NonNegativeReals, initialize=60) # Vapor molar density [mol/m**3]
+    rhoV_init = {}
+    for n in m.N:
+        rhoV_init[n] = pe.value(m.P[n])/(m.R/101325*pe.value(m.Temp[n]))
+
+    m.rhoV = pe.Var(m.N, within=pe.NonNegativeReals, initialize=rhoV_init) # Vapor molar density [mol/m**3]
     @m.Constraint(m.N)
     def EqrhoV(m,n):
         return m.rhoV[n] == m.P[n]/(m.R/101325*m.Temp[n])
 
-    m.Qliq = pe.Var(m.N, within=pe.NonNegativeReals, initialize=6) # Liquid volumetric flow [m**3/hr]
+    Qliq_init = {}
+    for n in m.N:
+        Qliq_init[n] = pe.value(m.L[n])/sum(pe.value(m.rho[i,n])*pe.value(m.x[i,n])/100 for i in m.I)
+
+    m.Qliq = pe.Var(m.N, within=pe.NonNegativeReals, initialize=Qliq_init) # Liquid volumetric flow [m**3/hr]
     @m.Constraint(m.N)
     def EqQliq(m,n):
         return m.Qliq[n] == m.L[n]/sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)
 
-    m.Qvap = pe.Var(m.N, within=pe.NonNegativeReals, initialize=4100) # Vapor volumetric flow [m**3/hr]
+    Qvap_init = {}
+    for n in m.N:
+        Qvap_init[n] = pe.value(m.V[n])/pe.value(m.rhoV[n])
+
+    m.Qvap = pe.Var(m.N, within=pe.NonNegativeReals, initialize=Qvap_init) # Vapor volumetric flow [m**3/hr]
     @m.Constraint(m.N)
     def EqQvap(m,n):
         return m.Qvap[n] == m.V[n]/m.rhoV[n]
@@ -194,18 +233,23 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Constants for DIPPR equation
     C1sig_init = {'Water':0.17766, 'Ethanol':0.0241005, 'Glycerol':0.0645335}
     m.C1sig = pe.Param(m.I, initialize=C1sig_init)
-    C2sig_init = {'Water':2.567, 'Ethanol':-7.75658*10**-5, 'Glycerol':-5.38024}
+    C2sig_init = {'Water':2.567, 'Ethanol':-7.75658*10**-5, 'Glycerol':-5.38024*10**-5}
     m.C2sig = pe.Param(m.I, initialize=C2sig_init)
     C3sig_init = {'Water':-3.3377, 'Ethanol':-1.025*10**-7, 'Glycerol':-2.1558*10**-7}
     m.C3sig = pe.Param(m.I, initialize=C3sig_init)
     C4sig_init = {'Water':1.9699, 'Ethanol':0, 'Glycerol':0}
     m.C4sig = pe.Param(m.I, initialize=C4sig_init)
 
-    m.sigma = pe.Var(m.N, within=pe.NonNegativeReals) # Liquid-vapor superficial tension [N/m]
+    sigma_init = {}
+    for n in m.N:
+        sigma_init[n] = sum((pe.value(m.x[i,n])/100)*m.C1sig[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(m.C2sig[i]+m.C3sig[i]*(pe.value(m.Temp[n])/pe.value(m.Tcritm[n]))+m.C4sig[i]*((pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**2) for i in m.I)
+
+    m.sigma = pe.Var(m.N, within=pe.NonNegativeReals, initialize=sigma_init) # Liquid-vapor superficial tension [N/m]
     @m.Constraint(m.N)
     def Eqsigma(m,n):
         return m.sigma[n] == sum((m.x[i,n]/100)*m.C1sig[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(m.C2sig[i]+m.C3sig[i]*(m.Temp[n]/m.Tcritm[n])+m.C4sig[i]*((m.Temp[n]/m.Tcritm[n]))**2) for i in m.I)
 
+    print(pe.value(m.sigma[3]))
     # ______________________________ Sections 8-9 ______________________________
     # Calculation of activity coefficient using NRTL model
 
@@ -937,7 +981,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
                         symbolic_solver_labels=True,
 
                         add_options=[
-                            'option reslim = 600;'
+                            'option reslim = 10;'
                             'option optcr = 0.0;'
                             'option nlp = conopt4;'
                             # Uncomment the following lines to setup IIS computation of BARON through option file

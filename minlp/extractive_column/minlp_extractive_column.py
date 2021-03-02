@@ -27,7 +27,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.V = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of vapor [mol/hr]
     m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=1/3)  # Molar composition of liquid [*]
     m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=1/3)  # Molar composition of vapor [*]
-    m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(300, 500))   # Operation temperature [K]
+    m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(300, 500), initialize=400)   # Operation temperature [K]
     m.P = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(m.Pop, 2))  # Stage pressure [atm]
     m.Z = pe.Var(m.N,  within=pe.NonNegativeReals)  # Compressibility coefficient [*]
     m.RR = pe.Var(within=pe.NonNegativeReals, bounds=(10**-4, 10), initialize=0.01)   # Reflux ratio [*]
@@ -52,7 +52,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.A0 = pe.Var(within=pe.NonNegativeReals, initialize=0.3*0.04)   # Holed area [m**2]
     m.poro = pe.Var(within=pe.NonNegativeReals, initialize=0.907*sqrt(m.d_hole/(0.12*0.5)))   # Plate porosity [*]
     m.pitch = pe.Var(within=pe.NonNegativeReals, initialize=0.12*0.6)   # Distance between plate holes [m]
-    m.A_col = pe.Var(within=pe.NonNegativeReals, initialize=0.373)   # Cross section area [m**2]
+    m.A_col = pe.Var(within=pe.NonNegativeReals, initialize=5)   # Cross section area [m**2]
 
     # Hydraulic constraints
     @m.Constraint()
@@ -148,12 +148,12 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.C4r = pe.Param(m.I, initialize=C4r_init)
     m.C5r = pe.Param(initialize=-141.26)
 
-    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(510, 860))
+    m.Tcritm = pe.Var(m.N, within=pe.NonNegativeReals, bounds=(510, 860), initialize=750)
     @m.Constraint(m.N)
     def EqTcritm(m,n):
         return m.Tcritm[n] == (pe.sqrt(sum((m.x[i,n]/100)*m.Tcrit[i]/(m.Pcrit[i]**0.5) for i in m.I)))/(sum((m.x[i,n]/100)*m.Tcrit[i]/m.Pcrit[i] for i in m.I))
     
-    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(1000, 7000), initialize={'Water':50000, 'Ethanol':15000, 'Glycerol':15000}) # Liquid molar density [mol/m**3]
+    m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(1000, 70000), initialize=30000) # Liquid molar density [mol/m**3]
     @m.Constraint(m.I, m.N)
     def Eqrho12(m,i,n):
         if i != 'Water':
@@ -628,7 +628,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.unv = pe.Var(m.N, within=pe.NonNegativeReals)     # Vapor velocity in plate  [m/s]
+    m.unv = pe.Var(m.N, within=pe.NonNegativeReals, initialize=10)     # Vapor velocity in plate  [m/s]
     @m.Constraint(m.N)
     def Equnv(m,n):
         if n != NT and n != 1:
@@ -792,7 +792,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.anfact = pe.Param(initialize=0.25)    # Anualizing factor
 
     # Exchanger dimensions
-    m.Area_cond = pe.Var(within=pe.NonNegativeReals, initialize=0.373)  # Condenser area [m**2]
+    m.Area_cond = pe.Var(within=pe.NonNegativeReals, initialize=39.82)  # Condenser area [m**2]
     m.Area_reb = pe.Var(within=pe.NonNegativeReals, initialize=73.94)  # Reboiler area [m**2]
 
     @m.Constraint()
@@ -917,7 +917,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
             gams_path + ' does not exist. We will create it')
         os.makedirs(gams_path)
     solvername = 'gams'
-    opt = SolverFactory(solvername, solver='dicopt')
+    opt = SolverFactory(solvername, solver='baron')
     results = opt.solve(m, tee=True,
                         # Uncomment the following lines if you want to save GAMS models
                         keepfiles=True,

@@ -25,10 +25,10 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Variables
     m.L = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of liquid [mol/hr]
     m.V = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(0, 10**6))  # Flow of vapor [mol/hr]
-    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=1/3)  # Molar composition of liquid [*]
-    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=1/3)  # Molar composition of vapor [*]
+    m.x = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=30)  # Molar composition of liquid [*]
+    m.y = pe.Var(m.I, m.N,  within=pe.NonNegativeReals, bounds=(0, 100), initialize=30)  # Molar composition of vapor [*]
     m.Temp = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(300, 500), initialize=400)   # Operation temperature [K]
-    m.P = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(m.Pop, 2))  # Stage pressure [atm]
+    m.P = pe.Var(m.N,  within=pe.NonNegativeReals, bounds=(m.Pop, 2), initialize=1)  # Stage pressure [atm]
     m.Z = pe.Var(m.N,  within=pe.NonNegativeReals)  # Compressibility coefficient [*]
     m.RR = pe.Var(within=pe.NonNegativeReals, bounds=(10**-4, 10), initialize=0.01)   # Reflux ratio [*]
     m.Qc = pe.Var(within=pe.NonNegativeReals, bounds=(6*10**4, 2*10**8), initialize=4*10**6)   # Condensator duty [kJ/hr]
@@ -927,13 +927,13 @@ def minlp_extractive_column(NT=30,  visualize=False):
                         add_options=[
                             'option reslim = 600;'
                             'option optcr = 0.0;'
-                            'option nlp = conopt4'
+                            'option nlp = conopt4;'
                             # Uncomment the following lines to setup IIS computation of BARON through option file
-                            # 'GAMS_MODEL.optfile = 1;'
-                            # '\n'
-                            # '$onecho > baron.opt \n'
-                            # 'CompIIS 1 \n'
-                            # '$offecho'
+                            #'GAMS_MODEL.optfile = 1;'
+                            #'\n'
+                            #'$onecho > baron.opt \n'
+                            #'CompIIS 1 \n'
+                            #'$offecho'
                         ])
 
     print('Objective:', round(pe.value(m.obj), 3))

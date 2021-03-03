@@ -30,15 +30,93 @@ def minlp_extractive_column(NT=30,  visualize=False):
 
     x_init = {}
     y_init = {}
-    for n in m.N:
-        #x_init[(i,n)] = 30
-        #y_init[(i,n)] = 30
+    Temp_init = {}
 
-        x_init[('Water', n)] = 1.03159004
+    Temp_init[1]=351.39
+    Temp_init[2]=368.92
+    Temp_init[3]=369.42
+    Temp_init[4]=370.12
+    Temp_init[5]=371.02
+    Temp_init[6]=372.08
+    Temp_init[7]=373
+    Temp_init[8]=374
+    Temp_init[9]=375
+    Temp_init[10]=376
+    Temp_init[11]=376
+    Temp_init[12]=374
+    Temp_init[13]=357
+    Temp_init[14]=358
+    Temp_init[15]=362
+    Temp_init[16]=376
+    Temp_init[30]=446.39
+
+    x_init[('Water', 1)]=0.4862
+    x_init[('Water', 2)]=1.03
+    x_init[('Water', 3)]=2.26
+    x_init[('Water', 4)]=3.86
+    x_init[('Water', 5)]=5.78
+    x_init[('Water', 6)]=7.87
+    x_init[('Water', 7)]=9.89
+    x_init[('Water', 8)]=11.68
+    x_init[('Water', 9)]=13.11
+    x_init[('Water', 10)]=14.19
+    x_init[('Water', 11)]=15.05
+    x_init[('Water', 12)]=16.40
+    x_init[('Water', 13)]=19.69
+    x_init[('Water', 14)]=30.62
+    x_init[('Water', 15)]=53.69
+    x_init[('Water', 16)]=68.51
+    x_init[('Water', 30)]=21.88
+
+    x_init[('Ethanol', 1)]=99.5
+    x_init[('Ethanol', 2)]=30.12
+    x_init[('Ethanol', 3)]=28.91
+    x_init[('Ethanol', 4)]=27.33
+    x_init[('Ethanol', 5)]=25.47
+    x_init[('Ethanol', 6)]=23.48
+    x_init[('Ethanol', 7)]=21.58
+    x_init[('Ethanol', 8)]=19.95
+    x_init[('Ethanol', 9)]=18.67
+    x_init[('Ethanol', 10)]=17.76
+    x_init[('Ethanol', 11)]=17.31
+    x_init[('Ethanol', 12)]=18.48
+    x_init[('Ethanol', 13)]=53.61
+    x_init[('Ethanol', 14)]=42.56
+    x_init[('Ethanol', 15)]=19.42
+    x_init[('Ethanol', 16)]=3.44
+    x_init[('Ethanol', 30)]=0.11
+    
+    x_init[('Glycerol', 1)]=0.01
+    x_init[('Glycerol', 2)]=68.83
+    x_init[('Glycerol', 3)]=68.82
+    x_init[('Glycerol', 4)]=68.79
+    x_init[('Glycerol', 5)]=68.74
+    x_init[('Glycerol', 6)]=68.64
+    x_init[('Glycerol', 7)]=68.51
+    x_init[('Glycerol', 8)]=68.36
+    x_init[('Glycerol', 9)]=68.2
+    x_init[('Glycerol', 10)]=68.04
+    x_init[('Glycerol', 11)]=67.62
+    x_init[('Glycerol', 12)]=65.11
+    x_init[('Glycerol', 13)]=26.68
+    x_init[('Glycerol', 14)]=26.81
+    x_init[('Glycerol', 15)]=26.87
+    x_init[('Glycerol', 16)]=28.04
+    x_init[('Glycerol', 30)]=77.99
+
+    for n in range(17,30):
+        x_init[('Water', n)]=68.51
+        x_init[('Ethanol', n)]=3.44
+        x_init[('Glycerol', n)]=28.04
+        Temp_init[n]=376.2923
+
+
+    for n in m.N:
+        #x_init[('Water', n)] = 1.03159004
         y_init[('Water', n)] = 0.48
-        x_init[('Ethanol', n)] = 30.1285211
+        #x_init[('Ethanol', n)] = 30.1285211
         y_init[('Ethanol', n)] = 99.5
-        x_init[('Glycerol', n)] = 68.8398887
+        #x_init[('Glycerol', n)] = 68.8398887
         y_init[('Glycerol', n)] = 0.01
 
     # Variables
@@ -59,9 +137,9 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.RR = pe.Var(within=pe.NonNegativeReals, bounds=(
         10**-4, 10), initialize=0.058)   # Reflux ratio [*]
     m.Qc = pe.Var(within=pe.NonNegativeReals, bounds=(
-        6*10**4, 2*10**8), initialize=4*10**6)   # Condensator duty [kJ/hr]
+        6*10**4, 2*10**8), initialize=3635108)   # Condensator duty [kJ/hr]
     m.Qr = pe.Var(within=pe.NonNegativeReals, bounds=(
-        10**5, 10**8), initialize=6*10**6)   # Reboiler duty [kJ/hr]
+        10**5, 10**8), initialize=6144494)   # Reboiler duty [kJ/hr]
     m.BR = pe.Var(within=pe.NonNegativeReals, bounds=(
         0, 20), initialize=2)   # Boil up [*]
 
@@ -1034,8 +1112,6 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def Size(m):
         return m.Htotal == ((1+m.Sfactor)*sum(m.HS*m.par[j] for j in range(2, NT)))
 
-    print(pe.value(m.Htotal))
-
     # Diameter-height relation
     @m.Constraint()
     def DtoLratio(m):
@@ -1076,10 +1152,8 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.anfact = pe.Param(initialize=0.25)    # Anualizing factor
 
     # Exchanger dimensions
-    m.Area_cond = pe.Var(within=pe.NonNegativeReals,
-                         initialize=39.82)  # Condenser area [m**2]
-    m.Area_reb = pe.Var(within=pe.NonNegativeReals,
-                        initialize=73.94)  # Reboiler area [m**2]
+    m.Area_cond = pe.Var(within=pe.NonNegativeReals,initialize=1.25*pe.value(m.Qc)/(m.Ucond*m.lmtd_cond))  # Condenser area [m**2]
+    m.Area_reb = pe.Var(within=pe.NonNegativeReals,initialize=1.25*pe.value(m.Qr)/(m.Ureb*m.lmtd_reb))  # Reboiler area [m**2]
 
     @m.Constraint()
     def def_a_cond(m):
@@ -1090,49 +1164,50 @@ def minlp_extractive_column(NT=30,  visualize=False):
         return m.Area_reb*m.Ureb*m.lmtd_reb == 1.25*m.Qr
 
     # Column design
-    # Average liquid density [kmol/m**3]
-    m.dliqprom = pe.Var(within=pe.NonNegativeReals)
-    # Average vapor density [kmol/m**3]
-    m.dvapprom = pe.Var(within=pe.NonNegativeReals)
-    # Average liquid molecular weight [kg/kmol]
-    m.mwpromliq = pe.Var(within=pe.NonNegativeReals, initialize=6/100)
-    # Average vapor molecular weight [kg/kmol]
-    m.mwpromvap = pe.Var(within=pe.NonNegativeReals, initialize=3/100)
-    m.FP_prom = pe.Var(within=pe.NonNegativeReals)  # Average flow factor
-    # Average vapor flow [kmol/hr]
-    m.V_prom = pe.Var(within=pe.NonNegativeReals)
-    m.cap_par = pe.Var(within=pe.NonNegativeReals,
-                       initialize=410.7)   # Capacity parameter
-    m.f_flood = pe.Var(within=pe.NonNegativeReals)   # Flooding parameter
-    m.scaleflood = pe.Param(initialize=1000)    # Scaling factor for flooding
 
+    dliqprom_init = sum(pe.value(m.par[n])*pe.value(m.rho[i, n])*pe.value(m.x[i, n]) for i in m.I for n in m.N)/sum(pe.value(m.par[n]) for n in m.N)/100
+    m.dliqprom = pe.Var(within=pe.NonNegativeReals, initialize=dliqprom_init) # Average liquid density [kmol/m**3]
     @m.Constraint()
     def Eqdliqprom(m):
         return m.dliqprom == sum(m.par[n]*m.rho[i, n]*m.x[i, n] for i in m.I for n in m.N)/sum(m.par[n] for n in m.N)/100
 
+    dvapprom_init = sum(pe.value(m.par[n])*pe.value(m.rhoV[n]) for n in m.N)/sum(pe.value(m.par[n]) for n in m.N)
+    m.dvapprom = pe.Var(within=pe.NonNegativeReals, initialize=dvapprom_init)     # Average vapor density [kmol/m**3]
     @m.Constraint()
     def Eqdvapprom(m):
         return m.dvapprom == sum(m.par[n]*m.rhoV[n] for n in m.N)/sum(m.par[n] for n in m.N)
 
+    mwpromliq_init = (sum(pe.value(m.par[n])*pe.value(m.MW[i])*pe.value(m.x[i, n])/100 for i in m.I for n in m.N)/1000)/sum(pe.value(m.par[n]) for n in m.N)
+    m.mwpromliq = pe.Var(within=pe.NonNegativeReals, initialize=mwpromliq_init) # Average liquid molecular weight [kg/kmol]
     @m.Constraint()
     def Eqmwpromliq(m):
         return m.mwpromliq == (sum(m.par[n]*m.MW[i]*m.x[i, n]/100 for i in m.I for n in m.N)/1000)/sum(m.par[n] for n in m.N)
 
+    mwpromvap_init =(sum(pe.value(m.par[n])*pe.value(m.MW[i])*pe.value(m.y[i, n])/100 for i in m.I for n in m.N)/1000)/sum(pe.value(m.par[n]) for n in m.N)
+    m.mwpromvap = pe.Var(within=pe.NonNegativeReals, initialize=mwpromvap_init) # Average vapor molecular weight [kg/kmol]
     @m.Constraint()
     def Eqmwpromvap(m):
         return m.mwpromvap == (sum(m.par[n]*m.MW[i]*m.y[i, n]/100 for i in m.I for n in m.N)/1000)/sum(m.par[n] for n in m.N)
 
+    V_prom_init = sum(pe.value(m.par[n])*pe.value(m.V[n]) for n in m.N)/sum(pe.value(m.par[n]) for n in m.N)
+    m.V_prom = pe.Var(within=pe.NonNegativeReals, initialize=V_prom_init) # Average vapor flow [kmol/hr]
     @m.Constraint()
     def EqV_prom(m):
         return m.V_prom == sum(m.par[n]*m.V[n] for n in m.N)/sum(m.par[n] for n in m.N)
 
+    m.FP_prom = pe.Var(within=pe.NonNegativeReals, initialize=0.07)  # Average flow factor
     @m.Constraint()
     def EqFP_prom(m):
         return m.FP_prom == 0.07
 
+    cap_par_init = pe.value(m.c0_fair)/(1+m.c1_fair*(m.FP_prom**m.c2_fair))
+    m.cap_par = pe.Var(within=pe.NonNegativeReals,initialize=cap_par_init)   # Capacity parameter
     @m.Constraint()
     def Eqcap_par(m):
         return m.cap_par*(1+m.c1_fair*(m.FP_prom**m.c2_fair)) == m.c0_fair
+
+    m.f_flood = pe.Var(within=pe.NonNegativeReals, initialize=10)   # Flooding parameter
+    m.scaleflood = pe.Param(initialize=1000)    # Scaling factor for flooding
 
     @m.Constraint()
     def Eqf_flood(m):
@@ -1143,33 +1218,42 @@ def minlp_extractive_column(NT=30,  visualize=False):
         return pe.sqrt(m.A_col*0.6*m.f_flood*m.scaleflood)*m.dvapprom*m.mwpromvap == pe.sqrt(m.mwpromvap*m.V_prom)
 
     # Construction costs
-    # Cost of condenser [1E5 $]
-    m.cost_cond = pe.Var(within=pe.NonNegativeReals, initialize=20523)
-    # Cost of reboiler [1E5 $]
-    m.cost_reb = pe.Var(within=pe.NonNegativeReals, initialize=10000)
-    m.cost_col = pe.Var(within=pe.NonNegativeReals,
-                        initialize=20000)    # Cost of column [1E5 $]
-    m.cost_sta = pe.Var(within=pe.NonNegativeReals,
-                        initialize=10000)    # Cost of stages [1E5 $]
     # Cost of infrastructure [1E5 $]
     m.tot_inf = pe.Var(within=pe.NonNegativeReals)
     m.scale_cost = pe.Param(initialize=100000)    # Scaling factor for costs
 
+    # Cost of condenser [1E5 $]
+    cost_cond_init = (m.I2/m.I1)*10**(3.7803+(0.8569*pe.log10(pe.value(m.Area_cond)))+0.0349*pe.sqrt(pe.log10(pe.value(m.Area_cond))))
+    m.cost_cond = pe.Var(within=pe.NonNegativeReals, initialize=240913)
     @m.Constraint()
     def Eqcost_cond(m):
         return m.cost_cond == (m.I2/m.I1)*10**(3.7803+(0.8569*pe.log10(m.Area_cond))+0.0349*pe.sqrt(pe.log10(m.Area_cond)))
+    #print(pe.value(m.cost_cond))
 
+    # Cost of reboiler [1E5 $]
+    cost_reb_init = (pe.value(m.I2)/pe.value(m.I1))*10**(4.4646-(0.5277*pe.log10(pe.value(m.Area_reb)))+0.3955*pe.sqrt(pe.log10(pe.value(m.Area_reb))))
+    m.cost_reb = pe.Var(within=pe.NonNegativeReals, initialize=132826)
     @m.Constraint()
     def Eqcost_reb(m):
         return m.cost_reb == (m.I2/m.I1)*10**(4.4646-(0.5277*pe.log10(m.Area_reb))+0.3955*pe.sqrt(pe.log10(m.Area_reb)))
 
+    #print(pe.value(m.cost_reb))
+
+    cost_col_init = (m.I2/m.I1)*10**(3.4974+(0.4485*pe.log10(pe.value(m.Htotal)*pe.value(m.A_col)))+0.1074*pe.sqrt(pe.log10(pe.value(m.Htotal)*pe.value(m.A_col))))
+    m.cost_col = pe.Var(within=pe.NonNegativeReals,initialize=12972)    # Cost of column [1E5 $]
     @m.Constraint()
     def Eqcost_col(m):
         return m.cost_col == (m.I2/m.I1)*10**(3.4974+(0.4485*pe.log10(m.Htotal*m.A_col))+0.1074*pe.sqrt(pe.log10(m.Htotal*m.A_col)))
 
+    cost_sta_init = (m.I2/m.I1)*(sum(pe.value(m.par[n]) for n in m.N)-2)*10**(2.9949+(0.4465*pe.log10(pe.value(m.A_col)))+0.3961*pe.sqrt(pe.log10(pe.value(m.A_col))))
+    m.cost_sta = pe.Var(within=pe.NonNegativeReals,initialize=15950)    # Cost of stages [1E5 $]
     @m.Constraint()
     def Eqcost_sta(m):
         return m.cost_sta == (m.I2/m.I1)*(sum(m.par[n] for n in m.N)-2)*10**(2.9949+(0.4465*pe.log10(m.A_col))+0.3961*pe.sqrt(pe.log10(m.A_col)))
+
+    #print(pe.value(m.cost_sta))
+    print(pe.value(m.Area_cond))
+    print(pe.value(m.Htotal))
 
     @m.Constraint()
     def Eqtot_inf(m):
@@ -1222,7 +1306,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
                         # symbolic_solver_labels=True,
 
                         add_options=[
-                            'option reslim = 10;'
+                            'option reslim = 4000;'
                             'option optcr = 0.0;'
                             'option nlp = conopt4;'
                             # Uncomment the following lines to setup IIS computation of BARON through option file

@@ -33,7 +33,7 @@ def list_generator(NT):
 
 def complete_enumeration(NT):
     X1, X2 = list_generator(NT)
-
+    feas_x, feas_y = [], []
     print('=============================')
     print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
     print('-----------------------------')
@@ -43,16 +43,19 @@ def complete_enumeration(NT):
         m, status, _ = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=x,provide_init=False,init={})
         if status == pe.SolverStatus.ok:
             print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 2)))
+            feas_x.append(X1[i])
+            feas_y.append(X2[i])
         else:
             print('%6s %6s %12s' % (X1[i], X2[i], 'Infeas'))
     print('=============================')
-    
+    return feas_x, feas_y
 
 
-def visualization(NT, points, only_feasibles=False, out1=[], out2=[]):
-    X1, X2 = list_generator(NT)
+def visualization(NT, points, show_feasibles=False, feas_x=[], feas_y=[]):
+    X1, X2 = [], []
 
-    
+    if show_feasibles:
+        X1, X2 = feas_x, feas_y
 
     def drawArrow(A, B):
         plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005,
@@ -302,18 +305,19 @@ def dsda(NT, k='inf', visualize=False):
 
     t_end = round(time.process_time() - t_start, 2)
 
-    if visualize:
-        visualization(NT, route)
-
     # Return visited points / final point / objective at that point / execution time
-    return route[-1], round(fmin, 2), t_end
+    return route, round(fmin, 2), t_end
 
 
 if __name__ == "__main__":
     NT = 17
     k = 'inf'  # or k = '2'
-    complete_enumeration(NT)
-    print(dsda(NT, k, visualize=True))
+    #x, y = complete_enumeration(NT)
+    route, fmin, time = dsda(NT, k)
+    print(route[-1], fmin, time)
+
+    # To run show_feasibles = True option, x and y must by initialized by running complete_enumeration
+    #visualization(NT,route, show_feasibles=True, feas_x=x, feas_y=y)
     
 
 

@@ -384,9 +384,9 @@ def minlp_extractive_column(NT=30,  visualize=False):
     yr_init = {n:0 for n in m.N}
     yr_init[2] = 1
 
-    par_init = {n:1 for n in m.N}
-    for j in range(1,17):
-        par_init[j] = 0
+    par_init = {n:0 for n in m.N}
+    for j in range(2,17):
+        par_init[j] = 1
 
 
     m.yr = pe.Var(m.N, within=pe.Binary, initialize=yr_init)    # 1 if in stage n there is reflux, 0 otherwise (Binary?)

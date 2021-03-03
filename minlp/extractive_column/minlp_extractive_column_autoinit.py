@@ -24,7 +24,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.Pop = pe.Param(initialize=1)   # Pressure at condenser [atm]
 
     # Dependences
-    # D / Temp / x / y
+    # D / Temp / x / y / L / V
 
     x_init = {}
     y_init = {}
@@ -63,7 +63,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.K0 = pe.Param(initialize=(880.6-(67.7*m.d_hole/m.tray_t)+(7.32*((m.d_hole/m.tray_t)**2))-(0.338*((m.d_hole/m.tray_t)**3)))*10**-3) # Hole coefficient [*]
 
     # Hydraulic variables
-    m.D = pe.Var(within=pe.NonNegativeReals, bounds=(0.01, 10), initialize=1)   # Column diameter [m]
+    m.D = pe.Var(within=pe.NonNegativeReals, bounds=(0.01, 10), initialize=0.91)   # Column diameter [m]
     m.Htotal = pe.Var(within=pe.NonNegativeReals, bounds=(6, 30), initialize=10)   # Total column height [m]
     m.pitch = pe.Var(within=pe.NonNegativeReals, initialize=sqrt(pe.value(m.D)/2)*pi*0.12)   # Distance between plate holes [m]
     m.At = pe.Var(within=pe.NonNegativeReals, initialize=sqrt(pe.value(m.D)/2)*(pi-(1.854590-0.96)))   # Active area [m**2]
@@ -186,9 +186,9 @@ def minlp_extractive_column(NT=30,  visualize=False):
     for n in m.N:
         for i in m.I:
             if i != 'Water':
-                rho_init[(i,n)] = np.real(( m.C1r[i]/(m.C2r[i]**(1+((1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**m.C4r[i]))) )*1000)
+                rho_init[(i,n)] = (( m.C1r[i]/(m.C2r[i]**(1+((1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**m.C4r[i]))) )*1000)
             else:
-                rho_init[(i,n)] = np.real(( m.C1r[i]+(m.C2r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(0.35))+(m.C3r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(2/3))+(m.C4r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))) + (pe.value(m.C5r)*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(4/3)) )*1000)
+                rho_init[(i,n)] = (( m.C1r[i]+(m.C2r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(0.35))+(m.C3r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(2/3))+(m.C4r[i]*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))) + (pe.value(m.C5r)*(1-(pe.value(m.Temp[n])/pe.value(m.Tcritm[n])))**(4/3)) )*1000)
 
     
     m.rho = pe.Var(m.I, m.N, within=pe.NonNegativeReals, bounds=(1000, 70000), initialize=rho_init) # Liquid molar density [mol/m**3]
@@ -196,9 +196,9 @@ def minlp_extractive_column(NT=30,  visualize=False):
     @m.Constraint(m.I, m.N)
     def Eqrho12(m,i,n):
         if i != 'Water':
-            return m.rho[i,n] == np.real( m.C1r[i]/(m.C2r[i]**(1+((1-(m.Temp[n]/m.Tcritm[n]))**m.C4r[i]))) )*1000
+            return m.rho[i,n] == ( m.C1r[i]/(m.C2r[i]**(1+((1-(m.Temp[n]/m.Tcritm[n]))**m.C4r[i]))) )*1000
         else:
-            return m.rho[i,n] == np.real( m.C1r[i]+(m.C2r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(0.35))+(m.C3r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(2/3))+(m.C4r[i]*(1-(m.Temp[n]/m.Tcritm[n]))) + (m.C5r*(1-(m.Temp[n]/m.Tcritm[n]))**(4/3)) )*1000
+            return m.rho[i,n] == ( m.C1r[i]+(m.C2r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(0.35))+(m.C3r[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(2/3))+(m.C4r[i]*(1-(m.Temp[n]/m.Tcritm[n]))) + (m.C5r*(1-(m.Temp[n]/m.Tcritm[n]))**(4/3)) )*1000
 
     rhoV_init = {}
     for n in m.N:
@@ -249,7 +249,6 @@ def minlp_extractive_column(NT=30,  visualize=False):
     def Eqsigma(m,n):
         return m.sigma[n] == sum((m.x[i,n]/100)*m.C1sig[i]*(1-(m.Temp[n]/m.Tcritm[n]))**(m.C2sig[i]+m.C3sig[i]*(m.Temp[n]/m.Tcritm[n])+m.C4sig[i]*((m.Temp[n]/m.Tcritm[n]))**2) for i in m.I)
 
-    print(pe.value(m.sigma[3]))
     # ______________________________ Sections 8-9 ______________________________
     # Calculation of activity coefficient using NRTL model
 
@@ -274,23 +273,47 @@ def minlp_extractive_column(NT=30,  visualize=False):
 
     m.alfa_nrtl = pe.Param(m.I, m.I, initialize=alfa_nrtl_init, within=pe.Any)
 
-    m.tao_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals)
+    tao_nrtl_init = {}
+    for n in m.N:
+        for i in m.I:
+            for i2 in m.I:
+                if i == i2:
+                    tao_nrtl_init[(i,i2,n)] = 0
+                else:
+                    tao_nrtl_init[(i,i2,n)] = m.a_nrtl[i,i2] + (m.b_nrtl[i,i2]/pe.value(m.Temp[n]))
+                    
+    m.tao_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals, initialize=tao_nrtl_init)
     @m.Constraint(m.I, m.I, m.N)
     def Eq_tao_nrtl(m,i,i2,n):
         if i == i2:
             return m.tao_nrtl[i,i2,n] == 0
         else:
             return m.tao_nrtl[i,i2,n] == m.a_nrtl[i,i2] + (m.b_nrtl[i,i2]/m.Temp[n])
+
+    g_nrtl_init = {}
+    for n in m.N:
+        for i in m.I:
+            for i2 in m.I:
+                if i == i2:
+                    g_nrtl_init[(i,i2,n)] = 1
+                else:
+                    g_nrtl_init[(i,i2,n)] = pe.exp(-m.alfa_nrtl[i,i2]*pe.value(m.tao_nrtl[i,i2,n]))
     
-    m.g_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals, initialize=2)
+    m.g_nrtl = pe.Var(m.I, m.I, m.N, within=pe.Reals, initialize=g_nrtl_init)
     @m.Constraint(m.I, m.I, m.N)
     def Eq_g_nrtl(m,i,i2,n):
         if i == i2:
             return m.g_nrtl[i,i2,n] == 1
         else:
             return m.g_nrtl[i,i2,n] == pe.exp(-m.alfa_nrtl[i,i2]*m.tao_nrtl[i,i2,n])
+
+    gamma_init = {}
+    for n in m.N:
+        for comp in m.I:
+            gamma_init[comp,n] = exp(sum(pe.value(m.x[comp1,n])*pe.value(m.tao_nrtl[comp1,comp,n])*pe.value(m.g_nrtl[comp1,comp,n]) for comp1 in m.I)/sum(pe.value(m.x[comp1,n])*pe.value(m.g_nrtl[comp1,comp,n]) for comp1 in m.I)+sum(pe.value(m.x[comp1,n])*pe.value(m.g_nrtl[comp,comp1,n])/sum(pe.value(m.x[comp2,n])*pe.value(m.g_nrtl[comp2,comp1,n]) for comp2 in m.I)*(pe.value(m.tao_nrtl[comp,comp1,n])-sum(pe.value(m.x[comp2,n])*pe.value(m.tao_nrtl[comp2,comp1,n])*pe.value(m.g_nrtl[comp2,comp1,n]) for comp2 in  m.I)/sum(pe.value(m.x[comp3,n])*pe.value(m.g_nrtl[comp3,comp1,n]) for comp3 in m.I)) for comp1 in m.I))         
     
-    m.gamma = pe.Var(m.I, m.N, within=pe.Reals)
+    m.gamma = pe.Var(m.I, m.N, within=pe.Reals, initialize=gamma_init)
+
     @m.Constraint(m.I, m.N)
     def Eqgamma(m,comp,n):
         return m.gamma[comp,n] == pe.exp(sum(m.x[comp1,n]*m.tao_nrtl[comp1,comp,n]*m.g_nrtl[comp1,comp,n] for comp1 in m.I)/sum(m.x[comp1,n]*m.g_nrtl[comp1,comp,n] for comp1 in m.I)+sum(m.x[comp1,n]*m.g_nrtl[comp,comp1,n]/sum(m.x[comp2,n]*m.g_nrtl[comp2,comp1,n] for comp2 in m.I)*(m.tao_nrtl[comp,comp1,n]-sum(m.x[comp2,n]*m.tao_nrtl[comp2,comp1,n]*m.g_nrtl[comp2,comp1,n] for comp2 in  m.I)/sum(m.x[comp3,n]*m.g_nrtl[comp3,comp1,n] for comp3 in m.I)) for comp1 in m.I))
@@ -300,10 +323,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
 
     Omega_init = {'Water':0.344861, 'Ethanol':0.643558, 'Glycerol':0.51269}
     m.Omega = pe.Param(m.I, initialize=Omega_init)    # Acentric factor [*]
-    m.phi = pe.Var(m.I, m.N, within=pe.NonNegativeReals)
-    @m.Constraint(m.I, m.N)
-    def EqPhi(m,i,n):
-        return m.phi[i,n] == 0.985
+    m.phi = pe.Param(m.I, m.N,  initialize=0.985)
 
     # ______________________________ Section 11 ______________________________
     # Entalphy calculation
@@ -320,12 +340,21 @@ def minlp_extractive_column(NT=30,  visualize=False):
     m.Tref = pe.Param(initialize=298.15)    # Reference temperature [K]
     m.Hscale = pe.Param(initialize=1000)    # Scaling factor for entalphy
 
-    m.HVi = pe.Var(m.I, m.N, within=pe.Reals, initialize=-400)
-    m.HV = pe.Var(m.N, within=pe.Reals, initialize=-400)
+    HVi_init = {}
+    for n in m.N:
+        for i in m.I:
+            HVi_init[i,n] = ( (m.C1c[i]*(pe.value(m.Temp[n])-m.Tref)) + ((m.C2c[i]/2)*((pe.value(m.Temp[n])**2)-(m.Tref**2)))+ ((m.C3c[i]/3)*((pe.value(m.Temp[n])**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((pe.value(m.Temp[n])**4)-(m.Tref**4))))/m.Hscale
+    
+    m.HVi = pe.Var(m.I, m.N, within=pe.Reals, initialize=HVi_init)
     @m.Constraint(m.I, m.N)
     def EqHVi(m,i,n):
         return m.HVi[i,n] == ( (m.C1c[i]*(m.Temp[n]-m.Tref)) + ((m.C2c[i]/2)*((m.Temp[n]**2)-(m.Tref**2)))+ ((m.C3c[i]/3)*((m.Temp[n]**3)-(m.Tref**3))) + ((m.C4c[i]/4)*((m.Temp[n]**4)-(m.Tref**4))))/m.Hscale
 
+    HV_init = {}
+    for n in m.N:
+        HV_init[n] = sum(pe.value(m.HVi[i,n])*pe.value(m.y[i,n])/100 for i in m.I)
+
+    m.HV = pe.Var(m.N, within=pe.Reals, initialize=HV_init)
     @m.Constraint(m.N)
     def EqHV(m,n):
         return m.HV[n]==sum(m.HVi[i,n]*m.y[i,n]/100 for i in m.I)
@@ -346,18 +375,32 @@ def minlp_extractive_column(NT=30,  visualize=False):
         return m.Tb[i]/m.Tcrit[i]
     m.Tred = pe.Param(m.I, initialize=Tred_init)  # Reduced temperature [*]
 
-    m.DHvap = pe.Var(m.I, m.N, within=pe.Reals) # Vaporization entalphy [kJ/mol]
+    DHvap_init = {}
+    for n in m.N:
+        for i in m.I:
+            DHvap_init[i,n] = (m.C1v[i]*((1-(pe.value(m.Temp[n])/pe.value(m.Tcrit[i]))))**(m.C2v[i]+m.C3v[i]*(pe.value(m.Temp[n])/pe.value(m.Tcrit[i]))+(m.C4v[i]*(pe.value(m.Temp[n])/pe.value(m.Tcrit[i])))))/m.Hscale
+
+    m.DHvap = pe.Var(m.I, m.N, within=pe.Reals, initialize=DHvap_init) # Vaporization entalphy [kJ/mol]
     @m.Constraint(m.I, m.N)
     def EqdHvap(m,i,n):
         return m.DHvap[i,n] == (m.C1v[i]*((1-(m.Temp[n]/m.Tcrit[i])))**(m.C2v[i]+m.C3v[i]*(m.Temp[n]/m.Tcrit[i])+(m.C4v[i]*(m.Temp[n]/m.Tcrit[i]))))/m.Hscale
 
+    HLi_init = {}
+    for n in m.N:
+        for i in m.I:
+            HLi_init[i,n] = pe.value(m.HVi[i,n])-pe.value(m.DHvap[i,n])
+
     # Liquid phase entalphy [kJ/mol]
-    m.HLi = pe.Var(m.I, m.N, within=pe.Reals)
-    m.HL = pe.Var(m.N, within=pe.Reals)
+    m.HLi = pe.Var(m.I, m.N, within=pe.Reals, initialize=HLi_init)
     @m.Constraint(m.I, m.N)
     def EqHLi(m,i,n):
         return m.HLi[i,n] == m.HVi[i,n]-m.DHvap[i,n]
 
+    HL_init = {}
+    for n in m.N:
+        HL_init[n] = sum(pe.value(m.HLi[i,n])*pe.value(m.x[i,n])/100 for i in m.I)
+
+    m.HL = pe.Var(m.N, within=pe.Reals, initialize=HL_init)
     @m.Constraint(m.N)
     def EqHL(m,n):
         return m.HL[n] == sum(m.HLi[i,n]*m.x[i,n]/100 for i in m.I)
@@ -976,9 +1019,9 @@ def minlp_extractive_column(NT=30,  visualize=False):
     opt = SolverFactory(solvername, solver='baron')
     results = opt.solve(m, tee=True,
                         # Uncomment the following lines if you want to save GAMS models
-                        keepfiles=True,
-                        tmpdir=gams_path,
-                        symbolic_solver_labels=True,
+                        #keepfiles=True,
+                        #tmpdir=gams_path,
+                        #symbolic_solver_labels=True,
 
                         add_options=[
                             'option reslim = 10;'

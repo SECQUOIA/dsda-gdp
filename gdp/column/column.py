@@ -358,8 +358,36 @@ def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init
         if provide_init == False:
             initialize(m)
 
-        log_infeasible_constraints(m, tol=1E-3)
-        results = SolverFactory('ipopt').solve(m, tee=True)
+        # SOLVE
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        gams_path = os.path.join(dir_path, "gamsfiles/")
+        if not(os.path.exists(gams_path)):
+            print('Directory for automatically generated files ' +
+                gams_path + ' does not exist. We will create it')
+            os.makedirs(gams_path)
+
+        #opt = SolverFactory('ipopt')
+        #results = opt.solve(m)
+        solvername = 'gams'
+        opt = SolverFactory(solvername, solver='conopt')
+        results = opt.solve(m, tee=False,
+                            # Uncomment the following lines if you want to save GAMS models
+                            #keepfiles=True,
+                            #tmpdir=gams_path,
+                            #symbolic_solver_labels=True,
+                            add_options=[
+                                'option reslim = 10;'
+                                'option optcr = 0.0;'
+                                # Uncomment the following lines to setup IIS computation of BARON through option file
+                                # 'GAMS_MODEL.optfile = 1;'
+                                # '\n'
+                                # '$onecho > baron.opt \n'
+                                # 'CompIIS 1 \n'
+                                # '$offecho'
+                                # 'display(execError);'
+                            ])
+        #log_infeasible_constraints(m, tol=1E-3)
+        #results = SolverFactory('ipopt').solve(m, tee=True)
         # Save results (for initialization)
         T_feed_init, feed_vap_frac_init, feed_init, x_init, y_init, L_init, V_init, liq_init, vap_init, B_init, D_init, bot_init, dis_init, reflux_ratio_init = {
         }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
@@ -417,7 +445,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init
         nlp_result.feasible = False
         nlp_result.pyomo_results = SolverResults()
         nlp_result.pyomo_results.solver.termination_condition = tc.error
-        print('Try an infeasible')
+        #print('Try an infeasible')
 
         return m, 'infeasible', {}
 

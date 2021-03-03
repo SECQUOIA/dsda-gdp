@@ -236,7 +236,7 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
 
 
 def dsda(NT, k='inf', visualize=False):
-    print('Starting D-SDA with k =',k)
+    print('\n Starting D-SDA with k =',k)
     # Initialize
     t_start = time.process_time()
     route = []
@@ -244,8 +244,8 @@ def dsda(NT, k='inf', visualize=False):
     route.append(ext_var)
     m, _, init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=ext_var,provide_init=False,init={})
     fmin = pe.value(m.obj)
-    min_allowed = {i: 1 for i in range(1, len(ext_var)+1)}
-    max_allowed = {i: NT for i in range(1, len(ext_var)+1)}
+    min_allowed = {i: 2 for i in range(1, len(ext_var)+1)}
+    max_allowed = {i: NT-1 for i in range(1, len(ext_var)+1)}
 
     # Define neighborhood
     if k == '2':
@@ -307,8 +307,8 @@ if __name__ == "__main__":
     NT = 17
     k = 'inf'  # or k = '2'
     #complete_enumeration(NT)
-    #print(dsda(NT, k, visualize=True))
-    m, _, _, = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=[13,4],provide_init=False,init={})
-    print('Objective',round(pe.value(m.obj),2))
+    print(dsda(NT, k, visualize=False))
+    #m, _, _, = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=[13,4],provide_init=False,init={})
+    #print('Objective',round(pe.value(m.obj),2))
 
 

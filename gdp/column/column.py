@@ -5,6 +5,7 @@ from __future__ import division
 from pyomo.environ import (
     Block, ConcreteModel, Constraint, log, minimize, NonNegativeReals, Objective, RangeSet, Set, Var, TransformationFactory, SolverFactory, value)
 from pyomo.gdp import Disjunct, Disjunction
+import math
 from pyomo.util.infeasible import log_infeasible_constraints
 from initialize import initialize
 from pyomo.common.errors import InfeasibleConstraintException
@@ -23,7 +24,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init
     m.T_ref = 298.15
     max_flow = 500
     m.condens_tray = max_trays
-    m.feed_tray = int(round(max_trays / 2))
+    m.feed_tray = math.ceil((max_trays / 2))
     m.reboil_tray = 1
     m.distillate_purity = xD
     m.bottoms_purity = xB

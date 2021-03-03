@@ -57,7 +57,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Compressibility coefficient [*]
     m.Z = pe.Var(m.N,  within=pe.NonNegativeReals)
     m.RR = pe.Var(within=pe.NonNegativeReals, bounds=(
-        10**-4, 10), initialize=0.01)   # Reflux ratio [*]
+        10**-4, 10), initialize=0.058)   # Reflux ratio [*]
     m.Qc = pe.Var(within=pe.NonNegativeReals, bounds=(
         6*10**4, 2*10**8), initialize=4*10**6)   # Condensator duty [kJ/hr]
     m.Qr = pe.Var(within=pe.NonNegativeReals, bounds=(
@@ -76,22 +76,13 @@ def minlp_extractive_column(NT=30,  visualize=False):
                                                                       ** 2))-(0.338*((m.d_hole/m.tray_t)**3)))*10**-3)  # Hole coefficient [*]
 
     # Hydraulic variables
-    m.D = pe.Var(within=pe.NonNegativeReals, bounds=(
-        0.01, 10), initialize=0.91)   # Column diameter [m]
-    m.Htotal = pe.Var(within=pe.NonNegativeReals, bounds=(
-        6, 30), initialize=10)   # Total column height [m]
-    m.pitch = pe.Var(within=pe.NonNegativeReals, initialize=sqrt(
-        pe.value(m.D)/2)*pi*0.12)   # Distance between plate holes [m]
-    m.At = pe.Var(within=pe.NonNegativeReals, initialize=sqrt(
-        pe.value(m.D)/2)*(pi-(1.854590-0.96)))   # Active area [m**2]
-    m.Ad = pe.Var(within=pe.NonNegativeReals, initialize=sqrt(
-        pe.value(m.D)/2)*(0.5*(1.854590-0.96)))   # Weir area [m**2]
-    m.poro = pe.Var(within=pe.NonNegativeReals, initialize=0.907 *
-                    pe.sqrt(m.d_hole/pe.value(m.pitch)))   # Plate porosity [*]
-    m.A0 = pe.Var(within=pe.NonNegativeReals, initialize=pe.value(
-        m.At)*pe.value(m.poro))   # Holed area [m**2]
-    # Cross section area [m**2]
-    m.A_col = pe.Var(within=pe.NonNegativeReals, initialize=5)
+    m.D = pe.Var(within=pe.NonNegativeReals, bounds=(0.01, 10), initialize=0.91)   # Column diameter [m]
+    m.pitch = pe.Var(within=pe.NonNegativeReals, initialize=0.07943)   # Distance between plate holes [m]
+    m.At = pe.Var(within=pe.NonNegativeReals, initialize=0.4735)   # Active area [m**2]
+    m.Ad = pe.Var(within=pe.NonNegativeReals, initialize=0.0942)   # Weir area [m**2]
+    m.poro = pe.Var(within=pe.NonNegativeReals, initialize=0.02317)   # Plate porosity [*]
+    m.A0 = pe.Var(within=pe.NonNegativeReals, initialize=pe.value(m.At)*pe.value(m.poro))   # Holed area [m**2]
+    m.A_col = pe.Var(within=pe.NonNegativeReals, initialize=2) # Cross section area [m**2]
 
     # Hydraulic constraints
     @m.Constraint()
@@ -562,7 +553,6 @@ def minlp_extractive_column(NT=30,  visualize=False):
     for j in range(2, 17):
         par_init[j] = 1
 
-
     # 1 if in stage n there is reflux, 0 otherwise (Binary?)
     m.yr = pe.Var(m.N, within=pe.Binary, initialize=yr_init)
     # 1 if in stage n there is boilup, 0 otherwise
@@ -574,14 +564,14 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # 1 if in stage n there is Azeotrope feed, 0 otherwise
     m.yfAz = pe.Var(m.N, within=pe.Binary, initialize=yfAz_init)
 
-    @m.Constraint(m.N)
-    def eqpar(m, n):
-        if n == 1:
-            return m.par[n] == 1
-        elif n == NT:
-            return m.par[n] == 1
-        else:
-            return m.par[n] == 1 - (1-sum(m.yr[j] for j in range(2, n+1)) - (sum(m.yb[j] for j in range(2, n))))
+    #@m.Constraint(m.N)
+    #def eqpar(m, n):
+    #    if n == 1:
+    #        return m.par[n] == 1
+    #    elif n == NT:
+    #        return m.par[n] == 1
+    #    else:
+    #        return m.par[n] == 1 - (1-sum(m.yr[j] for j in range(2, n+1)) - (sum(m.yb[j] for j in range(2, n))))
 
     # ______________________________ Section 14 ______________________________
     # Logic constraints
@@ -783,8 +773,14 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Hydraulic relations por all internal stages
 
     # Define vapor velocity
-    m.far = pe.Var(m.N, within=pe.NonNegativeReals, initialize={
-                   n: 0.35 for n in m.N if n != NT and n != 1})     # Aeration factor [*]
+    far_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            far_init[n] = (0.981*exp(-0.411*(pe.value(m.Qvap[n])/3600)/pe.value(m.At)*(pe.value(m.rhoV[n])*sum(pe.value(m.MW[i])*pe.value(m.y[i, n])/100 for i in m.I)/1000)**(0.5)))
+        else:
+            far_init[n] = 0
+
+    m.far = pe.Var(m.N, within=pe.NonNegativeReals, initialize=far_init)     # Aeration factor [*]
 
     @m.Constraint(m.N)
     def Eqfa(m, n):
@@ -793,9 +789,15 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    # Liquid height over divisor [m]
-    m.hD = pe.Var(m.N, within=pe.NonNegativeReals, initialize=10**-2)
+    hD_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            hD_init[n] = 0.6*((pe.value(m.Qliq[n])/3600/m.Lw)**(2/3))
+        else:
+            hD_init[n] = 0
 
+    # Liquid height over divisor [m]
+    m.hD = pe.Var(m.N, within=pe.NonNegativeReals, initialize=hD_init)
     @m.Constraint(m.N)
     def EqhD(m, n):
         if n != NT and n != 1:
@@ -803,8 +805,15 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
+    uhv_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            uhv_init[n] = ((pe.value(m.V[n])/(pe.value(m.rhoV[n]))))/(3600*pe.value(m.A0))
+        else:
+            uhv_init[n] = 0
+
     # Vapor velocity in hole [m/s]
-    m.uhv = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.uhv = pe.Var(m.N, within=pe.NonNegativeReals, initialize=uhv_init)
 
     @m.Constraint(m.N)
     def Equhv(m, n):
@@ -813,8 +822,15 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
+    unv_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            unv_init[n] = ((pe.value(m.V[n])/(pe.value(m.rhoV[n]))))/(3600*pe.value(m.At))
+        else:
+            unv_init[n] = 0
+
     # Vapor velocity in plate  [m/s]
-    m.unv = pe.Var(m.N, within=pe.NonNegativeReals, initialize=10)
+    m.unv = pe.Var(m.N, within=pe.NonNegativeReals, initialize=unv_init)
 
     @m.Constraint(m.N)
     def Equnv(m, n):
@@ -823,9 +839,15 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    # Liquid velocity in weir  [m/s]
-    m.ul = pe.Var(m.N, within=pe.NonNegativeReals)
+    ul_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            ul_init[n] = ((pe.value(m.L[n])/sum(pe.value(m.rho[i, n])*pe.value(m.x[i, n])/100 for i in m.I)))/(3600*pe.value(m.Ad))
+        else:
+            ul_init[n] = 0
 
+    # Liquid velocity in weir  [m/s]
+    m.ul = pe.Var(m.N, within=pe.NonNegativeReals, initialize=ul_init)
     @m.Constraint(m.N)
     def Equl(m, n):
         if n != NT and n != 1:
@@ -835,9 +857,17 @@ def minlp_extractive_column(NT=30,  visualize=False):
 
     # Liquid load
     m.consmach = pe.Param(initialize=1*10**-20)
-    # Liquid height in spray regime  [m]
-    m.hcl = pe.Var(m.N, within=pe.NonNegativeReals)
 
+    hcl_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            hcl_init[n] =  ((0.157*((pe.value(m.poro)+m.consmach)**(-0.791))/(1+1.04E-4*(((((pe.value(m.L[n])+m.consmach)/sum(pe.value(m.rho[i, n])*pe.value(m.x[i, n])/100 for i in m.I)))/3600/m.Lw)**(-0.59))*((pe.value(m.poro)+m.consmach)**(-1.791))))*(m.d_hole**0.833)*(996/(sum(pe.value(m.rho[i, n])*pe.value(m.x[i, n])/100 for i in m.I)*sum(m.MW[i]*pe.value(m.x[i, n])/100 for i in m.I)/1000))**(0.5*(1-0.91*m.d_hole/(pe.value(m.poro)+m.consmach))))
+        else:
+            hcl_init[n] = 0 
+
+    # Liquid height in spray regime  [m]
+    m.hcl = pe.Var(m.N, within=pe.NonNegativeReals, initialize=hcl_init)
+ 
     @m.Constraint(m.N)
     def Eqhcl(m, n):
         if n != NT and n != 1:
@@ -845,7 +875,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
-    m.Csbf = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.Csbf = pe.Var(m.N, within=pe.NonNegativeReals, initialize=0.15)
 
     @m.Constraint(m.N)
     def EqCsbf(m, n):
@@ -855,9 +885,17 @@ def minlp_extractive_column(NT=30,  visualize=False):
             return pe.Constraint.Skip
 
     # Pressure drop
-    # Pressure drop due to liquid presence [atm]
-    m.DPL = pe.Var(m.N, within=pe.NonNegativeReals, initialize=9*10**-5)
 
+    DPL_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            DPL_init[n] =  ((pe.value(m.far[n])*9.81*(sum(pe.value(m.rho[i, n])*pe.value(m.x[i, n])/100 for i in m.I)*sum(pe.value(m.MW[i])*pe.value(m.x[i, n])/100 for i in m.I)/1000)*(pe.value(m.hD[n])+pe.value(m.hw)))/101325)
+        else:
+            DPL_init[n] = 0
+
+    # Pressure drop due to liquid presence [atm]
+    m.DPL = pe.Var(m.N, within=pe.NonNegativeReals, initialize=DPL_init)
+    
     @m.Constraint(m.N)
     def EqDPL(m, n):
         if n != NT and n != 1:
@@ -866,7 +904,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
             return pe.Constraint.Skip
 
     # Pressure drop due to hole presence (dry) [atm]
-    m.DPS = pe.Var(m.N, within=pe.NonNegativeReals, initialize=10**-4)
+    m.DPS = pe.Var(m.N, within=pe.NonNegativeReals, initialize=0.0001)
 
     @m.Constraint(m.N)
     def EqDPS(m, n):
@@ -875,24 +913,39 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
+    DPq_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            DPq_init[n] = (1.62*((sum(pe.value(m.rho[i,n])*pe.value(m.x[i,n])/100 for i in m.I)*sum(pe.value(m.MW[i])*pe.value(m.x[i,n])/100 for i in m.I)/1000))/(pe.sqrt(pe.value(m.Lw)*pe.value(m.hw)))*(pe.sqrt((pe.value(m.L[n])/sum(pe.value(m.rho[i,n])*pe.value(m.x[i,n])/100 for i in m.I)/3600))+pe.sqrt((pe.value(m.V[n])/(pe.value(m.rhoV[n]))/3600))))/101325
+        
+        else:
+            DPq_init[n] = 0
+    
     # Pressure drop at weir [atm]
-    m.DPq = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.DPq = pe.Var(m.N, within=pe.NonNegativeReals, initialize=48.59)
 
     @m.Constraint(m.N)
     def EqDPq(m, n):
         if n != NT and n != 1:
-            return m.DPq[n]*101325 == 1.62*((sum(m.rho[i, n]*m.x[i, n]/100 for i in m.I)*sum(m.MW[i]*m.x[i, n]/100 for i in m.I)/1000))/(pe.sqrt(m.Lw*m.hw))*(pe.sqrt((m.L[n]/sum(m.rho[i, n]*m.x[i, n]/100 for i in m.I)/3600))+pe.sqrt((m.V[n]/(m.rhoV[n])/3600)))
+            return m.DPq[n]*101325 == 1.62*((sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)*sum(m.MW[i]*m.x[i,n]/100 for i in m.I)/1000))/(pe.sqrt(m.Lw*m.hw))*(pe.sqrt((m.L[n]/sum(m.rho[i,n]*m.x[i,n]/100 for i in m.I)/3600))+pe.sqrt((m.V[n]/(m.rhoV[n])/3600)))
         else:
             return pe.Constraint.Skip
 
+    DP_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            DP_init[n] = (pe.value(m.DPS[n])+pe.value(m.DPL[n]))
+        else:
+            DP_init[n] = 0
+
     # Total pressure drop [atm]
-    m.DP = pe.Var(m.N, within=pe.NonNegativeReals)
+    m.DP = pe.Var(m.N, within=pe.NonNegativeReals, initialize=DP_init)
 
     # Define stage pressure
     @m.Constraint()
     def EqDPR(m):
         return m.DP[NT] == m.DP[NT-1]
-
+    
     @m.Constraint(m.N)
     def EqDP(m, n):
         if n != NT and n != 1:
@@ -916,7 +969,14 @@ def minlp_extractive_column(NT=30,  visualize=False):
         return m.P[NT] == m.P[NT-1]
 
     # Undesired effects in the column
-    m.downF = pe.Var(m.N, within=pe.Reals)
+    downF_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            downF_init[n] = ((pe.value(m.hD[n])+((pe.value(m.DP[n])*101325+pe.value(m.DPq[n])))/(9.81*(((sum(pe.value(m.rho[i, n])*pe.value(m.x[i, n])/100 for i in m.I)*sum(pe.value(m.MW[i])*pe.value(m.x[i, n])/100 for i in m.I)/1000))-(pe.value(m.rhoV[n])*sum(pe.value(m.MW[i])*pe.value(m.y[i, n])/100 for i in m.I)/1000))))-(pe.value(m.HS)))
+        else:
+            downF_init[n] = 0
+
+    m.downF = pe.Var(m.N, within=pe.Reals, initialize=downF_init)
 
     @m.Constraint(m.N)
     def DownFlood(m, n):
@@ -926,8 +986,14 @@ def minlp_extractive_column(NT=30,  visualize=False):
             return pe.Constraint.Skip
 
     # Entrainment flooding
-    m.EntrainFloodLVar = pe.Var(m.N, within=pe.Reals)
-    m.EntrainFloodVVar = pe.Var(m.N, within=pe.Reals)
+    EntrainFloodVVar_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            EntrainFloodVVar_init[n] = (pe.value(m.unv[n])-(pe.value(m.Csbf[n])*(((((sum(pe.value(m.rho[i, n])*pe.value(m.x[i, n])/100 for i in m.I)*sum(pe.value(m.MW[i])*pe.value(m.x[i, n])/100 for i in m.I)/1000))-(pe.value(m.rhoV[n])*sum(pe.value(m.MW[i])*pe.value(m.y[i, n])/100 for i in m.I)/1000)))/(pe.value(m.rhoV[n])*sum(pe.value(m.MW[i])*pe.value(m.y[i, n])/100 for i in m.I)/1000))**0.5))
+        else:
+            EntrainFloodVVar_init[n] = 0
+
+    m.EntrainFloodVVar = pe.Var(m.N, within=pe.Reals, initialize=EntrainFloodVVar_init)
 
     @m.Constraint(m.N)
     def EntrainFloodV(m, n):
@@ -936,6 +1002,14 @@ def minlp_extractive_column(NT=30,  visualize=False):
         else:
             return pe.Constraint.Skip
 
+    EntrainFloodLVar_init = {}
+    for n in m.N:
+        if n != NT and n != 1:
+            EntrainFloodLVar_init[n] = (pe.value(m.ul[n])-((pe.value(m.sigma[n])*9.81*(((sum(pe.value(m.rho[i, n])*pe.value(m.x[i, n])/100 for i in m.I)*sum(pe.value(m.MW[i])*pe.value(m.x[i, n])/100 for i in m.I)/1000))-(pe.value(m.rhoV[n])*sum(pe.value(m.MW[i])*pe.value(m.y[i, n])/100 for i in m.I)/1000))/((sum(pe.value(m.rho[i, n])*pe.value(m.x[i, n])/100 for i in m.I)*sum(pe.value(m.MW[i])*pe.value(m.x[i, n])/100 for i in m.I)/1000)**2))**(1/4)))
+        else:
+            EntrainFloodLVar_init[n] = 0
+
+    m.EntrainFloodLVar = pe.Var(m.N, within=pe.Reals, initialize=EntrainFloodLVar_init)
     @m.Constraint(m.N)
     def EntrainFloodL(m, n):
         if n != NT and n != 1:
@@ -954,9 +1028,13 @@ def minlp_extractive_column(NT=30,  visualize=False):
     # Column construction
 
     # Column size
+    
+    m.Htotal = pe.Var(within=pe.NonNegativeReals, bounds=(6, 30), initialize=(((1+m.Sfactor)*sum(m.HS*pe.value(m.par[j]) for j in range(2, NT)))))   # Total column height [m]
     @m.Constraint()
     def Size(m):
         return m.Htotal == ((1+m.Sfactor)*sum(m.HS*m.par[j] for j in range(2, NT)))
+
+    print(pe.value(m.Htotal))
 
     # Diameter-height relation
     @m.Constraint()

@@ -16,14 +16,14 @@ import os
 from column import build_column
 
 def list_generator(NT):
-    X1, X2, aux, aux2, x = [], [], [], 1, {}
+    X1, X2, aux, aux2, x = [], [], [], 2, {}
 
-    for i in range(1, NT+1):
+    for i in range(2, NT):
         X1.append(i)
         aux.append(i)
         X2.append(aux2)
 
-    for i in range(NT-1):
+    for i in range(NT-2):
         aux.pop(0)
         aux2 += 1
         for j in aux:
@@ -40,13 +40,19 @@ def complete_enumeration(NT):
 
     for i in range(len(X1)):
         x = [X1[i], X2[i]]
-        m, _, _ = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=x,provide_init=False,init={})
-        print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 5)))
+        m, status, _ = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=x,provide_init=False,init={})
+        if status == pe.SolverStatus.ok:
+            print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 2)))
+        else:
+            print('%6s %6s %12s' % (X1[i], X2[i], 'Infeas'))
     print('=============================')
+    
 
 
-def visualization(NT, points):
+def visualization(NT, points, only_feasibles=False, out1=[], out2=[]):
     X1, X2 = list_generator(NT)
+
+    
 
     def drawArrow(A, B):
         plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005,
@@ -300,15 +306,14 @@ def dsda(NT, k='inf', visualize=False):
         visualization(NT, route)
 
     # Return visited points / final point / objective at that point / execution time
-    return route[-1], round(fmin, 5), t_end
+    return route[-1], round(fmin, 2), t_end
 
 
 if __name__ == "__main__":
     NT = 17
     k = 'inf'  # or k = '2'
-    #complete_enumeration(NT)
-    print(dsda(NT, k, visualize=False))
-    #m, _, _, = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=[13,4],provide_init=False,init={})
-    #print('Objective',round(pe.value(m.obj),2))
+    complete_enumeration(NT)
+    print(dsda(NT, k, visualize=True))
+    
 
 

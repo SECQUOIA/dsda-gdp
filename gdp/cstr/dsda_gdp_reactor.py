@@ -387,15 +387,12 @@ def fnlp_gdp(NT, x, provide_init=False, init={}):
     # External variable fix
     ext_var_1 =  x[0]
     ext_var_2 =  x[1]
-    YF_fixed = {}
 
     for n in m.N:
         if n == ext_var_1:
             m.YF[n].fix(True)
-            YF_fixed[n] = 1
         else:
             m.YF[n].fix(False)
-            YF_fixed[n] = 0
         
         if n == ext_var_2:
             m.YR_is_recycle[n].indicator_var.fix(True)
@@ -404,9 +401,9 @@ def fnlp_gdp(NT, x, provide_init=False, init={}):
             m.YR_is_recycle[n].indicator_var.fix(False)
             m.YR_is_not_recycle[n].indicator_var.fix(True)  
               
-        temp = 1 - (sum(YF_fixed[n2] for n2 in m.N if n2 <= n) - YF_fixed[n])
-
-        if temp == 1:
+        temp = pe.lor(pe.land(~m.YF[n2] for n2 in range(1,n)),m.YF[n])
+        
+        if pe.value(temp) == True:
             m.YP_is_cstr[n].indicator_var.fix(True)
             m.YP_is_bypass[n].indicator_var.fix(False)
         else:

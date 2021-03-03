@@ -2,6 +2,8 @@ import pyomo.environ as pe
 from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
 
+# The objective of this minimal working example is to show how dependent variables are currently being declared and initialized
+
 # Model declaration
 m = pe.ConcreteModel('MWE_autoinit')
 
@@ -20,20 +22,23 @@ y_hat_init = pe.value(m.Beta1) + pe.value(m.Beta2)*m.x
 m.y_hat = pe.Var(within=pe.Reals, initialize=y_hat_init)
 
 # Constriant (Equation 1)
+
+
 @m.Constraint()
 def Equation1(m):
     return m.y_hat == m.Beta1 + m.Beta2*m.x
 
 # Objective
+
+
 @m.Objective()
 def obj(m):
     return (m.y - m.y_hat)**2
+
 
 # Solver
 opt = SolverFactory('ipopt')
 opt_success = opt.solve(m)
 
-# Is it posible to avoid an explicit initialization delcaration like in line 20?
+# Is it posible to avoid the explicit initialization declaration done in line 20?
 # Could y_hat be initializated directly using Equation1?
-
-

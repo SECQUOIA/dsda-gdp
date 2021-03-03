@@ -346,7 +346,7 @@ def build_column(min_trays, max_trays, xD, xB,x_input, provide_init=False, init=
         if temp==1 and n!=m.feed_tray:
             m.tray[n].indicator_var.fix(True)
             m.no_tray[n].indicator_var.fix(False)
-	elif temp==0 and n!=m.feed_tray:
+        elif temp==0 and n!=m.feed_tray:
             m.tray[n].indicator_var.fix(False)
             m.no_tray[n].indicator_var.fix(True)
 
@@ -358,62 +358,60 @@ def build_column(min_trays, max_trays, xD, xB,x_input, provide_init=False, init=
 
     # Check equation feasibility
     try:
-	    fbbt(m)
+        fbbt(m)
 
             # SOLVE
-	    if provide_init==False:
-	    	initialize(m)
-	    log_infeasible_constraints(m, tol=1E-3)
-	    results=SolverFactory('ipopt').solve(
-		m, tee=True)
+        if provide_init==False:
+            initialize(m)
+        log_infeasible_constraints(m, tol=1E-3)
+        results=SolverFactory('ipopt').solve(m, tee=True)
 
             # Save results (for initialization)
+        T_feed_init,feed_vap_frac_init,feed_init,x_init,y_init,L_init,V_init,liq_init,vap_init,B_init,D_init,bot_init,dis_init,reflux_ratio_init={},{},{},{},{},{},{},{},{},{},{},{},{},{}
+        reboil_ratio_init,reflux_frac_init,boilup_frac_init,Kc_init,T_init,P_init,gamma_init={},{},{},{},{},{},{}
+        Pvap_init,Pvap_X_init,H_L_init,H_V_init,H_L_spec_feed_init,H_V_spec_feed_init,Qb_init,Qc_init={},{},{},{},{},{},{},{}
 
-            T_feed_init,feed_vap_frac_init,feed_init,x_init,y_init,L_init,V_init,liq_init,vap_init,B_init,D_init,bot_init,dis_init,reflux_ratio_init={},{},{},{},{},{},{},{},{},{},{},{},{},{}
-            reboil_ratio_init,reflux_frac_init,boilup_frac_init,Kc_init,T_init,P_init,gamma_init={},{},{},{},{},{},{}
-            Pvap_init,Pvap_X_init,H_L_init,H_V_init,H_L_spec_feed_init,H_V_spec_feed_init,Qb_init,Qc_init={},{},{},{},{},{},{},{}
+        T_feed_init=value(m.T_feed)
+        feed_vap_frac_init=value(m.feed_vap_frac)
+        bot_init=value(m.bot)
+        dis_init=value(m.dis)
+        reflux_ratio_init=value(m.reflux_ratio)
+        reboil_ratio_init=value(m.reboil_ratio)
+        reflux_frac_init=value(m.reflux_frac)
+        boilup_frac_init=value(m.boilup_frac)
+        Qb_init=value(m.Qb)
+        Qc_init=value(m.Qc)
+        P_init=value(m.P)
 
-            T_feed_init=value(m.T_feed)
-            feed_vap_frac_init=value(m.feed_vap_frac)
-	    bot_init=value(m.bot)
-	    dis_init=value(m.dis)
-	    reflux_ratio_init=value(m.reflux_ratio)
-	    reboil_ratio_init=value(m.reboil_ratio)
-	    reflux_frac_init=value(m.reflux_frac)
-	    boilup_frac_init=value(m.boilup_frac)
-            Qb_init=value(m.Qb)
-            Qc_init=value(m.Qc)
-            P_init=value(m.P)
+        for i in m.comps:
+            feed_init[i]=value(m.feed[i])
+            B_init[i]=value(m.B[i])
+            D_init[i]=value(m.D[i])
+            H_L_spec_feed_init[i]=value(m.H_L_spec_feed[i])
+            H_V_spec_feed_init[i]=value(m.H_V_spec_feed[i])
 
-            for i in m.comps:
-		feed_init[i]=value(m.feed[i])
-		B_init[i]=value(m.B[i])
-		D_init[i]=value(m.D[i])
-		H_L_spec_feed_init[i]=value(m.H_L_spec_feed[i])
-		H_V_spec_feed_init[i]=value(m.H_V_spec_feed[i])
+        for n in m.trays: 
+            liq_init[n]=value(m.liq[n])
+            vap_init[n]=value(m.vap[n])
+            T_init[n]=value(m.T[n])
 
-            for n in m.trays: 
-		liq_init[n]=value(m.liq[n])
-		vap_init[n]=value(m.vap[n])
-		T_init[n]=value(m.T[n])
-
-            for i in m.comps:
-		for n in m.trays:
-			x_init[i,n]=value(m.x[i,n])
-			y_init[i,n]=value(m.y[i,n])
-			L_init[i,n]=value(m.L[i,n])
-			V_init[i,n]=value(m.V[i,n])
-			Kc_init[i,n]=value(m.Kc[i,n])
-			gamma_init[i,n]=value(m.gamma[i,n])
-			Pvap_init[i,n]=value(m.Pvap[i,n])
-			Pvap_X_init[i,n]=value(m.Pvap_X[i,n])
-			H_L_init[i,n]=value(m.H_L[i,n])
-			H_V_init[i,n]=value(m.H_V[i,n])
+        for i in m.comps:
+            for n in m.trays:
+                x_init[i,n]=value(m.x[i,n])
+                y_init[i,n]=value(m.y[i,n])
+                L_init[i,n]=value(m.L[i,n])
+                V_init[i,n]=value(m.V[i,n])
+                Kc_init[i,n]=value(m.Kc[i,n])
+                gamma_init[i,n]=value(m.gamma[i,n])
+                Pvap_init[i,n]=value(m.Pvap[i,n])
+                Pvap_X_init[i,n]=value(m.Pvap_X[i,n])
+                H_L_init[i,n]=value(m.H_L[i,n])
+                H_V_init[i,n]=value(m.H_V[i,n])
 
 
-            initialization = {'T_feed':T_feed_init,'feed_vap_frac':feed_vap_frac_init,'feed':feed_init,'x':x_init,'y':y_init,'L':L_init,'V':V_init,'liq':liq_init,'vap':vap_init,'B':B_init,'D':D_init,'bot':bot_init,'dis':dis_init,'reflux_ratio':reflux_ratio_init,'reboil_ratio':reboil_ratio_init,'reflux_frac':reflux_frac_init,'boilup_frac':boilup_frac_init,'Kc':Kc_init,'T':T_init,'P':P_init,'gamma':gamma_init,'Pvap':Pvap_init,'Pvap_X':Pvap_X_init,'H_L':H_L_init,'H_V':H_V_init,'H_L_spec_feed':H_L_spec_feed_init,'H_V_spec_feed':H_V_spec_feed_init,'Qb':Qb_init,'Qc':Qc_init}
-            
-            return m, results.solver.status, initialization
+        initialization = {'T_feed':T_feed_init,'feed_vap_frac':feed_vap_frac_init,'feed':feed_init,'x':x_init,'y':y_init,'L':L_init,'V':V_init,'liq':liq_init,'vap':vap_init,'B':B_init,'D':D_init,'bot':bot_init,'dis':dis_init,'reflux_ratio':reflux_ratio_init,'reboil_ratio':reboil_ratio_init,'reflux_frac':reflux_frac_init,'boilup_frac':boilup_frac_init,'Kc':Kc_init,'T':T_init,'P':P_init,'gamma':gamma_init,'Pvap':Pvap_init,'Pvap_X':Pvap_X_init,'H_L':H_L_init,'H_V':H_V_init,'H_L_spec_feed':H_L_spec_feed_init,'H_V_spec_feed':H_V_spec_feed_init,'Qb':Qb_init,'Qc':Qc_init}
+        
+        return m, results.solver.status, initialization
     
 
     except InfeasibleConstraintException:

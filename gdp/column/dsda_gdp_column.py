@@ -311,7 +311,7 @@ def dsda(NT, k='inf', visualize=False):
 
 if __name__ == "__main__":
     NT = 17
-    k = 'inf'  # or k = '2'
+    k = '2'  # or k = '2'
     #x, y = complete_enumeration(NT)
     route, fmin, time = dsda(NT, k)
     print(route[-1], fmin, time)

@@ -16,14 +16,14 @@ import os
 from column import build_column
 
 def list_generator(NT):
-    X1, X2, aux, aux2, x = [], [], [], 1, {}
+    X1, X2, aux, aux2, x = [], [], [], 2, {}
 
-    for i in range(1, NT+1):
+    for i in range(2, NT):
         X1.append(i)
         aux.append(i)
         X2.append(aux2)
 
-    for i in range(NT-1):
+    for i in range(NT-2):
         aux.pop(0)
         aux2 += 1
         for j in aux:
@@ -33,20 +33,29 @@ def list_generator(NT):
 
 def complete_enumeration(NT):
     X1, X2 = list_generator(NT)
-
+    feas_x, feas_y = [], []
     print('=============================')
     print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
     print('-----------------------------')
 
     for i in range(len(X1)):
         x = [X1[i], X2[i]]
-        m, _, _ = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=x,provide_init=False,init={})
-        print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 5)))
+        m, status, _ = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=x,provide_init=False,init={})
+        if status == pe.SolverStatus.ok:
+            print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 2)))
+            feas_x.append(X1[i])
+            feas_y.append(X2[i])
+        else:
+            print('%6s %6s %12s' % (X1[i], X2[i], 'Infeas'))
     print('=============================')
+    return feas_x, feas_y
 
 
-def visualization(NT, points):
-    X1, X2 = list_generator(NT)
+def visualization(NT, points, show_feasibles=False, feas_x=[], feas_y=[]):
+    X1, X2 = [], []
+
+    if show_feasibles:
+        X1, X2 = feas_x, feas_y
 
     def drawArrow(A, B):
         plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005,
@@ -236,7 +245,7 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
 
 
 def dsda(NT, k='inf', visualize=False):
-    print('Starting D-SDA with k =',k)
+    print('\n Starting D-SDA with k =',k)
     # Initialize
     t_start = time.process_time()
     route = []
@@ -244,8 +253,8 @@ def dsda(NT, k='inf', visualize=False):
     route.append(ext_var)
     m, _, init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=ext_var,provide_init=False,init={})
     fmin = pe.value(m.obj)
-    min_allowed = {i: 1 for i in range(1, len(ext_var)+1)}
-    max_allowed = {i: NT for i in range(1, len(ext_var)+1)}
+    min_allowed = {i: 2 for i in range(1, len(ext_var)+1)}
+    max_allowed = {i: NT-1 for i in range(1, len(ext_var)+1)}
 
     # Define neighborhood
     if k == '2':
@@ -296,19 +305,19 @@ def dsda(NT, k='inf', visualize=False):
 
     t_end = round(time.process_time() - t_start, 2)
 
-    if visualize:
-        visualization(NT, route)
-
     # Return visited points / final point / objective at that point / execution time
-    return route[-1], round(fmin, 5), t_end
+    return route, round(fmin, 2), t_end
 
 
 if __name__ == "__main__":
     NT = 17
     k = 'inf'  # or k = '2'
-    #complete_enumeration(NT)
-    #print(dsda(NT, k, visualize=True))
-    m, _, _, = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=[13,4],provide_init=False,init={})
-    print('Objective',round(pe.value(m.obj),2))
+    #x, y = complete_enumeration(NT)
+    route, fmin, time = dsda(NT, k)
+    print(route[-1], fmin, time)
+
+    # To run show_feasibles = True option, x and y must by initialized by running complete_enumeration
+    #visualization(NT,route, show_feasibles=True, feas_x=x, feas_y=y)
+    
 
 

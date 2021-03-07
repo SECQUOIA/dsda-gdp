@@ -1,0 +1,7 @@
+set extvar /x1_1,x2_1,x3_1,x4_1,x4_2,x4_3/; 
+set s_x1(extvar) /x1_1/; 
+set s_x2(extvar) /x2_1/; 
+set s_x3(extvar) /x3_1/; 
+set s_x4(extvar) /x4_1,x4_2,x4_3/; 
+set neigh /d1*d728/; 
+set extineq /g1*g14/; 

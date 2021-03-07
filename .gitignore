@@ -2,3 +2,4 @@
 *.lst
 *.pyc
 gamsfiles/*
+util/jsonfiles

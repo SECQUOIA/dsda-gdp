@@ -405,7 +405,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                 m.tray[n].indicator_var.fix(False)
                 m.no_tray[n].indicator_var.fix(True)
     else:
-        # We are using a using of a pseudo-boolean formulation because we suspect boolean and relationships take longer for GAMS to write
+        # We are using a using of a boolean formulation because we know boolean and relationships take longer for GAMS to write
 
         YR_fixed = {}
         YB_fixed = {}

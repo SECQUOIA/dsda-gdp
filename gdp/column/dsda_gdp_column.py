@@ -254,7 +254,7 @@ def dsda(NT, k='inf'):
     route = []
     ext_var = [16, 2]
     route.append(ext_var)
-    boolean_reformulation = False
+    boolean_reformulation = True
     nlp = 'conopt'
     m, _, init = build_column(min_trays=8, max_trays=NT, xD=0.95, xB=0.95, x_input=ext_var,
                               nlp_solver=nlp, provide_init=False, init={}, boolean_ref=boolean_reformulation)

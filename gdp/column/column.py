@@ -6,6 +6,7 @@ from pyomo.environ import (
     Block, ConcreteModel, Constraint, Param, log, minimize, NonNegativeReals, Objective, RangeSet, Set, Var, TransformationFactory, SolverFactory, value, BooleanVar, exactly, land, lor)
 from pyomo.gdp import Disjunct, Disjunction
 import math
+import time
 from pyomo.util.infeasible import log_infeasible_constraints
 from initialize import initialize
 from pyomo.common.errors import InfeasibleConstraintException
@@ -16,7 +17,8 @@ from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
 
 
-def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init={}):
+def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init={}, boolean_ref=False):
+    t_start = time.process_time()
     """Builds the column model."""
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene'])
@@ -321,97 +323,114 @@ def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init
     m.total_cond.indicator_var.fix(1)
 
 # -----------End of model declaration. These changes are required to run the DSDA--------------
-    # Boolean variables and intTrays set definition
-    m.intTrays = Set(initialize= m.trays - [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
-    m.YB = BooleanVar(m.intTrays, doc='Existence of boil-up flow in stage n')
-    m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')   
-    #m.YP = BooleanVar(m.intTrays, doc='Boolean var associated with tray and no_tray')
-    m.YB_is_up = BooleanVar()
-    m.YR_is_down = BooleanVar()
-
-    # Logical constraints
-
-    @m.LogicalConstraint()
-    def one_reflux(m):
-        return exactly(1,m.YR)
-
-    @m.LogicalConstraint()
-    def one_boilup(m):
-        return exactly(1,m.YB)
-
-    @m.LogicalConstraint()
-    def boilup_fix(m):
-        return exactly(1,m.YB_is_up)
-
-    @m.LogicalConstraint()
-    def reflux_fix(m):
-        return exactly(1,m.YR_is_down)
-
-    @m.LogicalConstraint()
-    def no_reflux_down(m):
-        return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1,m.feed_tray)))
-
-    @m.LogicalConstraint()
-    def no_boilup_up(m):
-        return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1,m.max_trays)))
-
-
-    #@m.LogicalConstraint(m.conditional_trays)
-    #def YP_or_notYP(m,n):
-    #    return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n,m.max_trays)),lor(land(~m.YB[j] for j in range(n, m.max_trays)),m.YB[n])))
-        
-
-    #Associate Boolean variables with with disjunctions
-    #for n in m.conditional_trays:
-    #    m.YP[n].associate_binary_var(m.tray[n].indicator_var)
-
     # FIX Indicator variables according to input
     ext_var_1 = x_input[0]
     ext_var_2 = x_input[1]
 
-    for n in m.intTrays:  
-        if n == ext_var_1:
-            m.YR[n].fix(True)
-        else:
-            m.YR[n].fix(False)
+    if boolean_ref:
+        # Boolean variables and intTrays set definition
+        m.intTrays = Set(initialize= m.trays - [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
+        m.YB = BooleanVar(m.intTrays, doc='Existence of boil-up flow in stage n')
+        m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')   
+        m.YP = BooleanVar(m.intTrays, doc='Boolean var associated with tray and no_tray')
+        m.YB_is_up = BooleanVar()
+        m.YR_is_down = BooleanVar()
 
-        if n == ext_var_2:
-            m.YB[n].fix(True)
-        else:
-            m.YB[n].fix(False)
+        # Logical constraints
 
-    temp = value(land(~m.YR[n] for n in range(m.reboil_tray+1,m.feed_tray)))
-    if temp == True:
-        m.YR_is_down.fix(True)
+        @m.LogicalConstraint()
+        def one_reflux(m):
+            return exactly(1,m.YR)
+
+        @m.LogicalConstraint()
+        def one_boilup(m):
+            return exactly(1,m.YB)
+
+        @m.LogicalConstraint()
+        def boilup_fix(m):
+            return exactly(1,m.YB_is_up)
+
+        @m.LogicalConstraint()
+        def reflux_fix(m):
+            return exactly(1,m.YR_is_down)
+
+        @m.LogicalConstraint()
+        def no_reflux_down(m):
+            return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1,m.feed_tray)))
+
+        @m.LogicalConstraint()
+        def no_boilup_up(m):
+            return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1,m.max_trays)))
+
+        for n in m.intTrays:  
+            if n == ext_var_1:
+                m.YR[n].fix(True)
+            else:
+                m.YR[n].fix(False)
+
+            if n == ext_var_2:
+                m.YB[n].fix(True)
+            else:
+                m.YB[n].fix(False)
+
+        temp = value(land(~m.YR[n] for n in range(m.reboil_tray+1,m.feed_tray)))
+        if temp == True:
+            m.YR_is_down.fix(True)
+            
+        temp = value(land(~m.YB[n] for n in range(m.feed_tray+1,m.max_trays)))
+        if temp == True:
+            m.YB_is_up.fix(True)
         
-    temp = value(land(~m.YB[n] for n in range(m.feed_tray+1,m.max_trays)))
-    if temp == True:
-        m.YB_is_up.fix(True)
 
-    #for n in m.conditional_trays:
-    #    temp = value(land(lor(m.YR[j] for j in range(n,m.max_trays)),lor(land(~m.YB[j] for j in range(n, m.max_trays)),m.YB[n])))
-    #
-    #    if temp == True:
-    #        m.tray[n].indicator_var.fix(True)
-    #        m.no_tray[n].indicator_var.fix(False)
-    #    else:
-    #        m.tray[n].indicator_var.fix(False)
-    #        m.no_tray[n].indicator_var.fix(True)
-    
+            @m.LogicalConstraint(m.conditional_trays)
+            def YP_or_notYP(m,n):
+                return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n,m.max_trays)),lor(land(~m.YB[j] for j in range(n, m.max_trays)),m.YB[n])))
+            
+        #Associate Boolean variables with with disjunctions
+        for n in m.conditional_trays:
+            m.YP[n].associate_binary_var(m.tray[n].indicator_var)
 
-    for n in m.trays - [m.condens_tray, m.reboil_tray]:
-        temp = 1-(1-sum(value(m.YR[j]) for j in m.trays if j >= n and j <= max_trays-1))-(
-            sum(value(m.YB[j]) for j in m.trays if j >= n and j <= max_trays-1)-value(m.YB[n]))
-        if temp == 1 and n != m.feed_tray:
-            m.tray[n].indicator_var.fix(True)
-            m.no_tray[n].indicator_var.fix(False)
-        elif temp == 0 and n != m.feed_tray:
-            m.tray[n].indicator_var.fix(False)
-            m.no_tray[n].indicator_var.fix(True)
+        for n in m.conditional_trays:
+            temp = value(land(lor(m.YR[j] for j in range(n,m.max_trays)),lor(land(~m.YB[j] for j in range(n, m.max_trays)),m.YB[n])))
+        
+            if temp == True:
+                m.tray[n].indicator_var.fix(True)
+                m.no_tray[n].indicator_var.fix(False)
+            else:
+                m.tray[n].indicator_var.fix(False)
+                m.no_tray[n].indicator_var.fix(True)
+    else:
+        # We are using a using of a pseudo-boolean formulation because we suspect boolean and relationships take longer for GAMS to write
+
+        YR_fixed = {}
+        YB_fixed = {}
+        for n in m.trays - [m.condens_tray, m.reboil_tray]:  
+            if n == ext_var_1:
+                YR_fixed[n] = 1
+            else:
+                YR_fixed[n] = 0
+
+            if n == ext_var_2:
+                YB_fixed[n] = 1
+            else:
+                YB_fixed[n] = 0
+
+        for n in m.trays - [m.condens_tray, m.reboil_tray,]:
+            temp = 1-(1-sum(YR_fixed[j] for j in m.trays if j >= n and j <= max_trays-1))-(
+                sum(YB_fixed[j] for j in m.trays if j >= n and j <= max_trays-1)-YB_fixed[n])
+            if temp == 1 and n != m.feed_tray:
+                m.tray[n].indicator_var.fix(True)
+                m.no_tray[n].indicator_var.fix(False)
+            elif temp == 0 and n != m.feed_tray:
+                m.tray[n].indicator_var.fix(False)
+                m.no_tray[n].indicator_var.fix(True)
+        
 
     # Transform the model
     TransformationFactory('core.logical_to_linear').apply_to(m)
     TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=False)
+
 
     # Check equation feasibility
     try:
@@ -438,6 +457,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init
                             #keepfiles=True,
                             #tmpdir=gams_path,
                             #symbolic_solver_labels=True,
+                            skip_trivial_constraints=True,
                             add_options=[
                                 'option reslim = 10;'
                                 'option optcr = 0.0;'
@@ -499,6 +519,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init
         initialization = {'T_feed': T_feed_init, 'feed_vap_frac': feed_vap_frac_init, 'feed': feed_init, 'x': x_init, 'y': y_init, 'L': L_init, 'V': V_init, 'liq': liq_init, 'vap': vap_init, 'B': B_init, 'D': D_init, 'bot': bot_init, 'dis': dis_init, 'reflux_ratio': reflux_ratio_init, 'reboil_ratio': reboil_ratio_init,
                           'reflux_frac': reflux_frac_init, 'boilup_frac': boilup_frac_init, 'Kc': Kc_init, 'T': T_init, 'P': P_init, 'gamma': gamma_init, 'Pvap': Pvap_init, 'Pvap_X': Pvap_X_init, 'H_L': H_L_init, 'H_V': H_V_init, 'H_L_spec_feed': H_L_spec_feed_init, 'H_V_spec_feed': H_V_spec_feed_init, 'Qb': Qb_init, 'Qc': Qc_init}
 
+        #print('timer',time.process_time()-t_start)
         return m, results.solver.status, initialization
 
     except InfeasibleConstraintException:

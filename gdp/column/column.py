@@ -312,7 +312,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             return m.tray[t + 1].indicator_var >= m.tray[t].indicator_var
         else:
             return Constraint.NoConstraint
-# Fix feed conditions
+    # Fix feed conditions
     m.feed['benzene'].fix(50)
     m.feed['toluene'].fix(50)
     m.T_feed.fix(368)
@@ -329,10 +329,14 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
 
     if boolean_ref:
         # Boolean variables and intTrays set definition
-        m.intTrays = Set(initialize= m.trays - [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
-        m.YB = BooleanVar(m.intTrays, doc='Existence of boil-up flow in stage n')
-        m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')   
-        m.YP = BooleanVar(m.intTrays, doc='Boolean var associated with tray and no_tray')
+        m.intTrays = Set(
+            initialize=m.trays - [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
+        m.YB = BooleanVar(
+            m.intTrays, doc='Existence of boil-up flow in stage n')
+        m.YR = BooleanVar(
+            m.intTrays, doc='Existence of reflux flow in stage n')
+        m.YP = BooleanVar(
+            m.intTrays, doc='Boolean var associated with tray and no_tray')
         m.YB_is_up = BooleanVar()
         m.YR_is_down = BooleanVar()
 
@@ -340,29 +344,29 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
 
         @m.LogicalConstraint()
         def one_reflux(m):
-            return exactly(1,m.YR)
+            return exactly(1, m.YR)
 
         @m.LogicalConstraint()
         def one_boilup(m):
-            return exactly(1,m.YB)
+            return exactly(1, m.YB)
 
         @m.LogicalConstraint()
         def boilup_fix(m):
-            return exactly(1,m.YB_is_up)
+            return exactly(1, m.YB_is_up)
 
         @m.LogicalConstraint()
         def reflux_fix(m):
-            return exactly(1,m.YR_is_down)
+            return exactly(1, m.YR_is_down)
 
         @m.LogicalConstraint()
         def no_reflux_down(m):
-            return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1,m.feed_tray)))
+            return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
 
         @m.LogicalConstraint()
         def no_boilup_up(m):
-            return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1,m.max_trays)))
+            return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
 
-        for n in m.intTrays:  
+        for n in m.intTrays:
             if n == ext_var_1:
                 m.YR[n].fix(True)
             else:
@@ -373,26 +377,27 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             else:
                 m.YB[n].fix(False)
 
-        temp = value(land(~m.YR[n] for n in range(m.reboil_tray+1,m.feed_tray)))
+        temp = value(land(~m.YR[n]
+                          for n in range(m.reboil_tray+1, m.feed_tray)))
         if temp == True:
             m.YR_is_down.fix(True)
-            
-        temp = value(land(~m.YB[n] for n in range(m.feed_tray+1,m.max_trays)))
+
+        temp = value(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
         if temp == True:
             m.YB_is_up.fix(True)
-        
 
             @m.LogicalConstraint(m.conditional_trays)
-            def YP_or_notYP(m,n):
-                return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n,m.max_trays)),lor(land(~m.YB[j] for j in range(n, m.max_trays)),m.YB[n])))
-            
-        #Associate Boolean variables with with disjunctions
+            def YP_or_notYP(m, n):
+                return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
+
+        # Associate Boolean variables with with disjunctions
         for n in m.conditional_trays:
             m.YP[n].associate_binary_var(m.tray[n].indicator_var)
 
         for n in m.conditional_trays:
-            temp = value(land(lor(m.YR[j] for j in range(n,m.max_trays)),lor(land(~m.YB[j] for j in range(n, m.max_trays)),m.YB[n])))
-        
+            temp = value(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(
+                land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
+
             if temp == True:
                 m.tray[n].indicator_var.fix(True)
                 m.no_tray[n].indicator_var.fix(False)
@@ -404,7 +409,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
 
         YR_fixed = {}
         YB_fixed = {}
-        for n in m.trays - [m.condens_tray, m.reboil_tray]:  
+        for n in m.trays - [m.condens_tray, m.reboil_tray]:
             if n == ext_var_1:
                 YR_fixed[n] = 1
             else:
@@ -415,7 +420,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             else:
                 YB_fixed[n] = 0
 
-        for n in m.trays - [m.condens_tray, m.reboil_tray,]:
+        for n in m.trays - [m.condens_tray, m.reboil_tray, ]:
             temp = 1-(1-sum(YR_fixed[j] for j in m.trays if j >= n and j <= max_trays-1))-(
                 sum(YB_fixed[j] for j in m.trays if j >= n and j <= max_trays-1)-YB_fixed[n])
             if temp == 1 and n != m.feed_tray:
@@ -424,13 +429,12 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             elif temp == 0 and n != m.feed_tray:
                 m.tray[n].indicator_var.fix(False)
                 m.no_tray[n].indicator_var.fix(True)
-        
 
     # Transform the model
     TransformationFactory('core.logical_to_linear').apply_to(m)
     TransformationFactory('gdp.fix_disjuncts').apply_to(m)
-    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=False)
-
+    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+        m, tmp=False, ignore_infeasible=False)
 
     # Check equation feasibility
     try:
@@ -445,7 +449,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         gams_path = os.path.join(dir_path, "gamsfiles/")
         if not(os.path.exists(gams_path)):
             print('Directory for automatically generated files ' +
-                gams_path + ' does not exist. We will create it')
+                  gams_path + ' does not exist. We will create it')
             os.makedirs(gams_path)
 
         #opt = SolverFactory('ipopt')
@@ -473,10 +477,10 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         else:
             results = opt.solve(m, tee=False,
                                 # Uncomment the following lines if you want to save GAMS models
-                                #keepfiles=True,
-                                #tmpdir=gams_path,
-                                #symbolic_solver_labels=True,
-                                #skip_trivial_constraints=True,
+                                # keepfiles=True,
+                                # tmpdir=gams_path,
+                                # symbolic_solver_labels=True,
+                                # skip_trivial_constraints=True,
                                 add_options=[
                                     'option reslim = 10;'
                                     'option optcr = 0.0;'
@@ -488,7 +492,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                                     # '$offecho'
                                     # 'display(execError);'
                                 ])
-        
+
         # Save results (for initialization)
         T_feed_init, feed_vap_frac_init, feed_init, x_init, y_init, L_init, V_init, liq_init, vap_init, B_init, D_init, bot_init, dis_init, reflux_ratio_init = {
         }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
@@ -496,7 +500,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         }, {}, {}, {}, {}, {}, {}
         Pvap_init, Pvap_X_init, H_L_init, H_V_init, H_L_spec_feed_init, H_V_spec_feed_init, Qb_init, Qc_init = {
         }, {}, {}, {}, {}, {}, {}, {}
-          
+
         T_feed_init = value(m.T_feed)
         feed_vap_frac_init = value(m.feed_vap_frac)
         bot_init = value(m.bot)
@@ -537,7 +541,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         initialization = {'T_feed': T_feed_init, 'feed_vap_frac': feed_vap_frac_init, 'feed': feed_init, 'x': x_init, 'y': y_init, 'L': L_init, 'V': V_init, 'liq': liq_init, 'vap': vap_init, 'B': B_init, 'D': D_init, 'bot': bot_init, 'dis': dis_init, 'reflux_ratio': reflux_ratio_init, 'reboil_ratio': reboil_ratio_init,
                           'reflux_frac': reflux_frac_init, 'boilup_frac': boilup_frac_init, 'Kc': Kc_init, 'T': T_init, 'P': P_init, 'gamma': gamma_init, 'Pvap': Pvap_init, 'Pvap_X': Pvap_X_init, 'H_L': H_L_init, 'H_V': H_V_init, 'H_L_spec_feed': H_L_spec_feed_init, 'H_V_spec_feed': H_V_spec_feed_init, 'Qb': Qb_init, 'Qc': Qc_init}
 
-        #print('timer',time.process_time()-t_start)
+        # print('timer',time.process_time()-t_start)
+        solver_time = results.solver.user_time
         return m, results.solver.status, initialization
 
     except InfeasibleConstraintException:

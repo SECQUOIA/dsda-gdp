@@ -22,8 +22,11 @@ def main():
         #x_input=[16,2], # Original initialization
         x_input=[13,4], # To find optimal solution in PSE paper
         #x_input=[14,5], # To find optimal solution according to D-SDA
+        nlp_solver='msnlp',
         provide_init=False,
-        init={})
+        init={},
+        boolean_ref=False,
+        keep_gams=False)
 
 #---display results
     display_column(m[0])

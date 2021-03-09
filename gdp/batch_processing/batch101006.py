@@ -216,15 +216,14 @@ def build_model():
     return model
 
 
-if __name__ == "__main__":
-    m = build_model().create_instance('data_101006.dat')
+def solve_with_big_m(m):
     TransformationFactory('gdp.bigm').apply_to(m)
     # SOLVE
     dir_path = os.path.dirname(os.path.abspath(__file__))
     gams_path = os.path.join(dir_path, "gamsfiles/")
     if not(os.path.exists(gams_path)):
         print('Directory for automatically generated files ' +
-            gams_path + ' does not exist. We will create it')
+              gams_path + ' does not exist. We will create it')
         os.makedirs(gams_path)
 
     #opt = SolverFactory('ipopt')
@@ -247,4 +246,74 @@ if __name__ == "__main__":
                             # '$offecho'
                             # 'display(execError);'
                         ])
+    return results
+
+def solve_with_hull(m):
+    TransformationFactory('gdp.hull').apply_to(m)
+    # SOLVE
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    gams_path = os.path.join(dir_path, "gamsfiles/")
+    if not(os.path.exists(gams_path)):
+        print('Directory for automatically generated files ' +
+              gams_path + ' does not exist. We will create it')
+        os.makedirs(gams_path)
+
+    #opt = SolverFactory('ipopt')
+    #results = opt.solve(m)
+    solvername = 'gams'
+    opt = SolverFactory(solvername, solver='baron')
+    results = opt.solve(m, tee=True,
+                        # Uncomment the following lines if you want to save GAMS models
+                        #keepfiles=True,
+                        #tmpdir=gams_path,
+                        #symbolic_solver_labels=True,
+                        add_options=[
+                            'option reslim = 120;'
+                            'option optcr = 0.0;'
+                            # Uncomment the following lines to setup IIS computation of BARON through option file
+                            # 'GAMS_MODEL.optfile = 1;'
+                            # '\n'
+                            # '$onecho > baron.opt \n'
+                            # 'CompIIS 1 \n'
+                            # '$offecho'
+                            # 'display(execError);'
+                        ])
+    return results
+
+def solve_with_gdpopt(m):
+    # SOLVE
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    gams_path = os.path.join(dir_path, "gamsfiles/")
+    if not(os.path.exists(gams_path)):
+        print('Directory for automatically generated files ' +
+              gams_path + ' does not exist. We will create it')
+        os.makedirs(gams_path)
+
+    #opt = SolverFactory('ipopt')
+    #results = opt.solve(m)
+    solvername = 'gdpopt'
+    opt = SolverFactory(solvername)
+    results = opt.solve(m, tee=True,
+                    strategy='LOA',
+                    # strategy='GLOA',
+                    time_limit=3600,
+                    mip_solver='gams',
+                    mip_solver_args=dict(solver='cplex', warmstart=True),
+                    nlp_solver='gams',
+                    nlp_solver_args=dict(solver='ipopth', warmstart=True,),
+                    minlp_solver='gams',
+                    minlp_solver_args=dict(solver='dicopt', warmstart=True),
+                    subproblem_presolve=False,
+                    # init_strategy='no_init',
+                    set_cover_iterlim=20,
+                    # calc_disjunctive_bounds=True
+                    )
+    return results
+    
+if __name__ == "__main__":
+    m = build_model().create_instance('data_101006.dat')
+    # results = solve_with_big_m(m)
+    # results = solve_with_hull(m)
+    results = solve_with_gdpopt(m)
+    print(results)
     m.min_cost.display()

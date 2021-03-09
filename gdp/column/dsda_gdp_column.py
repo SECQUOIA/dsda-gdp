@@ -15,6 +15,7 @@ import os
 
 from column import build_column
 
+
 def list_generator(NT):
     X1, X2, aux, aux2, x = [], [], [], 2, {}
 
@@ -31,7 +32,8 @@ def list_generator(NT):
             X2.append(aux2)
     return X1, X2
 
-def complete_enumeration(NT):
+
+def complete_enumeration(NT, nlp='msnlp'):
     X1, X2 = list_generator(NT)
     feas_x, feas_y = [], []
     print('=============================')
@@ -40,7 +42,8 @@ def complete_enumeration(NT):
 
     for i in range(len(X1)):
         x = [X1[i], X2[i]]
-        m, status, _ = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=x,provide_init=False,init={})
+        m, status, _ = build_column(min_trays=8, max_trays=NT, xD=0.95,
+                                    xB=0.95, x_input=x, nlp_solver=nlp, provide_init=False, init={})
         if status == pe.SolverStatus.ok:
             print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 2)))
             feas_x.append(X1[i])
@@ -84,16 +87,17 @@ def neighborhood_k_eq_2(num_ext):
             direct.append(neighbors[j, i])
     return directions
 
-def neighborhood_k_eq_inf(num_ext): # number
+
+def neighborhood_k_eq_inf(num_ext):  # number
     num_neigh = 3*num_ext-1
-    neighbors = list(it.product([-1,0,1], repeat=num_ext))
+    neighbors = list(it.product([-1, 0, 1], repeat=num_ext))
     directions = {}
     for i in range(len(neighbors)):
-        directions[i+1]=list(neighbors[i])
+        directions[i+1] = list(neighbors[i])
     temp = directions.copy()
     for i in directions.keys():
         if temp[i] == [0]*num_ext:
-            temp.pop(i,None)
+            temp.pop(i, None)
     return temp
 # Creates neighbor of a given point
 # Optimize option will discard out of bounds points given by min and max allowed
@@ -104,7 +108,9 @@ def neighborhood_k_eq_inf(num_ext): # number
 # neighborhood is type dict and is the output of a k-Neighborhood function
 # newbors or new_newbors is type  dict starting in 0 with neighbor of a given point
 # Neighbor 0 is the actual point
-def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed={}, cheating=False):
+
+
+def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed={}):
     neighbors = {0: start}
     for i in neighborhood.keys():
         neighbors[i] = list(map(sum, zip(start, list(neighborhood[i]))))
@@ -120,12 +126,6 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
             if checked == num_vars:
                 new_neighbors[i] = neighbors[i]
 
-        if cheating:
-            temp = new_neighbors
-            for i in list(temp.keys()):
-                if new_neighbors[i][1] - new_neighbors[i][0] > 0:
-                    new_neighbors.pop(i, None)
-
         return new_neighbors
     return neighbors
 
@@ -140,7 +140,7 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
 # improve is type bool and shows if an improvement was made while looking for neighbors
-def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001):
+def evaluate_neighbors(ext_vars, init, fmin, nlp_solver, tol=0.000001, boolean_ref=False):
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
@@ -152,8 +152,9 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001):
     feasibles = {}
     initials = {}
     for i in temp.keys():
-        m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=temp[i],provide_init=True,init=init)
-                            #fnlp_gdp(NT, temp[i], provide_init=True, init=init)
+        m, status, new_init = build_column(min_trays=8, max_trays=NT, xD=0.95, xB=0.95,
+                                           x_input=temp[i], nlp_solver=nlp_solver, provide_init=True, init=init, boolean_ref=boolean_ref)
+        #fnlp_gdp(NT, temp[i], provide_init=True, init=init)
 
         if status == pe.SolverStatus.ok:
             objectives[i] = pe.value(m.obj)
@@ -177,7 +178,7 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001):
             for j in range(len(best_var)):
                 ssum += (min_points[i][j] - here[j])**2
             ssums[i] = ssum
-        
+
         key_max = max(ssums.keys(), key=(lambda k: ssums[k]))
 
         if objectives[key_max] + tol < fmin:
@@ -208,7 +209,7 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001):
 # best_var is type list and gives the best point (between moved and actual)
 # move is type bool and shows if an improvement was made while looking for neighbors
 # best_init is type dict and contains solved variables for the best point
-def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={}, max_allowed={}, tol=0.000001):
+def move_and_evaluate(start, init, fmin, direction, nlp_solver, optimize=True, min_allowed={}, max_allowed={}, tol=0.000001, boolean_ref=False):
     best_var = start
     best_init = init
     moved = False
@@ -221,7 +222,8 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
             if moved_point[j] >= min_allowed[j+1] and moved_point[j] <= max_allowed[j+1]:
                 checked += 1
         if checked == len(moved_point):
-            m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=moved_point,provide_init=True,init=init)
+            m, status, new_init = build_column(min_trays=8, max_trays=NT, xD=0.95, xB=0.95, x_input=moved_point,
+                                               nlp_solver=nlp_solver, provide_init=True, init=init, boolean_ref=boolean_ref)
             #                   fnlp_gdp(NT, moved_point, provide_init=True, init=init)
             if status == pe.SolverStatus.ok:
                 act_obj = pe.value(m.obj)
@@ -231,7 +233,8 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
                     best_init = new_init
                     moved = True
     else:
-        m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=moved_point,provide_init=True,init=init)
+        m, status, new_init = build_column(min_trays=8, max_trays=NT, xD=0.95, xB=0.95, x_input=moved_point,
+                                           nlp_solver=nlp_solver, provide_init=True, init=init, boolean_ref=boolean_ref)
         #                      fnlp_gdp(NT, moved_point, provide_init=True, init=init)
         if status == pe.SolverStatus.ok:
             act_obj = pe.value(m.obj)
@@ -244,14 +247,17 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
     return fmin, best_var, moved, best_init
 
 
-def dsda(NT, k='inf', visualize=False):
-    print('\n Starting D-SDA with k =',k)
+def dsda(NT, k='inf'):
+    print('\n Starting D-SDA with k =', k)
     # Initialize
     t_start = time.process_time()
     route = []
-    ext_var = [16,2]
+    ext_var = [16, 2]
     route.append(ext_var)
-    m, _, init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=ext_var,provide_init=False,init={})
+    boolean_reformulation = True
+    nlp = 'conopt'
+    m, _, init = build_column(min_trays=8, max_trays=NT, xD=0.95, xB=0.95, x_input=ext_var,
+                              nlp_solver=nlp, provide_init=False, init={}, boolean_ref=boolean_reformulation)
     fmin = pe.value(m.obj)
     min_allowed = {i: 2 for i in range(1, len(ext_var)+1)}
     max_allowed = {i: NT-1 for i in range(1, len(ext_var)+1)}
@@ -262,10 +268,12 @@ def dsda(NT, k='inf', visualize=False):
     elif k == 'inf':
         neighborhood = neighborhood_k_eq_inf(len(ext_var))
     elif k == 'l_flat':
-        neighborhood = {1: [1, 1], 2: [-1, -1], 3: [1, 0], 4: [-1, 0], 5: [0, 1], 6: [0, -1]}
+        neighborhood = {1: [1, 1], 2: [-1, -1],
+                        3: [1, 0], 4: [-1, 0], 5: [0, 1], 6: [0, -1]}
     elif k == 'm_flat':
-        neighborhood = {1: [1, -1], 2: [1, 0], 3: [-1, 1], 4: [0, 1], 5: [-1, 0], 6: [0, -1]}
-    else: 
+        neighborhood = {1: [1, -1], 2: [1, 0],
+                        3: [-1, 1], 4: [0, 1], 5: [-1, 0], 6: [0, -1]}
+    else:
         return "Enter a valid neighborhood ('inf', '2', 'l_flat' or 'm_flat')"
 
     looking_in_neighbors = True
@@ -275,11 +283,11 @@ def dsda(NT, k='inf', visualize=False):
 
         # Find neighbors of the actual point
         neighbors = my_neighbors(ext_var, neighborhood, optimize=True,
-                                 min_allowed=min_allowed, max_allowed=max_allowed, cheating=False)
+                                 min_allowed=min_allowed, max_allowed=max_allowed)
 
         # Evaluate neighbors of the actual point
         fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(
-            neighbors, init, fmin)
+            neighbors, init, fmin, nlp_solver=nlp, boolean_ref=boolean_reformulation)
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
@@ -291,7 +299,7 @@ def dsda(NT, k='inf', visualize=False):
 
                 # Move in given direction and evaluate
                 fmin, best_var, moved, best_init = move_and_evaluate(
-                    best_var, best_init, fmin, neighborhood[best_dir], optimize=True, min_allowed=min_allowed, max_allowed=max_allowed)
+                    best_var, best_init, fmin, neighborhood[best_dir], nlp_solver=nlp, optimize=True, min_allowed=min_allowed, max_allowed=max_allowed, boolean_ref=boolean_reformulation)
 
                 # Stopping condition in case no movement was done
                 if moved == True:
@@ -312,12 +320,9 @@ def dsda(NT, k='inf', visualize=False):
 if __name__ == "__main__":
     NT = 17
     k = 'inf'  # or k = '2'
-    #x, y = complete_enumeration(NT)
+    #x, y = complete_enumeration(NT, nlp='msnlp')
     route, fmin, time = dsda(NT, k)
     print(route[-1], fmin, time)
 
     # To run show_feasibles = True option, x and y must by initialized by running complete_enumeration
     #visualization(NT,route, show_feasibles=True, feas_x=x, feas_y=y)
-    
-
-

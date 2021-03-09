@@ -24,7 +24,8 @@ def main():
         #x_input=[14,5], # To find optimal solution according to D-SDA
         provide_init=False,
         init={},
-        boolean_ref=True)
+        boolean_ref=True,
+        keep_gams=False)
 
 #---display results
     display_column(m[0])

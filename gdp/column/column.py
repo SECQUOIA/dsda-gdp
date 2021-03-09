@@ -17,7 +17,7 @@ from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
 
 
-def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init={}, boolean_ref=False):
+def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init={}, boolean_ref=False, keep_gams=False):
     t_start = time.process_time()
     """Builds the column model."""
     m = ConcreteModel('benzene-toluene column')
@@ -452,25 +452,43 @@ def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init
         #results = opt.solve(m)
         solvername = 'gams'
         opt = SolverFactory(solvername, solver='conopt')
-        results = opt.solve(m, tee=False,
-                            # Uncomment the following lines if you want to save GAMS models
-                            #keepfiles=True,
-                            #tmpdir=gams_path,
-                            #symbolic_solver_labels=True,
-                            skip_trivial_constraints=True,
-                            add_options=[
-                                'option reslim = 10;'
-                                'option optcr = 0.0;'
-                                # Uncomment the following lines to setup IIS computation of BARON through option file
-                                # 'GAMS_MODEL.optfile = 1;'
-                                # '\n'
-                                # '$onecho > baron.opt \n'
-                                # 'CompIIS 1 \n'
-                                # '$offecho'
-                                # 'display(execError);'
-                            ])
-        #log_infeasible_constraints(m, tol=1E-3)
-        #results = SolverFactory('ipopt').solve(m, tee=True)
+        if keep_gams:
+            results = opt.solve(m, tee=False,
+                                # Uncomment the following lines if you want to save GAMS models
+                                keepfiles=True,
+                                tmpdir=gams_path,
+                                symbolic_solver_labels=True,
+                                skip_trivial_constraints=True,
+                                add_options=[
+                                    'option reslim = 10;'
+                                    'option optcr = 0.0;'
+                                    # Uncomment the following lines to setup IIS computation of BARON through option file
+                                    # 'GAMS_MODEL.optfile = 1;'
+                                    # '\n'
+                                    # '$onecho > baron.opt \n'
+                                    # 'CompIIS 1 \n'
+                                    # '$offecho'
+                                    # 'display(execError);'
+                                ])
+        else:
+            results = opt.solve(m, tee=False,
+                                # Uncomment the following lines if you want to save GAMS models
+                                #keepfiles=True,
+                                #tmpdir=gams_path,
+                                #symbolic_solver_labels=True,
+                                #skip_trivial_constraints=True,
+                                add_options=[
+                                    'option reslim = 10;'
+                                    'option optcr = 0.0;'
+                                    # Uncomment the following lines to setup IIS computation of BARON through option file
+                                    # 'GAMS_MODEL.optfile = 1;'
+                                    # '\n'
+                                    # '$onecho > baron.opt \n'
+                                    # 'CompIIS 1 \n'
+                                    # '$offecho'
+                                    # 'display(execError);'
+                                ])
+        
         # Save results (for initialization)
         T_feed_init, feed_vap_frac_init, feed_init, x_init, y_init, L_init, V_init, liq_init, vap_init, B_init, D_init, bot_init, dis_init, reflux_ratio_init = {
         }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}

@@ -23,7 +23,8 @@ def main():
         x_input=[13,4], # To find optimal solution in PSE paper
         #x_input=[14,5], # To find optimal solution according to D-SDA
         provide_init=False,
-        init={})
+        init={},
+        boolean_ref=True)
 
 #---display results
     display_column(m[0])

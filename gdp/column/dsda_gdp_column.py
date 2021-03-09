@@ -31,7 +31,7 @@ def list_generator(NT):
             X2.append(aux2)
     return X1, X2
 
-def complete_enumeration(NT):
+def complete_enumeration(NT, nlp='msnlp'):
     X1, X2 = list_generator(NT)
     feas_x, feas_y = [], []
     print('=============================')
@@ -40,7 +40,7 @@ def complete_enumeration(NT):
 
     for i in range(len(X1)):
         x = [X1[i], X2[i]]
-        m, status, _ = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=x,provide_init=False,init={})
+        m, status, _ = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=x, nlp_solver=nlp ,provide_init=False,init={})
         if status == pe.SolverStatus.ok:
             print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m.obj), 2)))
             feas_x.append(X1[i])
@@ -134,7 +134,7 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
 # improve is type bool and shows if an improvement was made while looking for neighbors
-def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001, boolean_ref=False):
+def evaluate_neighbors(ext_vars, init, fmin, nlp_solver, tol=0.000001, boolean_ref=False):
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
@@ -146,7 +146,7 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001, boolean_ref=False):
     feasibles = {}
     initials = {}
     for i in temp.keys():
-        m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=temp[i],provide_init=True,init=init, boolean_ref=boolean_ref)
+        m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=temp[i], nlp_solver=nlp_solver, provide_init=True,init=init, boolean_ref=boolean_ref)
                             #fnlp_gdp(NT, temp[i], provide_init=True, init=init)
 
         if status == pe.SolverStatus.ok:
@@ -202,7 +202,7 @@ def evaluate_neighbors(ext_vars, init, fmin, tol=0.000001, boolean_ref=False):
 # best_var is type list and gives the best point (between moved and actual)
 # move is type bool and shows if an improvement was made while looking for neighbors
 # best_init is type dict and contains solved variables for the best point
-def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={}, max_allowed={}, tol=0.000001, boolean_ref=False):
+def move_and_evaluate(start, init, fmin, direction, nlp_solver, optimize=True, min_allowed={}, max_allowed={}, tol=0.000001, boolean_ref=False):
     best_var = start
     best_init = init
     moved = False
@@ -215,7 +215,7 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
             if moved_point[j] >= min_allowed[j+1] and moved_point[j] <= max_allowed[j+1]:
                 checked += 1
         if checked == len(moved_point):
-            m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=moved_point,provide_init=True,init=init, boolean_ref=boolean_ref)
+            m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=moved_point, nlp_solver=nlp_solver, provide_init=True,init=init, boolean_ref=boolean_ref)
             #                   fnlp_gdp(NT, moved_point, provide_init=True, init=init)
             if status == pe.SolverStatus.ok:
                 act_obj = pe.value(m.obj)
@@ -225,7 +225,7 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
                     best_init = new_init
                     moved = True
     else:
-        m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=moved_point,provide_init=True,init=init, boolean_ref=boolean_ref)
+        m, status, new_init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=moved_point, nlp_solver=nlp_solver, provide_init=True,init=init, boolean_ref=boolean_ref)
         #                      fnlp_gdp(NT, moved_point, provide_init=True, init=init)
         if status == pe.SolverStatus.ok:
             act_obj = pe.value(m.obj)
@@ -238,15 +238,16 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
     return fmin, best_var, moved, best_init
 
 
-def dsda(NT, k='inf', visualize=False):
+def dsda(NT, k='inf'):
     print('\n Starting D-SDA with k =',k)
     # Initialize
     t_start = time.process_time()
     route = []
     ext_var = [16,2]
     route.append(ext_var)
-    boolean_reformulation = True
-    m, _, init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=ext_var,provide_init=False,init={},boolean_ref=boolean_reformulation)
+    boolean_reformulation = False
+    nlp = 'conopt'
+    m, _, init = build_column(min_trays=8,max_trays=NT,xD=0.95,xB=0.95,x_input=ext_var, nlp_solver=nlp, provide_init=False,init={},boolean_ref=boolean_reformulation)
     fmin = pe.value(m.obj)
     min_allowed = {i: 2 for i in range(1, len(ext_var)+1)}
     max_allowed = {i: NT-1 for i in range(1, len(ext_var)+1)}
@@ -274,7 +275,7 @@ def dsda(NT, k='inf', visualize=False):
 
         # Evaluate neighbors of the actual point
         fmin, best_var, best_dir, best_init, improve = evaluate_neighbors(
-            neighbors, init, fmin,boolean_ref=boolean_reformulation)
+            neighbors, init, fmin, nlp_solver=nlp, boolean_ref=boolean_reformulation)
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
@@ -286,7 +287,7 @@ def dsda(NT, k='inf', visualize=False):
 
                 # Move in given direction and evaluate
                 fmin, best_var, moved, best_init = move_and_evaluate(
-                    best_var, best_init, fmin, neighborhood[best_dir], optimize=True, min_allowed=min_allowed, max_allowed=max_allowed, boolean_ref=boolean_reformulation)
+                    best_var, best_init, fmin, neighborhood[best_dir], nlp_solver=nlp, optimize=True, min_allowed=min_allowed, max_allowed=max_allowed, boolean_ref=boolean_reformulation)
 
                 # Stopping condition in case no movement was done
                 if moved == True:
@@ -307,7 +308,7 @@ def dsda(NT, k='inf', visualize=False):
 if __name__ == "__main__":
     NT = 17
     k = 'inf'  # or k = '2'
-    #x, y = complete_enumeration(NT)
+    #x, y = complete_enumeration(NT, nlp='msnlp')
     route, fmin, time = dsda(NT, k)
     print(route[-1], fmin, time)
 

@@ -17,7 +17,7 @@ from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
 
 
-def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init={}, boolean_ref=False, keep_gams=False):
+def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init=False, init={}, boolean_ref=False, keep_gams=False):
     t_start = time.process_time()
     """Builds the column model."""
     m = ConcreteModel('benzene-toluene column')
@@ -451,7 +451,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, provide_init=False, init
         #opt = SolverFactory('ipopt')
         #results = opt.solve(m)
         solvername = 'gams'
-        opt = SolverFactory(solvername, solver='conopt')
+        opt = SolverFactory(solvername, solver=nlp_solver)
         if keep_gams:
             results = opt.solve(m, tee=False,
                                 # Uncomment the following lines if you want to save GAMS models

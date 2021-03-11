@@ -10,6 +10,7 @@ from pyomo.opt.base.solvers import SolverFactory
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
+from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 from pyomo.opt import SolutionStatus
 from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
@@ -318,16 +319,11 @@ def build_cstrs(NT=5):
     return m
 
 
-def solve_with_minlp(m, transformation='bigm', minlp='baron'):
+def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
-    if transformation == 'bigm':
-        pe.TransformationFactory('gdp.bigm').apply_to(m)
-    elif transformation == 'hull':
-        pe.TransformationFactory('gdp.hull').apply_to(m)
-    else:
-        print('Transformation must be either "bigm" or "hull')
-        return m
+    transformation_string = 'gdp.' + transformation
+    pe.TransformationFactory(transformation_string).apply_to(m)
 
     # SOLVE
     dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -345,7 +341,7 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron'):
                           # tmpdir=gams_path,
                           # symbolic_solver_labels=True,
                           add_options=[
-                              'option reslim = 120;'
+                              'option reslim = ' + str(timelimit) + ';'
                               'option optcr = 0.0;'
                               # Uncomment the following lines to setup IIS computation of BARON through option file
                               # 'GAMS_MODEL.optfile = 1;'
@@ -355,10 +351,11 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron'):
                               # '$offecho'
                               # 'display(execError);'
                           ])
+    update_boolean_vars_from_binary(m)
     return m
 
 
-def solve_with_gdpopt(m, mip='cplex', nlp='ipopth', minlp='dicopt'):
+def solve_with_gdpopt(m, mip='cplex', nlp='ipopth', minlp='bonmin', timelimit=10):
     # SOLVE
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -372,18 +369,32 @@ def solve_with_gdpopt(m, mip='cplex', nlp='ipopth', minlp='dicopt'):
     m.results = opt.solve(m, tee=True,
                           strategy='LOA',
                           # strategy='GLOA',
-                          time_limit=120,
+                          time_limit=timelimit,
                           mip_solver='gams',
-                          mip_solver_args=dict(solver=mip, warmstart=True),
+                          mip_solver_args=dict(solver=mip, warmstart=True,
+                                               keepfiles=True,
+                                               tmpdir=gams_path,
+                                               symbolic_solver_labels=True
+                                               ),
                           nlp_solver='gams',
-                          nlp_solver_args=dict(solver=nlp, warmstart=True,),
+                          nlp_solver_args=dict(solver=nlp, warmstart=True,
+                                            #    keepfiles=True,
+                                            #    tmpdir=gams_path,
+                                            #    symbolic_solver_labels=True
+                                               ),
                           minlp_solver='gams',
-                          minlp_solver_args=dict(solver=minlp, warmstart=True),
+                          minlp_solver_args=dict(solver=minlp, warmstart=True, tee=True,
+                                                #  keepfiles=True,
+                                                #  tmpdir=gams_path,
+                                                #  symbolic_solver_labels=True
+                                                 ),
                           subproblem_presolve=False,
                           # init_strategy='no_init',
-                          set_cover_iterlim=20,
+                          set_cover_iterlim=1,
+                          iterlim=1
                           # calc_disjunctive_bounds=True
                           )
+    update_boolean_vars_from_binary(m)
     return m
 
 
@@ -669,9 +680,10 @@ def visualize_solution(m, NT):
 if __name__ == "__main__":
     NT = 5
     m = build_cstrs(NT)
+    timelimit = 10,
     # initialize_cstr(m)
-    complete_enumeration(m, NT, nlp='msnlp')
-    #m_solved = solve_with_minlp(m, transformation='hull', minlp='baron')
-    #m_solved = solve_with_gdpopt(m, mip='cplex',nlp='ipopth',minlp='dicopt')
+    # complete_enumeration(m, NT, nlp='msnlp')
+    m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit)
+    # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='ipopth',minlp='dicopt', timelimit=timelimit)
     # print(m_solved.results)
-    # visualize_solution(m_solved,NT)
+    visualize_solution(m_solved,NT)

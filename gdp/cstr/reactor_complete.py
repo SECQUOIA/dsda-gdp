@@ -358,7 +358,7 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
     return m
 
 
-def solve_with_gdpopt(m, mip='cplex', nlp='ipopth', minlp='bonmin', timelimit=10):
+def solve_with_gdpopt(m, mip='cplex', nlp='conopt', minlp='bonmin', timelimit=10):
     """
     Function documentation
     """
@@ -381,9 +381,9 @@ def solve_with_gdpopt(m, mip='cplex', nlp='ipopth', minlp='bonmin', timelimit=10
                           time_limit=timelimit,
                           mip_solver='gams',
                           mip_solver_args=dict(solver=mip, warmstart=True,
-                                               keepfiles=True,
-                                               tmpdir=gams_path,
-                                               symbolic_solver_labels=True
+                                            #    keepfiles=True,
+                                            #    tmpdir=gams_path,
+                                            #    symbolic_solver_labels=True
                                                ),
                           nlp_solver='gams',
                           nlp_solver_args=dict(solver=nlp, warmstart=True,
@@ -397,10 +397,12 @@ def solve_with_gdpopt(m, mip='cplex', nlp='ipopth', minlp='bonmin', timelimit=10
                                                 #  tmpdir=gams_path,
                                                 #  symbolic_solver_labels=True
                                                  ),
-                          subproblem_presolve=False,
-                          # init_strategy='no_init',
-                          set_cover_iterlim=1,
-                          iterlim=1
+                        #   subproblem_presolve=True,
+                        #   mip_presolve=True,
+                          init_strategy='fix_disjuncts',
+                        #   set_cover_iterlim=0,
+                          iterlim=20,
+                          force_subproblem_nlp=True
                           # calc_disjunctive_bounds=True
                           )
     update_boolean_vars_from_binary(m)
@@ -440,7 +442,7 @@ def external_ref(m, x):
     return m
 
 
-def solve_nlp(m, nlp='msnlp'):
+def solve_nlp(m, nlp='msnlp', timelimit=10):
     m.status = 'ok'
     try:
         fbbt(m)
@@ -460,7 +462,7 @@ def solve_nlp(m, nlp='msnlp'):
                               # tmpdir=gams_path,
                               # symbolic_solver_labels=True,
                               add_options=[
-                                  'option reslim = 10;'
+                                  'option reslim = ' + str(timelimit) + ';'
                                   'option optcr = 0.0;'
                                   # Uncomment the following lines to setup IIS computation of BARON through option file
                                   # 'GAMS_MODEL.optfile = 1;'
@@ -508,7 +510,7 @@ def solve_nlp(m, nlp='msnlp'):
         return m
 
 
-def complete_enumeration(m, NT=5, nlp='msnlp'):
+def complete_enumeration(model_function=build_cstrs, NT=5, nlp='msnlp', timelimit = 10):
     X1 = list(range(1, NT+1))
     print()
 
@@ -519,12 +521,10 @@ def complete_enumeration(m, NT=5, nlp='msnlp'):
     #m2 = copy.copy(m)
     for i in range(len(X1)):
         for j in range(len(X1)):
-            #m = build_cstrs(NT)
-            #m2 = copy.deepcopy(m)
-            # m2=m.copy()
+            m = model_function(NT)
             x = [X1[i], X1[j]]
             m_fixed = external_ref(m, x)
-            m_solved = solve_nlp(m_fixed, nlp=nlp)
+            m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
             if m_solved.status == 'ok':
                 print('%6s %6s %12s' %
@@ -692,20 +692,21 @@ def visualize_solution(m, NT):
 
 
 if __name__ == "__main__":
-    # NT = 5
-    # timelimit = 10
+    NT = 5
+    timelimit = 10
     # m = build_cstrs(NT)
     # # initialize_cstr(m)
-    # m = external_ref(m,[5,5])
+    # m = external_ref(m,[1,1])
+    # m.display()
     # solve_nlp(m)
 
     # m2 = build_cstrs(NT)
     # initialize_cstr(m2)
 
     # m2.pprint()
-    neighborhood_k_eq_inf(10)
-    # complete_enumeration(m, NT, nlp='msnlp')
+    # neighborhood_k_eq_inf(10)
+    complete_enumeration(model_function=build_cstrs, NT=NT, nlp='msnlp')
     # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit)
-    # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='ipopth',minlp='dicopt', timelimit=timelimit)
+    # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='conopt',minlp='dicopt', timelimit=timelimit)
     # print(m_solved.results)
     # visualize_solution(m_solved,NT)

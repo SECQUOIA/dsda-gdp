@@ -530,10 +530,10 @@ def complete_enumeration(NT):
 
 
 
-def visualization(NT, points, feas_x=[], feas_y=[], objs=[]):
+def visualization(NT, points, feas_x=[], feas_y=[], objs=[], k='inf'):
 
     X1, X2 = feas_x, feas_y
-    cm = plt.cm.get_cmap('plasma_r') 
+    cm = plt.cm.get_cmap('viridis_r') 
 
     def drawArrow(A, B):
         plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005,
@@ -544,6 +544,10 @@ def visualization(NT, points, feas_x=[], feas_y=[], objs=[]):
 
     sc = plt.scatter(X1, X2, s=80, c=objs, cmap=cm)
     plt.colorbar(sc)
+    title_string = 'D-SDA with k = '+k
+    plt.title(title_string)
+    plt.xlabel("YF (Number of reactors)")
+    plt.ylabel("YR (Reflux position)")
     plt.show()
 
 
@@ -724,7 +728,7 @@ def move_and_evaluate(start, init, fmin, direction, optimize=True, min_allowed={
     return fmin, best_var, moved, best_init
 
 
-def dsda(NT, k='inf'):
+def dsda(NT, k='Infinity'):
     print('Starting D-SDA with k =',k)
     # Initialize
     t_start = time.process_time()
@@ -739,14 +743,14 @@ def dsda(NT, k='inf'):
     # Define neighborhood
     if k == '2':
         neighborhood = neighborhood_k_eq_2(len(ext_var))
-    elif k == 'inf':
+    elif k == 'Infinity':
         neighborhood = neighborhood_k_eq_inf(len(ext_var))
     elif k == 'l_flat':
         neighborhood = {1: [1, 1], 2: [-1, -1], 3: [1, 0], 4: [-1, 0], 5: [0, 1], 6: [0, -1]}
     elif k == 'm_flat':
         neighborhood = {1: [1, -1], 2: [1, 0], 3: [-1, 1], 4: [0, 1], 5: [-1, 0], 6: [0, -1]}
     else: 
-        return "Enter a valid neighborhood ('inf', '2', 'l_flat' or 'm_flat')"
+        return "Enter a valid neighborhood ('Infinity', '2', 'l_flat' or 'm_flat')"
 
     looking_in_neighbors = True
 
@@ -792,13 +796,13 @@ def dsda(NT, k='inf'):
 
 if __name__ == "__main__":
     NT = 5
-    k = 'inf'  # or k = '2'
+    k = 'Infinity'  # or k = '2'
     x, y, objs = complete_enumeration(NT)
     
     route, fmin, time = dsda(NT, k)
     print(route[-1], fmin, time)
 
     # To run show_feasibles = True option, x and y must by initialized by running complete_enumeration
-    visualization(NT,route, feas_x=x, feas_y=y, objs=objs)
+    visualization(NT,route, feas_x=x, feas_y=y, objs=objs, k=k)
 
 

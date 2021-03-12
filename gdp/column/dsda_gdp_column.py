@@ -68,12 +68,16 @@ def visualization(NT, points, feas_x=[], feas_y=[], objs=[], k='Infinity'):
         drawArrow(points[i], points[i+1])
 
     sc = plt.scatter(X1, X2, s=80, c=objs, cmap=cm)
-    plt.colorbar(sc)
+    cbar = plt.colorbar(sc)
+    cbar.set_label('Objective function', rotation=90)
     title_string = 'D-SDA with k = '+k
     plt.title(title_string)
     plt.xlabel("YR (Reflux position)")
     plt.ylabel("YB (Boil-up position)")
     plt.show()
+
+#cbar = plt.colorbar(heatmap)
+#cbar.ax.set_yticklabels(['0','1','2','>3'])
 
 # Creates all posible directions with k=2 for num_ext variables
 

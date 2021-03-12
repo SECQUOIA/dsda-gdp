@@ -543,7 +543,8 @@ def visualization(NT, points, feas_x=[], feas_y=[], objs=[], k='Infinity'):
         drawArrow(points[i], points[i+1])
 
     sc = plt.scatter(X1, X2, s=80, c=objs, cmap=cm)
-    plt.colorbar(sc)
+    cbar = plt.colorbar(sc)
+    cbar.set_label('Objective function', rotation=90)
     title_string = 'D-SDA with k = '+k
     plt.title(title_string)
     plt.xlabel("YF (Number of reactors)")

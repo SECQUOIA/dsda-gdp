@@ -17,7 +17,7 @@ from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
 
 
-def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init=False, init={}, boolean_ref=False, keep_gams=False):
+def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init=False, init={}, boolean_ref=False):
     t_start = time.process_time()
     """Builds the column model."""
     m = ConcreteModel('benzene-toluene column')
@@ -433,8 +433,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     # Transform the model
     TransformationFactory('core.logical_to_linear').apply_to(m)
     TransformationFactory('gdp.fix_disjuncts').apply_to(m)
-    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
-        m, tmp=False, ignore_infeasible=False)
+    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
 
     # Check equation feasibility
     try:
@@ -452,46 +451,27 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                   gams_path + ' does not exist. We will create it')
             os.makedirs(gams_path)
 
-        #opt = SolverFactory('ipopt')
-        #results = opt.solve(m)
         solvername = 'gams'
         opt = SolverFactory(solvername, solver=nlp_solver)
-        if keep_gams:
-            results = opt.solve(m, tee=False,
-                                # Uncomment the following lines if you want to save GAMS models
-                                keepfiles=True,
-                                tmpdir=gams_path,
-                                symbolic_solver_labels=True,
-                                skip_trivial_constraints=True,
-                                add_options=[
-                                    'option reslim = 10;'
-                                    'option optcr = 0.0;'
-                                    # Uncomment the following lines to setup IIS computation of BARON through option file
-                                    # 'GAMS_MODEL.optfile = 1;'
-                                    # '\n'
-                                    # '$onecho > baron.opt \n'
-                                    # 'CompIIS 1 \n'
-                                    # '$offecho'
-                                    # 'display(execError);'
-                                ])
-        else:
-            results = opt.solve(m, tee=False,
-                                # Uncomment the following lines if you want to save GAMS models
-                                # keepfiles=True,
-                                # tmpdir=gams_path,
-                                # symbolic_solver_labels=True,
-                                # skip_trivial_constraints=True,
-                                add_options=[
-                                    'option reslim = 10;'
-                                    'option optcr = 0.0;'
-                                    # Uncomment the following lines to setup IIS computation of BARON through option file
-                                    # 'GAMS_MODEL.optfile = 1;'
-                                    # '\n'
-                                    # '$onecho > baron.opt \n'
-                                    # 'CompIIS 1 \n'
-                                    # '$offecho'
-                                    # 'display(execError);'
-                                ])
+        results = opt.solve(m, tee=False,
+                            # Uncomment the following lines if you want to save GAMS models
+                            #keepfiles=True,
+                            #tmpdir=gams_path,
+                            #symbolic_solver_labels=True,
+                            skip_trivial_constraints=True,
+                            add_options=[
+                                'option reslim = 120;'
+                                'option optcr = 0.0;'
+                                'option iterLim = 20000;'
+                                # Uncomment the following lines to setup IIS computation of BARON through option file
+                                # 'GAMS_MODEL.optfile = 1;'
+                                # '\n'
+                                # '$onecho > baron.opt \n'
+                                # 'CompIIS 1 \n'
+                                # '$offecho'
+                                # 'display(execError);'
+                            ])
+        
 
         # Save results (for initialization)
         T_feed_init, feed_vap_frac_init, feed_init, x_init, y_init, L_init, V_init, liq_init, vap_init, B_init, D_init, bot_init, dis_init, reflux_ratio_init = {

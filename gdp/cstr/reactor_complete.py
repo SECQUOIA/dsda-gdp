@@ -15,6 +15,8 @@ from pyomo.opt import SolutionStatus
 from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
 
+from model_serializer import to_json, from_json, StoreSpec
+
 
 def build_cstrs(NT=5):
     # INPUTS
@@ -321,11 +323,12 @@ def build_cstrs(NT=5):
 
 def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
 
+    # Transformation step
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     transformation_string = 'gdp.' + transformation
     pe.TransformationFactory(transformation_string).apply_to(m)
 
-    # SOLVE
+    # Solution step
     dir_path = os.path.dirname(os.path.abspath(__file__))
     gams_path = os.path.join(dir_path, "gamsfiles/")
     if not(os.path.exists(gams_path)):
@@ -356,8 +359,14 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
 
 
 def solve_with_gdpopt(m, mip='cplex', nlp='ipopth', minlp='bonmin', timelimit=10):
-    # SOLVE
+    """
+    Function documentation
+    """
+
+    # Transformation step
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
+
+    # Solution step
     dir_path = os.path.dirname(os.path.abspath(__file__))
     gams_path = os.path.join(dir_path, "gamsfiles/")
     if not(os.path.exists(gams_path)):
@@ -425,10 +434,10 @@ def external_ref(m, x):
             m.YP_is_cstr[n].indicator_var.fix(False)
             m.YP_is_bypass[n].indicator_var.fix(True)
 
-    m3 = pe.TransformationFactory('core.logical_to_linear').create_using(m)
-    pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m3)
+    pe.TransformationFactory('core.logical_to_linear').apply_to(m)
+    pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
-    return m3
+    return m
 
 
 def solve_nlp(m, nlp='msnlp'):
@@ -461,6 +470,9 @@ def solve_nlp(m, nlp='msnlp'):
                                   # '$offecho'
                                   # 'display(execError);'
                               ])
+
+        wts = StoreSpec.value()
+        to_json(m, fname="test.json", human_read=True, wts=wts)
         Q_init, QFR_init, F_init, FR_init, rate_init, V_init, c_init,  R_init, P_init = {
         }, {}, {}, {}, {}, {}, {}, {}, {}
 
@@ -576,10 +588,12 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
     return neighbors
 
 
-def initialize_cstr(m, init={}):
-    for v in m.component_objects(pe.Var, active=True):
-        print(v.lb)
-        m.del_component(v)
+def initialize_cstr(m):
+    wts = StoreSpec.value()
+    from_json(m, fname = 'test.json', wts=wts)
+    # for v in m.component_objects(pe.Var, active=True):
+    #     print(v.lb)
+    #     m.del_component(v)
         #m.add_component(str(v), pe.Var(within=pe.NonNegativeReals, ))
 
     #m.Q = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
@@ -678,12 +692,20 @@ def visualize_solution(m, NT):
 
 
 if __name__ == "__main__":
-    NT = 5
-    m = build_cstrs(NT)
-    timelimit = 10,
-    # initialize_cstr(m)
+    # NT = 5
+    # timelimit = 10
+    # m = build_cstrs(NT)
+    # # initialize_cstr(m)
+    # m = external_ref(m,[5,5])
+    # solve_nlp(m)
+
+    # m2 = build_cstrs(NT)
+    # initialize_cstr(m2)
+
+    # m2.pprint()
+    neighborhood_k_eq_inf(10)
     # complete_enumeration(m, NT, nlp='msnlp')
-    m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit)
+    # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit)
     # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='ipopth',minlp='dicopt', timelimit=timelimit)
     # print(m_solved.results)
-    visualize_solution(m_solved,NT)
+    # visualize_solution(m_solved,NT)

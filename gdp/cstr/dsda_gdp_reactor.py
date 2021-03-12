@@ -530,7 +530,7 @@ def complete_enumeration(NT):
 
 
 
-def visualization(NT, points, feas_x=[], feas_y=[], objs=[], k='inf'):
+def visualization(NT, points, feas_x=[], feas_y=[], objs=[], k='Infinity'):
 
     X1, X2 = feas_x, feas_y
     cm = plt.cm.get_cmap('viridis_r') 

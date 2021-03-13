@@ -326,6 +326,8 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)
 
+    m.dsda_status = 'Initialized'
+
     return m
 
 
@@ -459,7 +461,6 @@ def external_ref(m, x, logic_expr = None):
 
 
 def solve_nlp(m, nlp='msnlp', timelimit=10):
-    m.status = 'ok'
     try:
         fbbt(m)
         # SOLVE
@@ -488,6 +489,11 @@ def solve_nlp(m, nlp='msnlp', timelimit=10):
                                   # '$offecho'
                                   # 'display(execError);'
                               ])
+
+        if m.results.solver.termination_condition == 'locallyOptimal' or m.results.solver.termination_condition == 'optimal':
+            m.dsda_status = 'Optimal'
+        elif m.results.solver.termination_condition == 'infeasible':
+            m.dsda_status = 'Evaluated_Infeasible'
 
         wts = StoreSpec.value()
         to_json(m, fname="test.json", human_read=True, wts=wts)
@@ -520,10 +526,9 @@ def solve_nlp(m, nlp='msnlp', timelimit=10):
         nlp_result.feasible = False
         nlp_result.pyomo_results = SolverResults()
         nlp_result.pyomo_results.solver.termination_condition = tc.error
-        m.status = 'inf' # TODO Change name to something less generic
+        m.dsda_status = 'FBBT_Infeasible'
         #print('Try an infeasible')
 
-    
     return m
 
 
@@ -545,7 +550,7 @@ def complete_enumeration_external(model_function=build_cstrs, NT=5, nlp='msnlp',
             m_fixed = external_ref(m, x)
             m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
-            if m_solved.status == 'ok':
+            if m_solved.dsda_status == 'Optimal':
                 print('%6s %6s %12s' %
                       (Xi, Xj, round(pe.value(m_solved.obj), 5)))
             else:
@@ -723,7 +728,7 @@ if __name__ == "__main__":
     # initialize_cstr(m2)
 
     # m2.pprint()
-    # complete_enumeration_external(model_function=build_cstrs, NT=NT, nlp='msnlp')
+    complete_enumeration_external(model_function=build_cstrs, NT=NT, nlp='msnlp')
     # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
     # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     # print(m_solved.results)

@@ -523,6 +523,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
 
         # print('timer',time.process_time()-t_start)
         solver_time = results.solver.user_time
+        # TODO replace with results.solver.termination_condition
         return m, results.solver.status, initialization
 
     except InfeasibleConstraintException:

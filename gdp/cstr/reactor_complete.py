@@ -369,7 +369,7 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10, gams
     return m
 
 
-def solve_with_gdpopt(m, mip='cplex', nlp='conopt', timelimit=10, strategy='RIC'):
+def solve_with_gdpopt(m, mip='cplex', nlp='conopt', timelimit=10, strategy='LOA', mip_output=False, nlp_output=False):
     """
     Function documentation
     """
@@ -378,29 +378,39 @@ def solve_with_gdpopt(m, mip='cplex', nlp='conopt', timelimit=10, strategy='RIC'
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
 
     # Solution step
-    dir_path = os.path.dirname(os.path.abspath(__file__))
-    gams_path = os.path.join(dir_path, "gamsfiles/")
-    if not(os.path.exists(gams_path)):
-        print('Directory for automatically generated files ' +
-              gams_path + ' does not exist. We will create it')
-        os.makedirs(gams_path)
+    mip_output_options = {}
+    nlp_output_options = {}
+    if mip_output:
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        gams_path = os.path.join(dir_path, "gamsfiles/")
+        if not(os.path.exists(gams_path)):
+            print('Directory for automatically generated files ' +
+                gams_path + ' does not exist. We will create it')
+            os.makedirs(gams_path)
+        mip_output_options = {'keepfiles':True,
+                        'tmpdir':gams_path,
+                        'symbolic_solver_labels':True}
+    
+    if nlp_output:
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        gams_path = os.path.join(dir_path, "gamsfiles/")
+        if not(os.path.exists(gams_path)):
+            print('Directory for automatically generated files ' +
+                gams_path + ' does not exist. We will create it')
+            os.makedirs(gams_path)
+        nlp_output_options = {'keepfiles':True,
+                        'tmpdir':gams_path,
+                        'symbolic_solver_labels':True}
+
     solvername = 'gdpopt'
     opt = SolverFactory(solvername)
     m.results = opt.solve(m, tee=True,
                           strategy=strategy,
                           time_limit=timelimit,
                           mip_solver='gams',
-                          mip_solver_args=dict(solver=mip, warmstart=True,
-                                            #    keepfiles=True,
-                                            #    tmpdir=gams_path,
-                                            #    symbolic_solver_labels=True
-                                               ),
+                          mip_solver_args=dict(solver=mip, warmstart=True, **mip_output_options),
                           nlp_solver='gams',
-                          nlp_solver_args=dict(solver=nlp, warmstart=True, tee=True
-                                            #    keepfiles=True,
-                                            #    tmpdir=gams_path,
-                                            #    symbolic_solver_labels=True
-                                               ),
+                          nlp_solver_args=dict(solver=nlp, warmstart=True, tee=True, **nlp_output_options),
                         #   mip_presolve=True,
                         #   init_strategy='fix_disjuncts',
                         #   set_cover_iterlim=0,
@@ -713,9 +723,8 @@ if __name__ == "__main__":
     # initialize_cstr(m2)
 
     # m2.pprint()
-    # neighborhood_k_eq_inf(10)
     # complete_enumeration_external(model_function=build_cstrs, NT=NT, nlp='msnlp')
-    # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=True)
-    # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='conopt', timelimit=timelimit)
+    # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
+    # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     # print(m_solved.results)
     # visualize_solution(m_solved,NT)

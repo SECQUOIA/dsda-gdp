@@ -18,16 +18,25 @@ import os
 from model_serializer import to_json, from_json, StoreSpec
 
 
-def build_cstrs(NT=5):
-    # INPUTS
-    # NT = 5  # Size of the superstructure (This is an input parameter)
+def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
+    """
+    Function that builds CSTR superstructure model of size NT.
+    The CSTRs have a single 1st order reaction A -> B and minimizes (TODO Check)
+    total reactor volume. The optimal solution should yield NT reactors with a recycle before reactor NT.
+    Reference: Paper Linhan 1.
+
+    Args:
+        NT: int. Positive Integer defining the maximum number of CSTRs
+    Returns:
+        m = Pyomo GDP model
+    """
 
     # PYOMO MODEL
     m = pe.ConcreteModel(name='gdp_reactors')
 
     # SETS
-    m.I = pe.Set(initialize=['A', 'B'])  # Set of components
-    m.N = pe.RangeSet(1, NT)  # Set of units in the superstructure
+    m.I = pe.Set(initialize=['A', 'B'], doc='Set of components')
+    m.N = pe.RangeSet(1, NT, doc='Set of units in the superstructure')
 
     # PARAMETERS
     m.k = pe.Param(initialize=2)  # Kinetic constant [L/(mol*s)]
@@ -42,7 +51,6 @@ def build_cstrs(NT=5):
 
     def F0_Def(m, i):
         return m.C0[i]*m.QF0
-
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
     # BOOLEAN VARIABLES
@@ -321,7 +329,7 @@ def build_cstrs(NT=5):
     return m
 
 
-def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
+def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10, gams_output=False):
 
     # Transformation step
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
@@ -329,20 +337,23 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
     pe.TransformationFactory(transformation_string).apply_to(m)
 
     # Solution step
-    dir_path = os.path.dirname(os.path.abspath(__file__))
-    gams_path = os.path.join(dir_path, "gamsfiles/")
-    if not(os.path.exists(gams_path)):
-        print('Directory for automatically generated files ' +
-              gams_path + ' does not exist. We will create it')
-        os.makedirs(gams_path)
+    output_options = {}
+    if gams_output:
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        gams_path = os.path.join(dir_path, "gamsfiles/")
+        if not(os.path.exists(gams_path)):
+            print('Directory for automatically generated files ' +
+                gams_path + ' does not exist. We will create it')
+            os.makedirs(gams_path)
+        output_options = {'keepfiles':True,
+                        'tmpdir':gams_path,
+                        'symbolic_solver_labels':True}
 
     solvername = 'gams'
     opt = SolverFactory(solvername, solver=minlp)
     m.results = opt.solve(m, tee=True,
+                          **output_options,
                           # Uncomment the following lines if you want to save GAMS models
-                          # keepfiles=True,
-                          # tmpdir=gams_path,
-                          # symbolic_solver_labels=True,
                           add_options=[
                               'option reslim = ' + str(timelimit) + ';'
                               'option optcr = 0.0;'
@@ -358,7 +369,7 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
     return m
 
 
-def solve_with_gdpopt(m, mip='cplex', nlp='conopt', minlp='bonmin', timelimit=10):
+def solve_with_gdpopt(m, mip='cplex', nlp='conopt', timelimit=10, strategy='RIC'):
     """
     Function documentation
     """
@@ -376,8 +387,7 @@ def solve_with_gdpopt(m, mip='cplex', nlp='conopt', minlp='bonmin', timelimit=10
     solvername = 'gdpopt'
     opt = SolverFactory(solvername)
     m.results = opt.solve(m, tee=True,
-                          strategy='LOA',
-                          # strategy='GLOA',
+                          strategy=strategy,
                           time_limit=timelimit,
                           mip_solver='gams',
                           mip_solver_args=dict(solver=mip, warmstart=True,
@@ -386,33 +396,27 @@ def solve_with_gdpopt(m, mip='cplex', nlp='conopt', minlp='bonmin', timelimit=10
                                             #    symbolic_solver_labels=True
                                                ),
                           nlp_solver='gams',
-                          nlp_solver_args=dict(solver=nlp, warmstart=True,
+                          nlp_solver_args=dict(solver=nlp, warmstart=True, tee=True
                                             #    keepfiles=True,
                                             #    tmpdir=gams_path,
                                             #    symbolic_solver_labels=True
                                                ),
-                          minlp_solver='gams',
-                          minlp_solver_args=dict(solver=minlp, warmstart=True, tee=True,
-                                                #  keepfiles=True,
-                                                #  tmpdir=gams_path,
-                                                #  symbolic_solver_labels=True
-                                                 ),
-                        #   subproblem_presolve=True,
                         #   mip_presolve=True,
-                          init_strategy='fix_disjuncts',
+                        #   init_strategy='fix_disjuncts',
                         #   set_cover_iterlim=0,
                           iterlim=20,
-                          force_subproblem_nlp=True
-                          # calc_disjunctive_bounds=True
+                          force_subproblem_nlp=True,
+                          subproblem_presolve=False,
+                        #   calc_disjunctive_bounds=True
                           )
     update_boolean_vars_from_binary(m)
     return m
 
 
-def external_ref(m, x):
+def external_ref(m, x, logic_expr = None):
     # External variable fix
     ext_var_1 = x[0]
-    ext_var_2 = x[1]
+    ext_var_2 = x[1] # TODO generalize for arbitrary number of external variables
     for n in m.N:
         if n == ext_var_1:
             m.YF[n].fix(True)
@@ -428,6 +432,8 @@ def external_ref(m, x):
 
         temp = pe.value(pe.lor(pe.land(~m.YF[n2]
                                        for n2 in range(1, n)), m.YF[n]))
+        # TODO Consider passing temp as argument which could be a model constraint(s) RHS
+        # see logic_list in scratch.py
 
         if temp == True:
             m.YP_is_cstr[n].indicator_var.fix(True)
@@ -475,6 +481,7 @@ def solve_nlp(m, nlp='msnlp', timelimit=10):
 
         wts = StoreSpec.value()
         to_json(m, fname="test.json", human_read=True, wts=wts)
+        # TODO fix to_json
         Q_init, QFR_init, F_init, FR_init, rate_init, V_init, c_init,  R_init, P_init = {
         }, {}, {}, {}, {}, {}, {}, {}, {}
 
@@ -497,40 +504,42 @@ def solve_nlp(m, nlp='msnlp', timelimit=10):
 
         m.initialization = {'Q': Q_init, 'QFR': QFR_init, 'F': F_init, 'FR': FR_init, 'rate': rate_init,
                             'V': V_init, 'c': c_init, 'QR': QR_init, 'QP': QP_init, 'R': R_init, 'P': P_init}
-        return m
 
     except InfeasibleConstraintException:
         nlp_result = MasterProblemResult()
         nlp_result.feasible = False
         nlp_result.pyomo_results = SolverResults()
         nlp_result.pyomo_results.solver.termination_condition = tc.error
-        m.status = 'inf'
+        m.status = 'inf' # TODO Change name to something less generic
         #print('Try an infeasible')
 
-        return m
+    
+    return m
 
 
-def complete_enumeration(model_function=build_cstrs, NT=5, nlp='msnlp', timelimit = 10):
+def complete_enumeration_external(model_function=build_cstrs, NT=5, nlp='msnlp', timelimit = 10):
     X1 = list(range(1, NT+1))
+    X2 = list(range(1, NT+1)) # TODO how to generalize for N external variables?
+    # Input variable should be dictionary of the external variables with lower and upper bounds
     print()
 
     print('=============================')
     print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
     print('-----------------------------')
 
-    #m2 = copy.copy(m)
-    for i in range(len(X1)):
-        for j in range(len(X1)):
+    # Loop over all external variables and then loop over its values
+    for Xi in X1:
+        for Xj in X2:
             m = model_function(NT)
-            x = [X1[i], X1[j]]
+            x = [Xi, Xj]
             m_fixed = external_ref(m, x)
             m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
             if m_solved.status == 'ok':
                 print('%6s %6s %12s' %
-                      (X1[i], X1[j], round(pe.value(m_solved.obj), 5)))
+                      (Xi, Xj, round(pe.value(m_solved.obj), 5)))
             else:
-                print('%6s %6s %12s' % (X1[i], X1[j], 'Infeasible'))
+                print('%6s %6s %12s' % (Xi, Xj, 'Infeasible'))
 
     print('=============================')
 
@@ -694,10 +703,10 @@ def visualize_solution(m, NT):
 if __name__ == "__main__":
     NT = 5
     timelimit = 10
-    # m = build_cstrs(NT)
+    m = build_cstrs(NT)
     # # initialize_cstr(m)
-    # m = external_ref(m,[1,1])
-    # m.display()
+    # m = external_ref(m,[1,5])
+    # m.pprint()
     # solve_nlp(m)
 
     # m2 = build_cstrs(NT)
@@ -705,8 +714,8 @@ if __name__ == "__main__":
 
     # m2.pprint()
     # neighborhood_k_eq_inf(10)
-    complete_enumeration(model_function=build_cstrs, NT=NT, nlp='msnlp')
-    # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit)
-    # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='conopt',minlp='dicopt', timelimit=timelimit)
+    # complete_enumeration_external(model_function=build_cstrs, NT=NT, nlp='msnlp')
+    # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=True)
+    # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='conopt', timelimit=timelimit)
     # print(m_solved.results)
     # visualize_solution(m_solved,NT)

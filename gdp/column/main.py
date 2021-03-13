@@ -21,15 +21,15 @@ def main():
         xB=0.95,
         #x_input=[16,2], # Original initialization
         #x_input=[13,4], # To find optimal solution in PSE paper
-        x_input=[14,5], # To find optimal solution according to D-SDA
-        # x_input=[8,2],
+        #x_input=[14,5], # To find optimal solution according to D-SDA
+        x_input=[10,3],
         nlp_solver='conopt',
         provide_init=False,
         init={},
-        boolean_ref=False)
+        boolean_ref=True)
 
 #---display results
-    display_column(m[0])
+    display_column(m)
 
 
 

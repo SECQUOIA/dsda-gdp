@@ -435,6 +435,9 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     TransformationFactory('gdp.fix_disjuncts').apply_to(m)
     TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
 
+    m.dsda_status = 'Initialized'
+    m.dsda_initialization = {}
+
     # Check equation feasibility
     try:
         fbbt(m)
@@ -453,7 +456,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
 
         solvername = 'gams'
         opt = SolverFactory(solvername, solver=nlp_solver)
-        results = opt.solve(m, tee=False,
+        m.results = opt.solve(m, tee=False,
                             # Uncomment the following lines if you want to save GAMS models
                             #keepfiles=True,
                             #tmpdir=gams_path,
@@ -471,8 +474,12 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                                 # '$offecho'
                                 # 'display(execError);'
                             ])
-        
 
+        if m.results.solver.termination_condition == 'locallyOptimal' or m.results.solver.termination_condition == 'optimal':
+            m.dsda_status = 'Optimal'
+        elif m.results.solver.termination_condition == 'infeasible':
+            m.dsda_status = 'Evaluated_Infeasible'
+        
         # Save results (for initialization)
         T_feed_init, feed_vap_frac_init, feed_init, x_init, y_init, L_init, V_init, liq_init, vap_init, B_init, D_init, bot_init, dis_init, reflux_ratio_init = {
         }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
@@ -518,24 +525,17 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                 H_L_init[i, n] = value(m.H_L[i, n])
                 H_V_init[i, n] = value(m.H_V[i, n])
 
-        initialization = {'T_feed': T_feed_init, 'feed_vap_frac': feed_vap_frac_init, 'feed': feed_init, 'x': x_init, 'y': y_init, 'L': L_init, 'V': V_init, 'liq': liq_init, 'vap': vap_init, 'B': B_init, 'D': D_init, 'bot': bot_init, 'dis': dis_init, 'reflux_ratio': reflux_ratio_init, 'reboil_ratio': reboil_ratio_init,
+        m.dsda_initialization = {'T_feed': T_feed_init, 'feed_vap_frac': feed_vap_frac_init, 'feed': feed_init, 'x': x_init, 'y': y_init, 'L': L_init, 'V': V_init, 'liq': liq_init, 'vap': vap_init, 'B': B_init, 'D': D_init, 'bot': bot_init, 'dis': dis_init, 'reflux_ratio': reflux_ratio_init, 'reboil_ratio': reboil_ratio_init,
                           'reflux_frac': reflux_frac_init, 'boilup_frac': boilup_frac_init, 'Kc': Kc_init, 'T': T_init, 'P': P_init, 'gamma': gamma_init, 'Pvap': Pvap_init, 'Pvap_X': Pvap_X_init, 'H_L': H_L_init, 'H_V': H_V_init, 'H_L_spec_feed': H_L_spec_feed_init, 'H_V_spec_feed': H_V_spec_feed_init, 'Qb': Qb_init, 'Qc': Qc_init}
 
         # print('timer',time.process_time()-t_start)
-        solver_time = results.solver.user_time
-        # TODO replace with results.solver.termination_condition
-        return m, results.solver.status, initialization
-
+    
+        #print(m.results.solver.termination_condition)
     except InfeasibleConstraintException:
-
-        # config.logger.debug("MIP preprocessing detected infeasibility.")
-        nlp_result = MasterProblemResult()
-        nlp_result.feasible = False
-        nlp_result.pyomo_results = SolverResults()
-        nlp_result.pyomo_results.solver.termination_condition = tc.error
+        m.dsda_status = 'FBBT_Infeasible'
         #print('Try an infeasible')
 
-        return m, 'infeasible', {}
+    return m
 
 
 # ---------Other functions do define the model-------------------------------------------------

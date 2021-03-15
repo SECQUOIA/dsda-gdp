@@ -666,34 +666,6 @@ def neighborhood_k_eq_inf(num_ext):  # number
             temp.pop(i, None)
     return temp
 
-# Creates neighbor of a given point
-# Optimize option will discard out of bounds points given by min and max allowed
-
-# start is type list and stands for the actual point
-# neighborhood is type dict and is the output of a k-Neighborhood function
-# newbors or new_newbors is type  dict starting in 0 with neighbor of a given point
-# Neighbor 0 is the actual point
-
-
-def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed={}):
-    neighbors = {0: start}
-    for i in neighborhood.keys():
-        neighbors[i] = list(map(sum, zip(start, list(neighborhood[i]))))
-
-    if optimize:
-        new_neighbors = {}
-        num_vars = len(neighbors[0])
-        for i in neighbors.keys():
-            checked = 0
-            for j in range(num_vars):
-                if neighbors[i][j] >= min_allowed[j+1] and neighbors[i][j] <= max_allowed[j+1]:
-                    checked += 1
-            if checked == num_vars:
-                new_neighbors[i] = neighbors[i]
-
-        return new_neighbors
-    return neighbors
-
 
 def initialize_model(m, from_feasible=False):
     wts = StoreSpec.value()
@@ -829,7 +801,7 @@ def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'
 # best_var is type list and gives the best point (between moved and actual)
 # move is type bool and shows if an improvement was made while looking for neighbors
 # best_init is type dict and contains solved variables for the best point
-def evaluate_line_search(start, fmin, direction, model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+def do_line_search(start, fmin, direction, model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
     best_var = start
     moved = False
 
@@ -917,7 +889,7 @@ def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5
     while looking_in_neighbors:
 
         # Find neighbors of the actual point
-        neighbors = my_neighbors(ext_var, neighborhood, optimize=True,
+        neighbors = find_actual_neighbors(ext_var, neighborhood, optimize=True,
                                  min_allowed=min_allowed, max_allowed=max_allowed)
 
         fmin, best_var, best_dir, improve = evaluate_neighbors(neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=external_ref, nlp=nlp, iter_timelimit=iter_timelimit, tol=tol)
@@ -929,7 +901,7 @@ def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5
 
             # If improvement was made start line search (inner cycle)
             while line_searching:
-                fmin, best_var, moved = evaluate_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args, reformulation_function=external_ref, nlp=nlp, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
+                fmin, best_var, moved = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args, reformulation_function=external_ref, nlp=nlp, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
 
                 # Stopping condition in case no movement was done
                 if moved == True:

@@ -751,7 +751,7 @@ def find_actual_neighbors(start, neighborhood, optimize=True, min_allowed={}, ma
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
 # improve is type bool and shows if an improvement was made while looking for neighbors
-def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'NT':5}, nlp='conopt', iter_timelimit=10, tol=0.000001):
+def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='conopt', iter_timelimit=10, tol=0.000001):
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
@@ -765,7 +765,7 @@ def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'
 
         m = model_function(**model_args)
         m_init = initialize_model(m)
-        m_fixed = external_ref(m_init, temp[i])
+        m_fixed = reformulation_function(m_init, temp[i])
         m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=iter_timelimit)
         #print(temp[i],m_solved.dsda_status)
         
@@ -809,7 +809,7 @@ def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'
     if improve == True:
         m2 = model_function(**model_args)
         m2_init = initialize_model(m2)
-        m2_fixed = external_ref(m2_init, best_var)
+        m2_fixed = reformulation_function(m2_init, best_var)
         m2_solved = solve_nlp(m2_fixed, nlp=nlp, timelimit=iter_timelimit)
         generate_initialization(m2_solved)
 
@@ -827,7 +827,7 @@ def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'
 # best_var is type list and gives the best point (between moved and actual)
 # move is type bool and shows if an improvement was made while looking for neighbors
 # best_init is type dict and contains solved variables for the best point
-def evaluate_line_search(start, fmin, direction, model_function=build_cstrs, model_args={'NT':5}, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+def evaluate_line_search(start, fmin, direction, model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
     best_var = start
     moved = False
 
@@ -842,7 +842,7 @@ def evaluate_line_search(start, fmin, direction, model_function=build_cstrs, mod
         if checked == len(moved_point):
             m = model_function(**model_args)
             m_init = initialize_model(m)
-            m_fixed = external_ref(m_init, moved_point)
+            m_fixed = reformulation_function(m_init, moved_point)
             m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=iter_timelimit)
 
             if m_solved.dsda_status == 'Optimal':
@@ -854,7 +854,7 @@ def evaluate_line_search(start, fmin, direction, model_function=build_cstrs, mod
     else:
         m = model_function(**model_args)
         m_init = initialize_model(m)
-        m_fixed = external_ref(m_init, moved_point)
+        m_fixed = reformulation_function(m_init, moved_point)
         m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=iter_timelimit)
 
         if m_solved.dsda_status == 'Optimal':
@@ -867,13 +867,13 @@ def evaluate_line_search(start, fmin, direction, model_function=build_cstrs, mod
     if moved == True:
         m2 = model_function(**model_args)
         m2_init = initialize_model(m2)
-        m2_fixed = external_ref(m2_init, best_var)
+        m2_fixed = reformulation_function(m2_init, best_var)
         m2_solved = solve_nlp(m2_fixed, nlp=nlp, timelimit=iter_timelimit)
         generate_initialization(m2_solved)
 
     return fmin, best_var, moved
 
-def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5}, starting_point=[1,1], provide_starting_initialization=True, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5}, starting_point=[1,1], reformulation_function=external_ref, provide_starting_initialization=True, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
 
     print('\nStarting D-SDA with k =', k)
 
@@ -918,7 +918,7 @@ def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5
         neighbors = my_neighbors(ext_var, neighborhood, optimize=True,
                                  min_allowed=min_allowed, max_allowed=max_allowed)
 
-        fmin, best_var, best_dir, improve = evaluate_neighbors(neighbors, fmin, model_function=model_function, model_args=model_args, nlp=nlp, iter_timelimit=iter_timelimit, tol=tol)
+        fmin, best_var, best_dir, improve = evaluate_neighbors(neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=external_ref, nlp=nlp, iter_timelimit=iter_timelimit, tol=tol)
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
@@ -927,7 +927,7 @@ def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5
 
             # If improvement was made start line search (inner cycle)
             while line_searching:
-                fmin, best_var, moved = evaluate_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args, nlp=nlp, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
+                fmin, best_var, moved = evaluate_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args, reformulation_function=external_ref, nlp=nlp, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
 
                 # Stopping condition in case no movement was done
                 if moved == True:
@@ -977,7 +977,7 @@ if __name__ == "__main__":
     min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(k=k, model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, provide_starting_initialization=True, nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    m_solved, route = solve_with_dsda(k=k, model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, reformulation_function=external_ref, provide_starting_initialization=True, nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
     visualize_dsda(points=route, feas_x=x, feas_y=y, objs=objs, k=k)
     print(m_solved.results)
     visualize_cstr_superstructure(m_solved, NT)

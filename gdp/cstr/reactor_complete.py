@@ -3,6 +3,7 @@ from pyomo.gdp import (Disjunct, Disjunction)
 import networkx as nx
 import matplotlib.pyplot as plt
 import copy
+import time
 import numpy as np
 import itertools as it
 from pyomo.core.base.misc import display
@@ -330,6 +331,86 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     return m
 
+def visualize_superstructure(m, NT):
+    x = list((range(1, NT+1)))
+
+    # Initialize bypasses (b), reactors(r) and recycle
+    xb = []
+    xr = []
+    recycle = 0
+
+    yp = {}
+    yr = {}
+
+    # Use information from solved model
+    for n in m.N:
+        yp[n] = pe.value(pe.value(m.YP[n].get_associated_binary()))
+        yr[n] = pe.value(pe.value(m.YR[n].get_associated_binary()))
+
+    # Classify units in bypasses (b) or reactors(r) and determine recycle
+    for i in x:
+        if yp[i] > 0.5:
+            xr.append(i)
+        else:
+            xb.append(i)
+        if yr[i] > 0.5:
+            recycle = i
+
+    # Create labels for bypasses (b), reactors(r), input/output (f) and recycle(recy)
+    blabels = dict(zip(range(1, len(xb)+1), xb[::-1]))
+    rlabels = dict(zip(range(len(xb)+1, len(xb)+1+len(xr)), xr[::-1]))
+    flabels = {0: '', NT+1: ''}
+    recylabels = {'r1': '', 'r2': '', 'r3': '', 'r4': ''}
+
+    # Create posicions (pos) for bypasses (b), reactors(r), input/output(f) and recycle(recy)
+    posb = {}
+    posr = {}
+    posf = {0: (0.2, 0), NT+1: (NT+1, 0)}
+    posrecy = {'r1': (NT+0.5, -0.0009), 'r2': (NT+0.5, 0.008),
+               'r3': (NT-recycle+0.5, 0.007), 'r4': (NT-recycle+0.5, -0.0009)}
+
+    for i in range(1, len(xb)+1):
+        posb[i] = (i, 0)
+
+    for i in range(len(xb)+1, len(xb)+1+len(xr)):
+        posr[i] = (i, 0)
+
+    # Create flow arrow from input to output
+    arcsf = [(0, NT+1)]
+
+    # Declare graph
+    graph = nx.DiGraph()
+
+    # Graph input/out(f)
+    nx.draw_networkx_labels(graph, posf, flabels)
+    nx.draw_networkx_edges(graph, posf, arcsf, width=1, arrowsize=10)
+    nx.draw_networkx(graph, posf, node_size=1, node_color='black',
+                     nodelist=flabels, with_labels=True, node_shape='', edgecolors='black')
+
+    # Graph bypasses(b)
+    nx.draw_networkx_labels(graph, posb, blabels)
+    nx.draw_networkx(graph, posb, node_size=900, node_color='whitesmoke', width=1.5,
+                     nodelist=blabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=0.2)
+
+    # Graph reactors(r)
+    nx.draw_networkx_labels(graph, posr, rlabels)
+    nx.draw_networkx(graph, posr, node_size=900, node_color='lightslategray', width=1.5,
+                     nodelist=rlabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=1.5)
+
+    # Graph recycle(recy) if it exists
+    if recycle != 0:
+        arcsrecy = [('r1', 'r2'), ('r3', 'r4')]
+        pairs = list(zip(list(arcsrecy), ['R', 'R']))
+        edgelabels = dict(pairs)
+        nx.draw_networkx_labels(graph, posrecy, recylabels)
+        nx.draw_networkx_edges(
+            graph, posrecy, arcsrecy, width=1, arrowsize=10)
+        nx.draw_networkx(graph, posrecy, node_size=0, node_color='white',
+                         nodelist=recylabels, node_shape='', edgecolors='black')
+        nx.draw_networkx_edge_labels(
+            graph, posrecy, edge_labels=edgelabels)
+
+    plt.show()
 
 def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10, gams_output=False):
 
@@ -495,32 +576,6 @@ def solve_nlp(m, nlp='msnlp', timelimit=10):
         elif m.results.solver.termination_condition == 'infeasible':
             m.dsda_status = 'Evaluated_Infeasible'
 
-        wts = StoreSpec.value()
-        to_json(m, fname="test.json", human_read=True, wts=wts)
-        # TODO fix to_json
-        Q_init, QFR_init, F_init, FR_init, rate_init, V_init, c_init,  R_init, P_init = {
-        }, {}, {}, {}, {}, {}, {}, {}, {}
-
-        QR_init = pe.value(m.QR)
-        QP_init = pe.value(m.QP)
-        for n in m.N:
-            Q_init[n] = pe.value(m.Q[n])
-            QFR_init[n] = pe.value(m.QFR[n])
-            V_init[n] = pe.value(m.V[n])
-            c_init[n] = pe.value(m.c[n])
-
-            for i in m.I:
-                F_init[i, n] = pe.value(m.F[i, n])
-                FR_init[i, n] = pe.value(m.FR[i, n])
-                rate_init[i, n] = pe.value(m.rate[i, n])
-
-        for i in m.I:
-            R_init[i] = pe.value(m.R[i])
-            P_init[i] = pe.value(m.P[i])
-
-        m.initialization = {'Q': Q_init, 'QFR': QFR_init, 'F': F_init, 'FR': FR_init, 'rate': rate_init,
-                            'V': V_init, 'c': c_init, 'QR': QR_init, 'QP': QP_init, 'R': R_init, 'P': P_init}
-
     except InfeasibleConstraintException:
         nlp_result = MasterProblemResult()
         nlp_result.feasible = False
@@ -532,7 +587,7 @@ def solve_nlp(m, nlp='msnlp', timelimit=10):
     return m
 
 
-def complete_enumeration_external(model_function=build_cstrs, NT=5, nlp='msnlp', timelimit = 10):
+def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5}, nlp='msnlp', timelimit = 10):
     X1 = list(range(1, NT+1))
     X2 = list(range(1, NT+1)) # TODO how to generalize for N external variables?
     # Input variable should be dictionary of the external variables with lower and upper bounds
@@ -545,7 +600,7 @@ def complete_enumeration_external(model_function=build_cstrs, NT=5, nlp='msnlp',
     # Loop over all external variables and then loop over its values
     for Xi in X1:
         for Xj in X2:
-            m = model_function(NT)
+            m = model_function(**model_args)
             x = [Xi, Xj]
             m_fixed = external_ref(m, x)
             m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
@@ -612,124 +667,140 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
     return neighbors
 
 
-def initialize_cstr(m):
+def initialize_model(m, from_init=''):
     wts = StoreSpec.value()
-    from_json(m, fname = 'test.json', wts=wts)
-    # for v in m.component_objects(pe.Var, active=True):
-    #     print(v.lb)
-    #     m.del_component(v)
-        #m.add_component(str(v), pe.Var(within=pe.NonNegativeReals, ))
+    step = 'test'
+    json_name = step+'.json'
+    from_json(m, fname = json_name, wts=wts)
+    return m
 
-    #m.Q = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.QFR = pe.Var(m.N, initialize=0,within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.F = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.FR = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.rate = pe.Var(m.I, m.N, initialize=0, within=pe.Reals, bounds=(-10, 10))
-    #m.V = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.c = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.QR = pe.Var(initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.QP = pe.Var(initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.R = pe.Var(m.I, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
-    #m.P = pe.Var(m.I, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+def generate_initialization(m, from_model=''):
+    wts = StoreSpec.value()
+    step = 'test'
+    json_name = step+'.json'
+    to_json(m, fname=json_name, human_read=True, wts=wts)
 
 
-def visualize_solution(m, NT):
-    x = list((range(1, NT+1)))
 
-    # Initialize bypasses (b), reactors(r) and recycle
-    xb = []
-    xr = []
-    recycle = 0
+# Creates neighbor of a given point
+# Optimize option will discard out of bounds points given by min and max allowed
+# Cheating will discard infeasible points for CSTR problem (X2 - X1 > 0)
+# Cheating will only be used while solving GAMS issue
 
-    yp = {}
-    yr = {}
+# start is type list and stands for the actual point
+# neighborhood is type dict and is the output of a k-Neighborhood function
+# newbors or new_newbors is type  dict starting in 0 with neighbor of a given point
+# Neighbor 0 is the actual point
 
-    # Use information from solved model
-    for n in m.N:
-        yp[n] = pe.value(pe.value(m.YP[n].get_associated_binary()))
-        yr[n] = pe.value(pe.value(m.YR[n].get_associated_binary()))
+def actual_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed={}):
+    neighbors = {0: start}
+    for i in neighborhood.keys():
+        neighbors[i] = list(map(sum, zip(start, list(neighborhood[i]))))
 
-    # Classify units in bypasses (b) or reactors(r) and determine recycle
-    for i in x:
-        if yp[i] > 0.5:
-            xr.append(i)
-        else:
-            xb.append(i)
-        if yr[i] > 0.5:
-            recycle = i
+    if optimize:
+        new_neighbors = {}
+        num_vars = len(neighbors[0])
+        for i in neighbors.keys():
+            checked = 0
+            for j in range(num_vars):
+                if neighbors[i][j] >= min_allowed[j+1] and neighbors[i][j] <= max_allowed[j+1]:
+                    checked += 1
+            if checked == num_vars:
+                new_neighbors[i] = neighbors[i]
 
-    # Create labels for bypasses (b), reactors(r), input/output (f) and recycle(recy)
-    blabels = dict(zip(range(1, len(xb)+1), xb[::-1]))
-    rlabels = dict(zip(range(len(xb)+1, len(xb)+1+len(xr)), xr[::-1]))
-    flabels = {0: '', NT+1: ''}
-    recylabels = {'r1': '', 'r2': '', 'r3': '', 'r4': ''}
+        return new_neighbors
+    return neighbors
 
-    # Create posicions (pos) for bypasses (b), reactors(r), input/output(f) and recycle(recy)
-    posb = {}
-    posr = {}
-    posf = {0: (0.2, 0), NT+1: (NT+1, 0)}
-    posrecy = {'r1': (NT+0.5, -0.0009), 'r2': (NT+0.5, 0.008),
-               'r3': (NT-recycle+0.5, 0.007), 'r4': (NT-recycle+0.5, -0.0009)}
+# Evaluates a group of given points and returns the best
+# ext_vars is dict with given points where 0 is actual point
+# init is type dict and contains solved variables for the actual point
+# fmin is type int and stands for objective at actual point
+# tol is type int and stands for numerical tolereance for equallity
+# fmin as return is type int and gives the best neighbor's objective
+# best_var is type list and gives the best neighbor
+# best_dir is type int and is the steepest direction (key in neighborhood)
+# best_init is type dict and contains solved variables for the best point
+# improve is type bool and shows if an improvement was made while looking for neighbors
+def evaluate_neighbors(ext_vars, init, fmin, nlp='conopt', tol=0.000001, boolean_ref=True):
+    improve = False
+    best_var = ext_vars[0]
+    here = ext_vars[0]
+    best_dir = 0
+    best_init = init
+    temp = ext_vars
+    temp.pop(0, None)
+    objectives = {}
+    feasibles = {}
+    initials = {}
+    for i in temp.keys():
+        #m = build_column(min_trays=8, max_trays=NT, xD=0.95, xB=0.95,
+        #                                   x_input=temp[i], nlp_solver=nlp_solver, provide_init=True, init=init, boolean_ref=boolean_ref)
+        new_init = m.dsda_initialization
 
-    for i in range(1, len(xb)+1):
-        posb[i] = (i, 0)
+        if m.dsda_status == 'Optimal':
+            objectives[i] = pe.value(m.obj)
+            feasibles[i] = temp[i]
+            initials[i] = new_init
 
-    for i in range(len(xb)+1, len(xb)+1+len(xr)):
-        posr[i] = (i, 0)
+    key_min = min(objectives.keys(), key=(lambda k: objectives[k]))
+    min_obj = objectives[key_min]
+    mins = 0
+    min_points = {}
 
-    # Create flow arrow from input to output
-    arcsf = [(0, NT+1)]
+    for i in objectives.keys():
+        if abs(objectives[i] - min_obj) < tol:
+            min_points[i] = feasibles[i]
+            mins += 1
 
-    # Declare graph
-    graph = nx.DiGraph()
+    if mins > 1:
+        ssums = {}
+        for i in min_points.keys():
+            ssum = 0
+            for j in range(len(best_var)):
+                ssum += (min_points[i][j] - here[j])**2
+            ssums[i] = ssum
 
-    # Graph input/out(f)
-    nx.draw_networkx_labels(graph, posf, flabels)
-    nx.draw_networkx_edges(graph, posf, arcsf, width=1, arrowsize=10)
-    nx.draw_networkx(graph, posf, node_size=1, node_color='black',
-                     nodelist=flabels, with_labels=True, node_shape='', edgecolors='black')
+        key_max = max(ssums.keys(), key=(lambda k: ssums[k]))
 
-    # Graph bypasses(b)
-    nx.draw_networkx_labels(graph, posb, blabels)
-    nx.draw_networkx(graph, posb, node_size=900, node_color='whitesmoke', width=1.5,
-                     nodelist=blabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=0.2)
+        if objectives[key_max] + tol < fmin:
+            fmin = objectives[key_max]
+            best_var = ext_vars[key_max]
+            best_dir = key_max
+            best_init = initials[key_max]
+            improve = True
+    else:
+        if objectives[key_min] + tol < fmin:
+            fmin = objectives[key_min]
+            best_var = ext_vars[key_min]
+            best_dir = key_min
+            best_init = initials[key_min]
+            improve = True
 
-    # Graph reactors(r)
-    nx.draw_networkx_labels(graph, posr, rlabels)
-    nx.draw_networkx(graph, posr, node_size=900, node_color='lightslategray', width=1.5,
-                     nodelist=rlabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=1.5)
+    return fmin, best_var, best_dir, best_init, improve
 
-    # Graph recycle(recy) if it exists
-    if recycle != 0:
-        arcsrecy = [('r1', 'r2'), ('r3', 'r4')]
-        pairs = list(zip(list(arcsrecy), ['R', 'R']))
-        edgelabels = dict(pairs)
-        nx.draw_networkx_labels(graph, posrecy, recylabels)
-        nx.draw_networkx_edges(
-            graph, posrecy, arcsrecy, width=1, arrowsize=10)
-        nx.draw_networkx(graph, posrecy, node_size=0, node_color='white',
-                         nodelist=recylabels, node_shape='', edgecolors='black')
-        nx.draw_networkx_edge_labels(
-            graph, posrecy, edge_labels=edgelabels)
 
-    plt.show()
 
 
 if __name__ == "__main__":
     NT = 5
     timelimit = 10
-    m = build_cstrs(NT)
+    #k = 'Infinity'
+    #route, fmin, time = dsda(NT, k)
+
+
+
+
+    #m = build_cstrs(NT)
     # # initialize_cstr(m)
-    # m = external_ref(m,[1,5])
-    # m.pprint()
-    # solve_nlp(m)
+    #m = external_ref(m,[5,5])
+    #m.pprint()
 
-    # m2 = build_cstrs(NT)
-    # initialize_cstr(m2)
+    #m2 = build_cstrs(NT)
+    #m_init = initialize_dsda(m2)
 
-    # m2.pprint()
-    complete_enumeration_external(model_function=build_cstrs, NT=NT, nlp='msnlp')
+    #m_init.pprint()
+    complete_enumeration_external(model_function=build_cstrs, model_args={'NT':NT}, nlp='msnlp', timelimit=10)
     # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
     # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     # print(m_solved.results)
-    # visualize_solution(m_solved,NT)
+    # visualize_superstructure(m_solved,NT)

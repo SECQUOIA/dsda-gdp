@@ -536,6 +536,7 @@ def external_ref(m, x, logic_expr = None):
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    pe.TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
 
     return m
 
@@ -558,6 +559,7 @@ def solve_nlp(m, nlp='msnlp', timelimit=10):
                               # keepfiles=True,
                               # tmpdir=gams_path,
                               # symbolic_solver_labels=True,
+                              skip_trivial_constraints=True,
                               add_options=[
                                   'option reslim = ' + str(timelimit) + ';'
                                   'option optcr = 0.0;'
@@ -602,7 +604,8 @@ def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5
         for Xj in X2:
             m = model_function(**model_args)
             x = [Xi, Xj]
-            m_fixed = reformulation_function(m, x)
+            m_init = initialize_model(m,from_feasible=True)
+            m_fixed = reformulation_function(m_init, x)
             m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
             if m_solved.dsda_status == 'Optimal':
@@ -634,7 +637,7 @@ def visualize_dsda(points=[], feas_x=[], feas_y=[], objs=[], k='?'):
     cbar.set_label('Objective function', rotation=90)
     title_string = 'D-SDA with k = '+k
     plt.title(title_string)
-    plt.xlabel("YF (Number of reactors")
+    plt.xlabel("YF (Number of reactors)")
     plt.ylabel("YR (Reflux position)")
     plt.show()
 

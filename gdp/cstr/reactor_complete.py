@@ -15,7 +15,6 @@ from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_f
 from pyomo.opt import SolutionStatus
 from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
-
 from model_serializer import to_json, from_json, StoreSpec
 
 
@@ -587,7 +586,7 @@ def solve_nlp(m, nlp='msnlp', timelimit=10):
     return m
 
 
-def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5}, nlp='msnlp', timelimit = 10):
+def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='msnlp', timelimit = 10):
     X1 = list(range(1, NT+1))
     X2 = list(range(1, NT+1)) # TODO how to generalize for N external variables?
     # Input variable should be dictionary of the external variables with lower and upper bounds
@@ -603,7 +602,7 @@ def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5
         for Xj in X2:
             m = model_function(**model_args)
             x = [Xi, Xj]
-            m_fixed = external_ref(m, x)
+            m_fixed = reformulation_function(m, x)
             m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
             if m_solved.dsda_status == 'Optimal':
@@ -981,4 +980,7 @@ if __name__ == "__main__":
     visualize_dsda(points=route, feas_x=x, feas_y=y, objs=objs, k=k)
     print(m_solved.results)
     visualize_cstr_superstructure(m_solved, NT)
+
+
+
     

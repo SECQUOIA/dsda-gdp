@@ -873,7 +873,7 @@ def evaluate_line_search(start, fmin, direction, model_function=build_cstrs, mod
 
     return fmin, best_var, moved
 
-def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5}, starting_point=[1,1], nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5}, starting_point=[1,1], provide_starting_initialization=True, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
 
     print('\nStarting D-SDA with k =', k)
 
@@ -884,8 +884,12 @@ def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5
     route.append(ext_var)
 
     m = model_function(**model_args)
-    m_init = initialize_model(m, from_feasible=True)
-    m_fixed = external_ref(m_init, ext_var)
+    if provide_starting_initialization:
+        m_init = initialize_model(m, from_feasible=True)
+        m_fixed = external_ref(m_init, ext_var)
+    else:
+        m_fixed = external_ref(m, ext_var)
+
     m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=iter_timelimit)
 
     fmin = pe.value(m_solved.obj)
@@ -941,8 +945,14 @@ def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5
     print('External variables:', route[-1])
     print('Execution time [s]:', t_end)
 
+    m2 = model_function(**model_args)
+    m2_init = initialize_model(m2)
+    m2_fixed = external_ref(m2_init, route[-1])
+    m2_solved = solve_nlp(m2_fixed, nlp=nlp, timelimit=iter_timelimit)
+    m2_solved.dsda_time = t_end
+
     # Return visited points / final point / objective at that point / execution time
-    return route, round(fmin, 5), t_end
+    return m2_solved, route
 
 if __name__ == "__main__":
 
@@ -967,6 +977,8 @@ if __name__ == "__main__":
     min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
-    route, fmin, time = solve_with_dsda(k=k, model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    m_solved, route = solve_with_dsda(k=k, model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, provide_starting_initialization=True, nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
     visualize_dsda(points=route, feas_x=x, feas_y=y, objs=objs, k=k)
+    print(m_solved.results)
+    visualize_cstr_superstructure(m_solved, NT)
     

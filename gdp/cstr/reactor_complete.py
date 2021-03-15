@@ -331,7 +331,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     return m
 
-def visualize_superstructure(m, NT):
+def visualize_cstr_superstructure(m, NT):
     x = list((range(1, NT+1)))
 
     # Initialize bypasses (b), reactors(r) and recycle
@@ -592,6 +592,7 @@ def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5
     X2 = list(range(1, NT+1)) # TODO how to generalize for N external variables?
     # Input variable should be dictionary of the external variables with lower and upper bounds
     print()
+    feas_x, feas_y, objs = [], [], []
 
     print('=============================')
     print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
@@ -608,10 +609,35 @@ def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5
             if m_solved.dsda_status == 'Optimal':
                 print('%6s %6s %12s' %
                       (Xi, Xj, round(pe.value(m_solved.obj), 5)))
+                feas_x.append(Xi)
+                feas_y.append(Xj)
+                objs.append(round(pe.value(m_solved.obj), 5))
             else:
                 print('%6s %6s %12s' % (Xi, Xj, 'Infeasible'))
 
     print('=============================')
+    return feas_x, feas_y, objs
+
+def visualize_dsda(points=[], feas_x=[], feas_y=[], objs=[], k='?'):
+
+    X1, X2 = feas_x, feas_y
+    cm = plt.cm.get_cmap('viridis_r')
+
+    def drawArrow(A, B):
+        plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005,
+                  head_width=0.15, head_length=0.08, color='black', shape='full')
+
+    for i in range(len(points)-1):
+        drawArrow(points[i], points[i+1])
+
+    sc = plt.scatter(X1, X2, s=80, c=objs, cmap=cm)
+    cbar = plt.colorbar(sc)
+    cbar.set_label('Objective function', rotation=90)
+    title_string = 'D-SDA with k = '+k
+    plt.title(title_string)
+    plt.xlabel("YF (Number of reactors")
+    plt.ylabel("YR (Reflux position)")
+    plt.show()
 
 
 def neighborhood_k_eq_2(num_ext):
@@ -667,18 +693,22 @@ def my_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed
     return neighbors
 
 
-def initialize_model(m, from_init=''):
+def initialize_model(m, from_feasible=False):
     wts = StoreSpec.value()
-    step = 'test'
-    json_name = step+'.json'
-    from_json(m, fname = json_name, wts=wts)
+
+    if from_feasible:
+        from_json(m, fname = 'dsda_starting_initialization.json', wts=wts)
+    else:
+        from_json(m, fname = 'dsda_initialization.json', wts=wts)
     return m
 
-def generate_initialization(m, from_model=''):
+def generate_initialization(m, starting_initialization=False):
     wts = StoreSpec.value()
-    step = 'test'
-    json_name = step+'.json'
-    to_json(m, fname=json_name, human_read=True, wts=wts)
+
+    if starting_initialization:
+        to_json(m, fname = 'dsda_starting_initialization.json', human_read=True, wts=wts)
+    else:
+        to_json(m, fname='dsda_initialization.json', human_read=True, wts=wts)
 
 
 
@@ -692,7 +722,7 @@ def generate_initialization(m, from_model=''):
 # newbors or new_newbors is type  dict starting in 0 with neighbor of a given point
 # Neighbor 0 is the actual point
 
-def actual_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed={}):
+def find_actual_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_allowed={}):
     neighbors = {0: start}
     for i in neighborhood.keys():
         neighbors[i] = list(map(sum, zip(start, list(neighborhood[i]))))
@@ -721,26 +751,28 @@ def actual_neighbors(start, neighborhood, optimize=True, min_allowed={}, max_all
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
 # improve is type bool and shows if an improvement was made while looking for neighbors
-def evaluate_neighbors(ext_vars, init, fmin, nlp='conopt', tol=0.000001, boolean_ref=True):
+def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'NT':5}, nlp='conopt', iter_timelimit=10, tol=0.000001):
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
     best_dir = 0
-    best_init = init
     temp = ext_vars
     temp.pop(0, None)
     objectives = {}
     feasibles = {}
-    initials = {}
-    for i in temp.keys():
-        #m = build_column(min_trays=8, max_trays=NT, xD=0.95, xB=0.95,
-        #                                   x_input=temp[i], nlp_solver=nlp_solver, provide_init=True, init=init, boolean_ref=boolean_ref)
-        new_init = m.dsda_initialization
 
-        if m.dsda_status == 'Optimal':
-            objectives[i] = pe.value(m.obj)
+    for i in temp.keys():
+
+        m = model_function(**model_args)
+        m_init = initialize_model(m)
+        m_fixed = external_ref(m_init, temp[i])
+        m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=iter_timelimit)
+        #print(temp[i],m_solved.dsda_status)
+        
+        if m_solved.dsda_status == 'Optimal':
+            
+            objectives[i] = pe.value(m_solved.obj)
             feasibles[i] = temp[i]
-            initials[i] = new_init
 
     key_min = min(objectives.keys(), key=(lambda k: objectives[k]))
     min_obj = objectives[key_min]
@@ -766,41 +798,175 @@ def evaluate_neighbors(ext_vars, init, fmin, nlp='conopt', tol=0.000001, boolean
             fmin = objectives[key_max]
             best_var = ext_vars[key_max]
             best_dir = key_max
-            best_init = initials[key_max]
             improve = True
     else:
         if objectives[key_min] + tol < fmin:
             fmin = objectives[key_min]
             best_var = ext_vars[key_min]
             best_dir = key_min
-            best_init = initials[key_min]
             improve = True
 
-    return fmin, best_var, best_dir, best_init, improve
+    if improve == True:
+        m2 = model_function(**model_args)
+        m2_init = initialize_model(m2)
+        m2_fixed = external_ref(m2_init, best_var)
+        m2_solved = solve_nlp(m2_fixed, nlp=nlp, timelimit=iter_timelimit)
+        generate_initialization(m2_solved)
+
+    return fmin, best_var, best_dir, improve
 
 
+# Moves from a certain start in a given direction and evaluates it
+# start is type list with the actual point
+# init is type dict and contains solved variables for the actual point
+# fmin is type int and stands for objective at actual point
+# direction is type int and is the moving direction direction (key in neighborhood)
+# optimize option will discard out of bounds points given by min and max allowed
+# tol is type int and stands for numerical tolereance for equallity
+# fmin as return is type int and gives the best point objective (between moved and actual)
+# best_var is type list and gives the best point (between moved and actual)
+# move is type bool and shows if an improvement was made while looking for neighbors
+# best_init is type dict and contains solved variables for the best point
+def evaluate_line_search(start, fmin, direction, model_function=build_cstrs, model_args={'NT':5}, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+    best_var = start
+    moved = False
 
+    moved_point = list(map(sum, zip(list(start), list(direction))))
+
+    if optimize:
+        checked = 0
+        for j in range(len(moved_point)):
+            if moved_point[j] >= min_allowed[j+1] and moved_point[j] <= max_allowed[j+1]:
+                checked += 1
+
+        if checked == len(moved_point):
+            m = model_function(**model_args)
+            m_init = initialize_model(m)
+            m_fixed = external_ref(m_init, moved_point)
+            m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=iter_timelimit)
+
+            if m_solved.dsda_status == 'Optimal':
+                act_obj = pe.value(m_solved.obj)
+                if act_obj + tol < fmin:
+                    fmin = act_obj
+                    best_var = moved_point
+                    moved = True
+    else:
+        m = model_function(**model_args)
+        m_init = initialize_model(m)
+        m_fixed = external_ref(m_init, moved_point)
+        m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=iter_timelimit)
+
+        if m_solved.dsda_status == 'Optimal':
+            act_obj = pe.value(m_solved.obj)
+            if act_obj + tol < fmin:
+                fmin = act_obj
+                best_var = moved_point
+                moved = True
+    
+    if moved == True:
+        m2 = model_function(**model_args)
+        m2_init = initialize_model(m2)
+        m2_fixed = external_ref(m2_init, best_var)
+        m2_solved = solve_nlp(m2_fixed, nlp=nlp, timelimit=iter_timelimit)
+        generate_initialization(m2_solved)
+
+    return fmin, best_var, moved
+
+def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5}, starting_point=[1,1], nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+
+    print('\nStarting D-SDA with k =', k)
+
+    # Initialize
+    t_start = time.process_time()
+    route = []
+    ext_var = starting_point
+    route.append(ext_var)
+
+    m = model_function(**model_args)
+    m_init = initialize_model(m, from_feasible=True)
+    m_fixed = external_ref(m_init, ext_var)
+    m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=iter_timelimit)
+
+    fmin = pe.value(m_solved.obj)
+    generate_initialization(m_solved)
+    
+    # Define neighborhood
+    if k == '2':
+        neighborhood = neighborhood_k_eq_2(len(ext_var))
+    elif k == 'Infinity':
+        neighborhood = neighborhood_k_eq_inf(len(ext_var))
+    elif k == 'l_flat':
+        neighborhood = {1: [1, 1], 2: [-1, -1],
+                        3: [1, 0], 4: [-1, 0], 5: [0, 1], 6: [0, -1]}
+    elif k == 'm_flat':
+        neighborhood = {1: [1, -1], 2: [1, 0],
+                        3: [-1, 1], 4: [0, 1], 5: [-1, 0], 6: [0, -1]}
+    else:
+        return "Enter a valid neighborhood ('Infinity', '2', 'l_flat' or 'm_flat')"
+
+    looking_in_neighbors = True
+
+    # Look in neighbors (outter cycle)
+    while looking_in_neighbors:
+
+        # Find neighbors of the actual point
+        neighbors = my_neighbors(ext_var, neighborhood, optimize=True,
+                                 min_allowed=min_allowed, max_allowed=max_allowed)
+
+        fmin, best_var, best_dir, improve = evaluate_neighbors(neighbors, fmin, model_function=model_function, model_args=model_args, nlp=nlp, iter_timelimit=iter_timelimit, tol=tol)
+
+        # Stopping condition in case there is no improvement amongst neighbors
+        if improve == True:
+            line_searching = True
+            route.append(best_var)
+
+            # If improvement was made start line search (inner cycle)
+            while line_searching:
+                fmin, best_var, moved = evaluate_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args, nlp=nlp, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
+
+                # Stopping condition in case no movement was done
+                if moved == True:
+                    route.append(best_var)
+                else:
+                    ext_var = best_var
+                    line_searching = False
+
+        else:
+            looking_in_neighbors = False
+
+    t_end = round(time.process_time() - t_start, 2)
+
+    print('Objective:',round(fmin, 5))
+    print('External variables:', route[-1])
+    print('Execution time [s]:', t_end)
+
+    # Return visited points / final point / objective at that point / execution time
+    return route, round(fmin, 5), t_end
 
 if __name__ == "__main__":
+
+    # Inputs
     NT = 5
     timelimit = 10
-    #k = 'Infinity'
-    #route, fmin, time = dsda(NT, k)
 
+    #Complete enumeration
+    x, y, objs = complete_enumeration_external(model_function=build_cstrs, model_args={'NT':NT}, nlp='msnlp', timelimit=10)
 
+    # MINLP and GDPopt methods
+    m = build_cstrs(NT)
+    m_init = initialize_model(m, from_feasible=True)
+    m_solved = solve_with_minlp(m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
+    # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
+    print(m_solved.results)
+    visualize_cstr_superstructure(m_solved, NT)
 
+    # D-SDA
+    k = 'Infinity'
+    starting_point = [1,1]
+    min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
+    max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
-    #m = build_cstrs(NT)
-    # # initialize_cstr(m)
-    #m = external_ref(m,[5,5])
-    #m.pprint()
-
-    #m2 = build_cstrs(NT)
-    #m_init = initialize_dsda(m2)
-
-    #m_init.pprint()
-    complete_enumeration_external(model_function=build_cstrs, model_args={'NT':NT}, nlp='msnlp', timelimit=10)
-    # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
-    # m_solved = solve_with_gdpopt(m, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
-    # print(m_solved.results)
-    # visualize_superstructure(m_solved,NT)
+    route, fmin, time = solve_with_dsda(k=k, model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    visualize_dsda(points=route, feas_x=x, feas_y=y, objs=objs, k=k)
+    

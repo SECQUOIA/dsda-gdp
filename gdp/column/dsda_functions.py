@@ -459,7 +459,7 @@ def do_line_search(start:list, fmin:int, direction:int, model_function, model_ar
 
     return fmin, best_var, moved
 
-def solve_with_dsda(k:str, model_function, model_args:dict, starting_point:list, reformulation_function, provide_starting_initialization: bool=True, nlp: str='conopt', optimize: bool=True, min_allowed: dict={}, max_allowed :dict={}, iter_timelimit: int=10, tol:int =0.000001):
+def solve_with_dsda(model_function, model_args:dict, starting_point:list, reformulation_function, k:str='Infinity', provide_starting_initialization: bool=True, nlp: str='conopt', optimize: bool=True, min_allowed: dict={}, max_allowed :dict={}, iter_timelimit: int=10, tol:int =0.000001):
 
     """
     Function that computes Discrete-Steepest Descend Algorithm
@@ -510,16 +510,8 @@ def solve_with_dsda(k:str, model_function, model_args:dict, starting_point:list,
         neighborhood = neighborhood_k_eq_2(len(ext_var))
     elif k == 'Infinity':
         neighborhood = neighborhood_k_eq_inf(len(ext_var))
-    elif k == 'l_flat':
-        print('l_flat Neighborhood is only available for 2 external variables')
-        neighborhood = {1: [1, 1], 2: [-1, -1],
-                        3: [1, 0], 4: [-1, 0], 5: [0, 1], 6: [0, -1]}
-    elif k == 'm_flat':
-        print('m_flat Neighborhood is only available for 2 external variables')
-        neighborhood = {1: [1, -1], 2: [1, 0],
-                        3: [-1, 1], 4: [0, 1], 5: [-1, 0], 6: [0, -1]}
     else:
-        return "Enter a valid neighborhood ('Infinity', '2', 'l_flat' or 'm_flat')"
+        return "Enter a valid neighborhood ('Infinity' or '2')"
 
     looking_in_neighbors = True
 
@@ -567,7 +559,7 @@ def solve_with_dsda(k:str, model_function, model_args:dict, starting_point:list,
 
     return m2_solved, route
 
-def visualize_dsda(route:list=[], feas_x:list=[], feas_y:list=[], objs:list=[], k:str='?'):
+def visualize_dsda(route:list=[], feas_x:list=[], feas_y:list=[], objs:list=[], k:str='?', ext1_name: str='External variable 1', ext2_name: str='External variable 2'):
 
     """
     Function that plots Discrete-Steepest Descend Algorithm for two external variables
@@ -578,6 +570,8 @@ def visualize_dsda(route:list=[], feas_x:list=[], feas_y:list=[], objs:list=[], 
         feas_y: List containing y-axis position of feasible points
         objs: List containing objective function of feasible points
         k: Type of neighborhood
+        ext1_name: External variable 1 name
+        ext2_name: External variable 2 name
         
     Returns:
   
@@ -598,8 +592,8 @@ def visualize_dsda(route:list=[], feas_x:list=[], feas_y:list=[], objs:list=[], 
     cbar.set_label('Objective function', rotation=90)
     title_string = 'D-SDA with k = '+k
     plt.title(title_string)
-    plt.xlabel("External Var 1")
-    plt.ylabel("External Var 2")
+    plt.xlabel(ext1_name)
+    plt.ylabel(ext2_name)
     plt.show()
 
 

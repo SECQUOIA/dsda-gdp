@@ -18,7 +18,6 @@ from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_f
 from pyomo.opt import SolutionStatus
 from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
-from initialize import *
 from model_serializer import to_json, from_json, StoreSpec
 
 def build_column(min_trays, max_trays, xD, xB):

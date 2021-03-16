@@ -3,96 +3,174 @@
 from __future__ import division
 
 from math import (fabs, ceil)
-
+import pyomo.environ as pe
+from pyomo.environ import (
+    Block, ConcreteModel, Constraint, Param, log, minimize, NonNegativeReals, Objective, RangeSet, Set, Var, TransformationFactory, SolverFactory, value, BooleanVar, exactly, land, lor)
+from pyomo.gdp import (Disjunct, Disjunction)
 from pyomo.environ import SolverFactory, Suffix, value
 from pyomo.util.infeasible import log_infeasible_constraints
 
-from column import build_column
+from gdp_column import build_column
+from dsda_functions import (initialize_model, generate_initialization, solve_nlp, solve_with_dsda, solve_with_minlp, solve_with_gdpopt, visualize_dsda)
 
 
 
-def main():
 
-#---solve  (write DSDA instead)
-    m = build_column(
-        min_trays=8,
-        max_trays=17,
-        xD=0.95,
-        xB=0.95,
-        #x_input=[16,2], # Original initialization
-        #x_input=[13,4], # To find optimal solution in PSE paper
-        #x_input=[14,5], # To find optimal solution according to D-SDA
-        x_input=[10,3],
-        nlp_solver='conopt',
-        provide_init=False,
-        init={},
-        boolean_ref=True)
+def external_ref(m, x, logic_expr = None):
+    
+     # Boolean variables and intTrays set definition
+    m.intTrays = Set(initialize=m.trays - [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
+    m.YB = BooleanVar(m.intTrays, doc='Existence of boil-up flow in stage n')
+    m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')
+    m.YP = BooleanVar(m.intTrays, doc='Boolean var associated with tray and no_tray')
+    m.YB_is_up = BooleanVar()
+    m.YR_is_down = BooleanVar()
 
-#---display results
-    display_column(m)
+    # Logical constraints
+
+    @m.LogicalConstraint()
+    def one_reflux(m):
+        return exactly(1, m.YR)
+
+    @m.LogicalConstraint()
+    def one_boilup(m):
+        return exactly(1, m.YB)
+
+    @m.LogicalConstraint()
+    def boilup_fix(m):
+        return exactly(1, m.YB_is_up)
+
+    @m.LogicalConstraint()
+    def reflux_fix(m):
+        return exactly(1, m.YR_is_down)
+
+    @m.LogicalConstraint()
+    def no_reflux_down(m):
+        return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
+
+    @m.LogicalConstraint()
+    def no_boilup_up(m):
+        return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
+
+    @m.LogicalConstraint(m.conditional_trays)
+    def YP_or_notYP(m, n):
+        return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
+
+    # Associate Boolean variables with with disjunctions
+    for n in m.conditional_trays:
+        m.YP[n].associate_binary_var(m.tray[n].indicator_var)
+
+    # Fix externals    
+
+    ext_var_1 = x[0]
+    ext_var_2 = x[1] 
+
+    for n in m.intTrays:
+        if n == ext_var_1:
+            m.YR[n].fix(True)
+        else:
+            m.YR[n].fix(False)
+
+        if n == ext_var_2:
+            m.YB[n].fix(True)
+        else:
+            m.YB[n].fix(False)
+
+    temp = value(land(~m.YR[n]
+                        for n in range(m.reboil_tray+1, m.feed_tray)))
+    if temp == True:
+        m.YR_is_down.fix(True)
+
+    temp = value(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
+    if temp == True:
+        m.YB_is_up.fix(True)
 
 
+    for n in m.conditional_trays:
+        temp = value(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(
+            land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
 
-#-----other functions------------------
-def display_column(m, all_data=False):
-    print('Objective: %s' % round(value(m.obj),2))
-    real_trays =  sum(value(m.tray[n].indicator_var) for n in range(2,m.max_trays) if n != m.feed_tray)+1
-    print('Number of trays:', real_trays)
-    print('Feed tray:', ceil(real_trays/2))
-    print('RF: {: >3.2f} RB: {: >3.2f}'
-          .format(value(m.reflux_frac / (1 - m.reflux_frac)),
-                  value(m.boilup_frac / (1 - m.boilup_frac))))
+        if temp == True:
+            m.tray[n].indicator_var.fix(True)
+            m.no_tray[n].indicator_var.fix(False)
+        else:
+            m.tray[n].indicator_var.fix(False)
+            m.no_tray[n].indicator_var.fix(True)
 
-    if all_data:
-        print('Qc: {: >3.0f}kW  DB: {: >3.0f} DT: {: >3.0f} dis: {: >3.0f}'
-            .format(value(m.Qc * 1E3),
-                    value(m.D['benzene']),
-                    value(m.D['toluene']),
-                    value(m.dis)))
-        for t in reversed(list(m.trays)):
-            print('T{: >2.0f}-{:1.0g} T: {: >3.0f} '
-                'F: {: >4.0f} '
-                'L: {: >4.0f} V: {: >4.0f} '
-                'xB: {: >3.0f} xT: {: >3.0f} yB: {: >3.0f} yT: {: >3.0f}'
-                .format(t,
-                        fabs(value(m.tray[t].indicator_var))
-                        if t in m.conditional_trays else 1,
-                        value(m.T[t]) - 273.15,
-                        value(sum(m.feed[c] for c in m.comps))
-                        if t == m.feed_tray else 0,
-                        value(m.liq[t]),
-                        value(m.vap[t]),
-                        value(m.x['benzene', t]) * 100,
-                        value(m.x['toluene', t]) * 100,
-                        value(m.y['benzene', t]) * 100,
-                        value(m.y['toluene', t]) * 100
-                        ))
-        print('Qb: {: >3.0f}kW  BB: {: > 3.0f} BT: {: >3.0f} bot: {: >3.0f}'
-            .format(value(m.Qb * 1E3),
-                    value(m.B['benzene']),
-                    value(m.B['toluene']),
-                    value(m.bot)))
-        for t in reversed(list(m.trays)):
-            print('T{: >2.0f}-{:1.0g} '
-                'FB: {: >3.0f} FT: {: >3.0f} '
-                'LB: {: >4.0f} LT: {: >4.0f} VB: {: >4.0f} VT: {: >4.0f}'
-                .format(t,
-                        fabs(value(m.tray[t].indicator_var))
-                        if t in m.conditional_trays else 1,
-                        value(m.feed['benzene']) if t == m.feed_tray else 0,
-                        value(m.feed['toluene']) if t == m.feed_tray else 0,
-                        value(m.L['benzene', t]),
-                        value(m.L['toluene', t]),
-                        value(m.V['benzene', t]),
-                        value(m.V['toluene', t])
-                        ))
-        
-    # Show value of Boolean variables
-        for k in m.conditional_trays:
-            print(str(m.tray[k].indicator_var)+'='+str(m.tray[k].indicator_var.value))
-          
+    pe.TransformationFactory('core.logical_to_linear').apply_to(m)
+    pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    pe.TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
+
+    return m
+
+def complete_enumeration_external(model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, reformulation_function=external_ref, nlp='conopt', timelimit = 10):
+    NT = model_args['max_trays']
+    X1, X2, aux, aux2, x = [], [], [], 2, {}
+
+    for i in range(2, NT):
+        X1.append(i)
+        aux.append(i)
+        X2.append(aux2)
+
+    for i in range(NT-2):
+        aux.pop(0)
+        aux2 += 1
+        for j in aux:
+            X1.append(j)
+            X2.append(aux2)
+
+    print()
+    feas_x, feas_y, objs = [], [], []
+
+    print('=============================')
+    print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
+    print('-----------------------------')
+
+    # Loop over all external variables and then loop over its values
+    for i in range(len(X1)):
+        x = [X1[i], X2[i]]
+        m = model_function(**model_args)
+        m_init = initialize_model(m, from_feasible=True)
+        m_fixed = reformulation_function(m_init, x)
+        m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
+
+        if m_solved.dsda_status == 'Optimal':
+            print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m_solved.obj), 2)))
+            feas_x.append(X1[i])
+            feas_y.append(X2[i])
+            objs.append(round(pe.value(m_solved.obj), 2))
+        else:
+            print('%6s %6s %12s' % (X1[i], X2[i], 'Infeasible'))
+
+    print('=============================')
+    return feas_x, feas_y, objs
+
+     
 
 if __name__ == "__main__":
-    m = main()
+    # Inputs
+    NT = 17
+    timelimit = 10
+    model_args = {'min_trays':8, 'max_trays':NT, 'xD':0.95, 'xB':0.95}
+
+    #Complete enumeration
+    # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, nlp='conopt', timelimit=20)
+
+    # MINLP and GDPopt methods
+    m = build_column(**model_args)
+    m_init = initialize_model(m, from_feasible=True)
+    m_solved = solve_with_minlp(m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
+    # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
+    print(m_solved.results)
+    
+    # D-SDA
+    k = 'Infinity'
+    starting_point = [16,2]
+    min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
+    max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
+
+    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref, k=k, provide_starting_initialization=True, nlp='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    #visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
+    print(m_solved.results)
 
 

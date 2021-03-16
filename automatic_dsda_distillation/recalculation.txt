@@ -1,0 +1,23 @@
+
+yaux_x1(extvar,Net)=0;
+yaux_x1(extvar,Net)$(ord(Net) eq floor(fex(extvar)))=1-mod(fex(extvar),1);
+yaux_x1(extvar,Net)$(ord(Net) eq 1+floor(fex(extvar)))=mod(fex(extvar),1);
+
+yb(Net)=sum(s_x1,yaux_x1(s_x1,Net));
+yaux_x2(extvar,Net)=0;
+yaux_x2(extvar,Net)$(ord(Net) eq floor(fex(extvar)))=1-mod(fex(extvar),1);
+yaux_x2(extvar,Net)$(ord(Net) eq 1+floor(fex(extvar)))=mod(fex(extvar),1);
+
+yf1(Net)=sum(s_x2,yaux_x2(s_x2,Net));
+yaux_x3(extvar,Net)=0;
+yaux_x3(extvar,Net)$(ord(Net) eq floor(fex(extvar)))=1-mod(fex(extvar),1);
+yaux_x3(extvar,Net)$(ord(Net) eq 1+floor(fex(extvar)))=mod(fex(extvar),1);
+
+yf2(Net)=sum(s_x3,yaux_x3(s_x3,Net));
+yaux_x4(extvar,Net)=0;
+yaux_x4(extvar,Net)$(ord(Net) eq floor(fex(extvar)))=1-mod(fex(extvar),1);
+yaux_x4(extvar,Net)$(ord(Net) eq 1+floor(fex(extvar)))=mod(fex(extvar),1);
+
+yc(Net)=sum(s_x4,yaux_x4(s_x4,Net));
+par(Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1))=(sum(Net1$((ord(Net1) ge 2) and (ord(Net1) le ord(Net))),yr(Net1)))+(yb(Net))-(sum(Net1$((ord(Net1) ge 2) and (ord(Net1) le ord(Net))),yb(Net1)));
+ye(Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1))=par(Net)*(1-yc(Net))*CASE+par(Net)*(1-CASE);

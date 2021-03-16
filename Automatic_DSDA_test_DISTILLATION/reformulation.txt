@@ -1,4 +1,0 @@
-fex(s_x1)=xvalue_p(s_x1);
-fex(s_x2)=xvalue_p(s_x2);
-fex(s_x3)=xvalue_p(s_x3);
-fex(s_x4)=xvalue_p(s_x4);

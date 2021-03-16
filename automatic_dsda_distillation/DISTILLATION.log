@@ -1,0 +1,32 @@
+
+--- Job DISTILLATION.gms Start 03/07/21 12:05:31 34.2.0 r6925a71 WEX-WEI x86 64bit/MS Windows
+--- Applying:
+    C:\GAMS\34\gmsprmNT.txt
+--- GAMS Parameters defined
+    Input "C:\Users\dada2\Google Drive\Waterloo\GAMS\AUTOMATIC DSDA\V1\Automatic_DSDA_test_DISTILLATION\DISTILLATION.gms"
+    PageWidth 80
+    PageSize 0
+    PageContr 3
+    Action CE
+    ScrDir "C:\Users\dada2\Google Drive\Waterloo\GAMS\AUTOMATIC DSDA\V1\Automatic_DSDA_test_DISTILLATION\225a\"
+    SysDir C:\GAMS\34\
+    WorkDir "C:\Users\dada2\Google Drive\Waterloo\GAMS\AUTOMATIC DSDA\V1\Automatic_DSDA_test_DISTILLATION\"
+    LogOption 3
+    DFormat 0
+    TFormat 0
+    ErrorLog 99
+    IDE 1
+Licensee: Eval License                                   G201207/0001AO-GEN
+          Carnegie Mellon University, Dept. of Chemical Engineering  DCE375
+          C:\Users\dada2\Documents\GAMS\gamslice.txt
+          Evaluation license: Not for commercial or production use
+GAMS 34.2.0   Copyright (C) 1987-2021 GAMS Development. All rights reserved
+--- Starting compilation
+--- DISTILLATION.gms(1443) 3 Mb
+--- Starting execution: elapsed 0:00:00.026
+--- DISTILLATION.gms(1235) 4 Mb
+--- Initialize embedded library embpycclib64.dll
+--- Execute embedded library embpycclib64.dll{'x1': ['yb', '1.0', 'Net', 'x1_1'], 'x2': ['yf1', '1.0', 'Net', 'x2_1'], 'x3': ['yf2', '1.0', 'Net', 'x3_1'], 'x4': ['yc', '3.0', 'Net', 'x4_1', 'x4_2', 'x4_3']}
+
+*** Status: Normal completion
+--- Job DISTILLATION.gms Stop 03/07/21 12:05:31 elapsed 0:00:00.136

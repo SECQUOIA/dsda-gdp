@@ -1298,7 +1298,7 @@ def minlp_extractive_column(NT=30,  visualize=False):
               gams_path + ' does not exist. We will create it')
         os.makedirs(gams_path)
     solvername = 'gams'
-    opt = SolverFactory(solvername, solver='baron')
+    opt = SolverFactory(solvername, solver='sbb')
     results = opt.solve(m, tee=True,
                         # Uncomment the following lines if you want to save GAMS models
                         # keepfiles=True,

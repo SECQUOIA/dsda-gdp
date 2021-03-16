@@ -567,7 +567,7 @@ def solve_with_dsda(k:str, model_function, model_args:dict, starting_point:list,
 
     return m2_solved, route
 
-def visualize_dsda(route:list=[], feas_x:list=[], feas_y:list=[], objs:list=[], k=:str'?'):
+def visualize_dsda(route:list=[], feas_x:list=[], feas_y:list=[], objs:list=[], k:str='?'):
 
     """
     Function that plots Discrete-Steepest Descend Algorithm for two external variables

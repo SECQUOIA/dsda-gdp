@@ -122,6 +122,34 @@ def build_small_batch_gdp():
     return m
 
 
+
+def external_ref(m, x, logic_expr = None):
+    ext_var={}
+    p=0
+    for j in m.j:
+        ext_var[j]=x[p]
+        p=p+1
+
+    for k in m.k:
+        for j in m.j:
+            if k==ext_var[j]:
+                m.Y[k,j].fix(True)
+                m.Y_exists[k,j].indicator_var.fix(True)  #IS THIS REQUIRED????
+                m.Y_not_exists[k,j].indicator_var.fix(False)  #IS THIS REQUIRED????
+            else:
+                m.Y[k,j].fix(False)
+                m.Y_exists[k,j].indicator_var.fix(False)  #IS THIS REQUIRED????
+                m.Y_not_exists[k,j].indicator_var.fix(True)#IS THIS REQUIRED????
+
+                
+
+    pe.TransformationFactory('core.logical_to_linear').apply_to(m)
+    pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    pe.TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
+    
+    return m
+
+    
 def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
 
     # Transformation step
@@ -160,5 +188,14 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
 
 if __name__ == "__main__":
     m = build_small_batch_gdp()
-    m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=120)
+    #m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=120)
+
+    #EXTERNAL REF TEST (this thest can be deleted)
+    newmodel=external_ref(m, [1,2,3], logic_expr = None)
+    for j in m.j:
+        for k in m.k:
+            print(str(m.Y_exists[k,j].indicator_var)+'='+str(m.Y_exists[k,j].indicator_var.value))
+            print(str(m.Y[k,j])+'='+str(m.Y[k,j].value))
+
+
     

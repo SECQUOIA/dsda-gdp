@@ -6,17 +6,25 @@ from pyomo.core.base.misc import display
 from pyomo.opt.base.solvers import SolverFactory
 import os
 
+def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
+    """
+    Function that builds CSTR superstructure model of size NT.
+    The CSTRs have a single 1st order reaction A -> B and minimizes (TODO Check)
+    total reactor volume. The optimal solution should yield NT reactors with a recycle before reactor NT.
+    Reference: Paper Linhan 1.
 
-def gdp_reactors(NT=5, visualize=False):
-    # INPUTS
-    # NT = 5  # Size of the superstructure (This is an input parameter)
+    Args:
+        NT: int. Positive Integer defining the maximum number of CSTRs
+    Returns:
+        m = Pyomo GDP model
+    """
 
     # PYOMO MODEL
     m = pe.ConcreteModel(name='gdp_reactors')
 
     # SETS
-    m.I = pe.Set(initialize=['A', 'B'])  # Set of components
-    m.N = pe.RangeSet(1, NT)  # Set of units in the superstructure
+    m.I = pe.Set(initialize=['A', 'B'], doc='Set of components')
+    m.N = pe.RangeSet(1, NT, doc='Set of units in the superstructure')
 
     # PARAMETERS
     m.k = pe.Param(initialize=2)  # Kinetic constant [L/(mol*s)]
@@ -31,7 +39,6 @@ def gdp_reactors(NT=5, visualize=False):
 
     def F0_Def(m, i):
         return m.C0[i]*m.QF0
-
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
     # BOOLEAN VARIABLES
@@ -279,14 +286,14 @@ def gdp_reactors(NT=5, visualize=False):
     # There is only one unreacted feed
 
     def one_unreacted_feed_rule(m):
-        return pe.exactly(1,m.YF)
+        return pe.exactly(1, m.YF)
 
     m.one_unreacted_feed = pe.LogicalConstraint(rule=one_unreacted_feed_rule)
 
     # There is only one recycle stream
 
     def one_recycle_rule(m):
-        return pe.exactly(1,m.YR)
+        return pe.exactly(1, m.YR)
 
     m.one_recycle = pe.LogicalConstraint(rule=one_recycle_rule)
 
@@ -296,7 +303,7 @@ def gdp_reactors(NT=5, visualize=False):
         if n == 1:
             return m.YP[n].equivalent_to(True)
         else:
-            return m.YP[n].equivalent_to(pe.lor(pe.land(~m.YF[n2] for n2 in range(1,n)),m.YF[n]))
+            return m.YP[n].equivalent_to(pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]))
 
     m.unit_in_n = pe.LogicalConstraint(m.N, rule=unit_in_n_rule)
 
@@ -307,125 +314,5 @@ def gdp_reactors(NT=5, visualize=False):
 
     m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)
 
-    # Transform the model using the BigM relaxation
+    return m
 
-    pe.TransformationFactory('core.logical_to_linear').apply_to(m)
-    pe.TransformationFactory('gdp.bigm').apply_to(m)
-
-    dir_path = os.path.dirname(os.path.abspath(__file__))
-    gams_path = os.path.join(dir_path, "gamsfiles/")
-    if not(os.path.exists(gams_path)):
-        print('Directory for automatically generated files ' +
-              gams_path + ' does not exist. We will create it')
-        os.makedirs(gams_path)
-
-    # SOLVE
-    solvername = 'gams'
-    opt = SolverFactory(solvername, solver='baron')
-    results = opt.solve(m, tee=True,
-                        # Uncomment the following lines if you want to save GAMS models
-                        # keepfiles=True,
-                        # tmpdir=gams_path,
-                        # symbolic_solver_labels=True,
-
-                        add_options=[
-                            'option reslim = 20;'
-                            'option optcr = 0.0;'
-                            # Uncomment the following lines to setup IIS computation of BARON through option file
-                            # 'GAMS_MODEL.optfile = 1;'
-                            # '\n'
-                            # '$onecho > baron.opt \n'
-                            # 'CompIIS 1 \n'
-                            # '$offecho'
-                        ])
-
-    print('Objective:', round(pe.value(m.obj), 5))
-
-    if visualize:
-        x = list((range(1, NT+1)))
-
-        # Initialize bypasses (b), reactors(r) and recycle
-        xb = []
-        xr = []
-        recycle = 0
-
-        yp = {}
-        yr = {}
-
-        # Use information from solved model
-        for n in m.N:
-            yp[n] = pe.value(pe.value(m.YP[n].get_associated_binary()))
-            yr[n] = pe.value(pe.value(m.YR[n].get_associated_binary()))
-
-        # Classify units in bypasses (b) or reactors(r) and determine recycle
-        for i in x:
-            if yp[i] > 0.5:
-                xr.append(i)
-            else:
-                xb.append(i)
-            if yr[i] > 0.5:
-                recycle = i
-
-        # Create labels for bypasses (b), reactors(r), input/output (f) and recycle(recy)
-        blabels = dict(zip(range(1, len(xb)+1), xb[::-1]))
-        rlabels = dict(zip(range(len(xb)+1, len(xb)+1+len(xr)), xr[::-1]))
-        flabels = {0: '', NT+1: ''}
-        recylabels = {'r1': '', 'r2': '', 'r3': '', 'r4': ''}
-
-        # Create posicions (pos) for bypasses (b), reactors(r), input/output(f) and recycle(recy)
-        posb = {}
-        posr = {}
-        posf = {0: (0.2, 0), NT+1: (NT+1, 0)}
-        posrecy = {'r1': (NT+0.5, -0.0009), 'r2': (NT+0.5, 0.008),
-                   'r3': (NT-recycle+0.5, 0.007), 'r4': (NT-recycle+0.5, -0.0009)}
-
-        for i in range(1, len(xb)+1):
-            posb[i] = (i, 0)
-
-        for i in range(len(xb)+1, len(xb)+1+len(xr)):
-            posr[i] = (i, 0)
-
-        # Create flow arrow from input to output
-        arcsf = [(0, NT+1)]
-
-        # Declare graph
-        graph = nx.DiGraph()
-
-        # Graph input/out(f)
-        nx.draw_networkx_labels(graph, posf, flabels)
-        nx.draw_networkx_edges(graph, posf, arcsf, width=1, arrowsize=10)
-        nx.draw_networkx(graph, posf, node_size=1, node_color='black',
-                         nodelist=flabels, with_labels=True, node_shape='', edgecolors='black')
-
-        # Graph bypasses(b)
-        nx.draw_networkx_labels(graph, posb, blabels)
-        nx.draw_networkx(graph, posb, node_size=900, node_color='whitesmoke', width=1.5,
-                         nodelist=blabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=0.2)
-
-        # Graph reactors(r)
-        nx.draw_networkx_labels(graph, posr, rlabels)
-        nx.draw_networkx(graph, posr, node_size=900, node_color='lightslategray', width=1.5,
-                         nodelist=rlabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=1.5)
-
-        # Graph recycle(recy) if it exists
-        if recycle != 0:
-            arcsrecy = [('r1', 'r2'), ('r3', 'r4')]
-            pairs = list(zip(list(arcsrecy), ['R', 'R']))
-            edgelabels = dict(pairs)
-            nx.draw_networkx_labels(graph, posrecy, recylabels)
-            nx.draw_networkx_edges(
-                graph, posrecy, arcsrecy, width=1, arrowsize=10)
-            nx.draw_networkx(graph, posrecy, node_size=0, node_color='white',
-                             nodelist=recylabels, node_shape='', edgecolors='black')
-            nx.draw_networkx_edge_labels(
-                graph, posrecy, edge_labels=edgelabels)
-
-        plt.show()
-
-    return results
-
-
-if __name__ == "__main__":
-    NT = 5
-    # Visualization works best (aesthetically) for NT=5
-    gdp_reactors(NT, visualize=True)

@@ -8,7 +8,7 @@ from pyomo.gdp import Disjunct, Disjunction
 import math
 import time
 from pyomo.util.infeasible import log_infeasible_constraints
-from initialize import initialize
+from .initialize import initialize
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult

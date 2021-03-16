@@ -15,12 +15,16 @@ e1 = m.x + 5
 e2 = e1 + m.x
 
 m.I = Set(initialize=['A', 'B'], doc='Set of components')
+
+# Create list of expressions
 logic_expr = []
 for n in m.N:
     logic_expr.append(lor(land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]))
 
+# Create list of logical constraints
 m.logic_list = LogicalConstraintList()
 
+# Populate constraint list with expressions
 for n in m.N:
     m.logic_list.add(m.YP[n].equivalent_to(logic_expr[n-1]))
 

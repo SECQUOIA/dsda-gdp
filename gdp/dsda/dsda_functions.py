@@ -13,7 +13,7 @@ from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_f
 from pyomo.opt import SolutionStatus
 from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
-from model_serializer import to_json, from_json, StoreSpec
+from .model_serializer import to_json, from_json, StoreSpec
 
 
 def solve_nlp(m: pe.ConcreteModel(), nlp: str = 'conopt', timelimit: int = 10, gams_output: bool = False) -> pe.ConcreteModel():

@@ -1,16 +1,18 @@
 from __future__ import division
 
-from math import (fabs, ceil)
-import pyomo.environ as pe
+from math import ceil, fabs
 
-from pyomo.gdp import (Disjunct, Disjunction)
-from pyomo.environ import SolverFactory, Suffix, value
-from pyomo.util.infeasible import log_infeasible_constraints
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
+import pyomo.environ as pe
+from pyomo.environ import SolverFactory, Suffix, value
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.util.infeasible import log_infeasible_constraints
 
-from gdp_reactor import build_cstrs
-from dsda_functions import (initialize_model, generate_initialization, solve_nlp, solve_with_dsda, solve_with_minlp, solve_with_gdpopt, visualize_dsda)
+from gdp.dsda.dsda_functions import (generate_initialization, initialize_model,
+                            solve_nlp, solve_with_dsda, solve_with_gdpopt,
+                            solve_with_minlp, visualize_dsda)
+from gdp.cstr.gdp_reactor import build_cstrs
 
 
 def external_ref(m, x, logic_expr = None):
@@ -161,7 +163,6 @@ def visualize_cstr_superstructure(m, NT):
     plt.show()
 
 if __name__ == "__main__":
-
     # Inputs
     NT = 5
     timelimit = 10

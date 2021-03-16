@@ -2,27 +2,31 @@
 
 from __future__ import division
 
-from math import (fabs, ceil)
+from math import ceil, fabs
+
 import pyomo.environ as pe
-from pyomo.environ import (
-    Block, ConcreteModel, Constraint, Param, log, minimize, NonNegativeReals, Objective, RangeSet, Set, Var, TransformationFactory, SolverFactory, value, BooleanVar, exactly, land, lor)
-from pyomo.gdp import (Disjunct, Disjunction)
-from pyomo.environ import SolverFactory, Suffix, value
+from pyomo.environ import (Block, BooleanVar, ConcreteModel, Constraint,
+                           NonNegativeReals, Objective, Param, RangeSet, Set,
+                           SolverFactory, Suffix, TransformationFactory, Var,
+                           exactly, land, log, lor, minimize, value)
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
-from gdp_column import build_column
-from dsda_functions import (initialize_model, generate_initialization, solve_nlp, solve_with_dsda, solve_with_minlp, solve_with_gdpopt, visualize_dsda)
+from gdp.column.gdp_column import build_column
+from gdp.dsda.dsda_functions import (
+    generate_initialization, initialize_model, solve_nlp, solve_with_dsda,
+    solve_with_gdpopt, solve_with_minlp, visualize_dsda)
 
 
+def external_ref(m, x, logic_expr=None):
 
-
-def external_ref(m, x, logic_expr = None):
-    
-     # Boolean variables and intTrays set definition
-    m.intTrays = Set(initialize=m.trays - [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
+    # Boolean variables and intTrays set definition
+    m.intTrays = Set(initialize=m.trays -
+                     [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
     m.YB = BooleanVar(m.intTrays, doc='Existence of boil-up flow in stage n')
     m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')
-    m.YP = BooleanVar(m.intTrays, doc='Boolean var associated with tray and no_tray')
+    m.YP = BooleanVar(
+        m.intTrays, doc='Boolean var associated with tray and no_tray')
     m.YB_is_up = BooleanVar()
     m.YR_is_down = BooleanVar()
 
@@ -60,10 +64,10 @@ def external_ref(m, x, logic_expr = None):
     for n in m.conditional_trays:
         m.YP[n].associate_binary_var(m.tray[n].indicator_var)
 
-    # Fix externals    
+    # Fix externals
 
     ext_var_1 = x[0]
-    ext_var_2 = x[1] 
+    ext_var_2 = x[1]
 
     for n in m.intTrays:
         if n == ext_var_1:
@@ -77,14 +81,13 @@ def external_ref(m, x, logic_expr = None):
             m.YB[n].fix(False)
 
     temp = value(land(~m.YR[n]
-                        for n in range(m.reboil_tray+1, m.feed_tray)))
+                      for n in range(m.reboil_tray+1, m.feed_tray)))
     if temp == True:
         m.YR_is_down.fix(True)
 
     temp = value(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
     if temp == True:
         m.YB_is_up.fix(True)
-
 
     for n in m.conditional_trays:
         temp = value(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(
@@ -99,11 +102,13 @@ def external_ref(m, x, logic_expr = None):
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
-    pe.TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
+    pe.TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+        m, tmp=False, ignore_infeasible=True)
 
     return m
 
-def complete_enumeration_external(model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, reformulation_function=external_ref, nlp='conopt', timelimit = 10):
+
+def complete_enumeration_external(model_function=build_column, model_args={'min_trays': 8, 'max_trays': 17, 'xD': 0.95, 'xB': 0.95}, reformulation_function=external_ref, nlp='conopt', timelimit=10):
     NT = model_args['max_trays']
     X1, X2, aux, aux2, x = [], [], [], 2, {}
 
@@ -135,7 +140,8 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
         m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
         if m_solved.dsda_status == 'Optimal':
-            print('%6s %6s %12s' % (X1[i], X2[i], round(pe.value(m_solved.obj), 2)))
+            print('%6s %6s %12s' %
+                  (X1[i], X2[i], round(pe.value(m_solved.obj), 2)))
             feas_x.append(X1[i])
             feas_y.append(X2[i])
             objs.append(round(pe.value(m_solved.obj), 2))
@@ -145,32 +151,31 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
     print('=============================')
     return feas_x, feas_y, objs
 
-     
 
 if __name__ == "__main__":
     # Inputs
     NT = 17
     timelimit = 10
-    model_args = {'min_trays':8, 'max_trays':NT, 'xD':0.95, 'xB':0.95}
+    model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
 
-    #Complete enumeration
+    # Complete enumeration
     # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, nlp='conopt', timelimit=20)
 
     # MINLP and GDPopt methods
     m = build_column(**model_args)
     m_init = initialize_model(m, from_feasible=True)
-    m_solved = solve_with_minlp(m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
+    m_solved = solve_with_minlp(
+        m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
     # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     print(m_solved.results)
-    
+
     # D-SDA
     k = 'Infinity'
-    starting_point = [16,2]
+    starting_point = [16, 2]
     min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref, k=k, provide_starting_initialization=True, nlp='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
+                                      k=k, provide_starting_initialization=True, nlp='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
     #visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     print(m_solved.results)
-
-

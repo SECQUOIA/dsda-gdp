@@ -146,7 +146,10 @@ def external_ref(m, x, logic_expr = None):
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
     pe.TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
+    
+    return m
 
+    
 def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
 
     # Transformation step

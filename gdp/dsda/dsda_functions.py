@@ -598,8 +598,8 @@ def visualize_dsda(route:list=[], feas_x:list=[], feas_y:list=[], objs:list=[], 
     cbar.set_label('Objective function', rotation=90)
     title_string = 'D-SDA with k = '+k
     plt.title(title_string)
-    plt.xlabel("YR (Reflux position)")
-    plt.ylabel("YB (Boil-up position)")
+    plt.xlabel("External Var 1")
+    plt.ylabel("External Var 2")
     plt.show()
 
 

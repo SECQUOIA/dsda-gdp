@@ -1,6 +1,7 @@
 from pyomo.environ import *
 from pyomo.gdp import *
 import os
+import random
 
 def build_model():
     model = AbstractModel()
@@ -309,11 +310,61 @@ def solve_with_gdpopt(m):
                     # calc_disjunctive_bounds=True
                     )
     return results
+
+
+
+def external_ref(m, x, logic_expr = None):
+    ext_var={}
+    p=0
+    for stage in m.STAGES:
+        ext_var[stage,'outPhase']=x[p]
+        p=p+1
+
+    for stage in m.STAGES:
+        ext_var[stage,'inPhase']=x[p]
+        p=p+1
+
+    for stage in m.STAGES:
+        for parallel in m.PARALLELUNITS:
+            if parallel==ext_var[stage,'outPhase']:
+                m.outOfPhase[stage,parallel].fix(True)
+            else:
+                m.outOfPhase[stage,parallel].fix(False)
+
+    for stage in m.STAGES:
+        for parallel in m.PARALLELUNITS:
+            if parallel==ext_var[stage,'inPhase']:
+                m.inPhase[stage,parallel].fix(True)
+            else:
+                m.inPhase[stage,parallel].fix(False)      
+
+    TransformationFactory('core.logical_to_linear').apply_to(m)
+    #TransformationFactory('gdp.fix_disjuncts').apply_to(m)         #NOT WORKING HERE!!
+    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
+    
+    return m          
+
     
 if __name__ == "__main__":
     m = build_model().create_instance('data_101006.dat')
     # results = solve_with_big_m(m)
     # results = solve_with_hull(m)
-    results = solve_with_gdpopt(m)
-    print(results)
-    m.min_cost.display()
+    # results = solve_with_gdpopt(m)
+    # print(results)
+    # m.min_cost.display()
+
+
+    #External reformulation test (this can be deleted)
+    inputval=[random.randrange(1, 7) for i in range(20)]
+    external_ref(m, inputval, logic_expr = None)
+    p=0
+    for stage in m.STAGES:
+        print('\n External variable '+str(p+1)+'='+str(inputval[p]))
+        p=p+1
+        for parallel in m.PARALLELUNITS:
+            print(str( m.outOfPhase[stage,parallel])+'='+str(m.outOfPhase[stage,parallel].value))
+    for stage in m.STAGES:
+        print('\n External variable '+str(p+1)+'='+str(inputval[p]))
+        p=p+1
+        for parallel in m.PARALLELUNITS:
+            print(str( m.inPhase[stage,parallel])+'='+str(m.inPhase[stage,parallel].value))

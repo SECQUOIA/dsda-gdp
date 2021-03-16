@@ -530,7 +530,7 @@ def solve_with_dsda(k:str, model_function, model_args:dict, starting_point:list,
         neighbors = find_actual_neighbors(ext_var, neighborhood, optimize=True,
                                  min_allowed=min_allowed, max_allowed=max_allowed)
 
-        fmin, best_var, best_dir, improve = evaluate_neighbors(neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=external_ref, nlp=nlp, iter_timelimit=iter_timelimit, tol=tol)
+        fmin, best_var, best_dir, improve = evaluate_neighbors(neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=reformulation_function, nlp=nlp, iter_timelimit=iter_timelimit, tol=tol)
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
@@ -539,7 +539,7 @@ def solve_with_dsda(k:str, model_function, model_args:dict, starting_point:list,
 
             # If improvement was made start line search (inner cycle)
             while line_searching:
-                fmin, best_var, moved = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args, reformulation_function=external_ref, nlp=nlp, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
+                fmin, best_var, moved = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args, reformulation_function=reformulation_function, nlp=nlp, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
 
                 # Stopping condition in case no movement was done
                 if moved == True:

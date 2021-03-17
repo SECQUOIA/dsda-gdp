@@ -64,7 +64,7 @@ def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5
         for Xj in X2:
             m = model_function(**model_args)
             x = [Xi, Xj]
-            m_init = initialize_model(m,from_feasible=True)
+            m_init = initialize_model(m,from_feasible=True, feasible_name='cstr_initialization.json')
             m_fixed = reformulation_function(m_init, x)
             m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
@@ -172,7 +172,7 @@ if __name__ == "__main__":
 
     # MINLP and GDPopt methods
     m = build_cstrs(NT)
-    m_init = initialize_model(m, from_feasible=True)
+    m_init = initialize_model(m, from_feasible=True, feasible_name='cstr_initialization.json')
     m_solved = solve_with_minlp(m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
     # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     print(m_solved.results)
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, reformulation_function=external_ref, k=k, provide_starting_initialization=True, nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, reformulation_function=external_ref, k=k, provide_starting_initialization=True, feasible_name='cstr_initialization.json', nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
     visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
     print(m_solved.results)
     visualize_cstr_superstructure(m_solved, NT)

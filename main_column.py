@@ -14,7 +14,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 
 from gdp.column.gdp_column import build_column
 from gdp.dsda.dsda_functions import (
-    generate_initialization, initialize_model, solve_nlp, solve_with_dsda,
+    generate_initialization, initialize_model, solve_subproblem, solve_with_dsda,
     solve_with_gdpopt, solve_with_minlp, visualize_dsda)
 
 
@@ -108,7 +108,7 @@ def external_ref(m, x, logic_expr=None):
     return m
 
 
-def complete_enumeration_external(model_function=build_column, model_args={'min_trays': 8, 'max_trays': 17, 'xD': 0.95, 'xB': 0.95}, reformulation_function=external_ref, nlp='conopt', timelimit=10):
+def complete_enumeration_external(model_function=build_column, model_args={'min_trays': 8, 'max_trays': 17, 'xD': 0.95, 'xB': 0.95}, reformulation_function=external_ref, subproblem_solver='conopt', timelimit=10):
     NT = model_args['max_trays']
     X1, X2, aux, aux2, x = [], [], [], 2, {}
 
@@ -137,7 +137,7 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
         m = model_function(**model_args)
         m_init = initialize_model(m, from_feasible=True, feasible_model='column')
         m_fixed = reformulation_function(m_init, x)
-        m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
+        m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=timelimit)
 
         if m_solved.dsda_status == 'Optimal':
             print('%6s %6s %12s' %
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
 
     # Complete enumeration
-    x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, nlp='conopt', timelimit=20)
+    x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, subproblem_solver='conopt', timelimit=20)
 
     # MINLP and GDPopt methods
     m = build_column(**model_args)
@@ -176,6 +176,6 @@ if __name__ == "__main__":
     max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
     m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
-                                      k=k, provide_starting_initialization=True, feasible_model='column', nlp='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
     visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     print(m_solved.results)

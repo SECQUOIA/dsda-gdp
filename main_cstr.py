@@ -10,7 +10,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from gdp.dsda.dsda_functions import (generate_initialization, initialize_model,
-                                     solve_nlp, solve_with_dsda, solve_with_gdpopt,
+                                     solve_subproblem, solve_with_dsda, solve_with_gdpopt,
                                      solve_with_minlp, visualize_dsda)
 from gdp.cstr.gdp_reactor import build_cstrs
 
@@ -50,7 +50,7 @@ def external_ref(m, x, logic_expr=None):
     return m
 
 
-def complete_enumeration_external(model_function=build_cstrs, model_args={'NT': 5}, reformulation_function=external_ref, nlp='msnlp', timelimit=10):
+def complete_enumeration_external(model_function=build_cstrs, model_args={'NT': 5}, reformulation_function=external_ref, subproblem_solver='msnlp', timelimit=10):
     X1 = list(range(1, NT+1))
     # TODO how to generalize for N external variables?
     X2 = list(range(1, NT+1))
@@ -70,7 +70,7 @@ def complete_enumeration_external(model_function=build_cstrs, model_args={'NT': 
             m_init = initialize_model(
                 m, from_feasible=True,  feasible_model='cstr')
             m_fixed = reformulation_function(m_init, x)
-            m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
+            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=timelimit)
 
             if m_solved.dsda_status == 'Optimal':
                 print('%6s %6s %12s' %
@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     # Complete enumeration
     x, y, objs = complete_enumeration_external(
-        model_function=build_cstrs, model_args={'NT': NT}, nlp='msnlp', timelimit=10)
+        model_function=build_cstrs, model_args={'NT': NT}, subproblem_solver='msnlp', timelimit=10)
 
     # MINLP and GDPopt methods
     m = build_cstrs(NT)
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
     m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
-                                      provide_starting_initialization=True, feasible_model='cstr', nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+                                      provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
     visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k,
                    ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
     print(m_solved.results)

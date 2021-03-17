@@ -3,7 +3,7 @@ import pyomo.environ as pe
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
-#from gdp.small_batch import build_small_batch
+from gdp.small_batch.gdp_small_batch import build_small_batch
 from gdp.dsda.dsda_functions import (
     generate_initialization, initialize_model, solve_subproblem, solve_with_dsda,
     solve_with_gdpopt, solve_with_minlp, visualize_dsda)

@@ -5,8 +5,7 @@ from pyomo.opt.base.solvers import SolverFactory
 from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 import os
 
-def build_small_batch_gdp():
-
+def build_small_batch():
     NK=3
     
     # Model
@@ -186,16 +185,17 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
     update_boolean_vars_from_binary(m)
     return m
 
+    
+
 if __name__ == "__main__":
-    m = build_small_batch_gdp()
+    m = build_small_batch()
     #m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=120)
 
     #EXTERNAL REF TEST (this thest can be deleted)
     newmodel=external_ref(m, [1,2,3], logic_expr = None)
-    for j in m.j:
-        for k in m.k:
-            print(str(m.Y_exists[k,j].indicator_var)+'='+str(m.Y_exists[k,j].indicator_var.value))
-            print(str(m.Y[k,j])+'='+str(m.Y[k,j].value))
+
+    
+    
 
 
     

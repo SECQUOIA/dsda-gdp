@@ -260,8 +260,7 @@ def generate_initialization(m: pe.ConcreteModel(), starting_initialization: bool
     wts = StoreSpec.value()
 
     if starting_initialization:
-        to_json(m, fname='dsda_starting_initialization.json',
-                human_read=True, wts=wts)
+        to_json(m, fname='initialization.json', human_read=True, wts=wts)
     else:
         to_json(m, fname='dsda_initialization.json', human_read=True, wts=wts)
 

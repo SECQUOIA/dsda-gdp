@@ -10,15 +10,15 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from gdp.dsda.dsda_functions import (generate_initialization, initialize_model,
-                            solve_nlp, solve_with_dsda, solve_with_gdpopt,
-                            solve_with_minlp, visualize_dsda)
+                                     solve_nlp, solve_with_dsda, solve_with_gdpopt,
+                                     solve_with_minlp, visualize_dsda)
 from gdp.cstr.gdp_reactor import build_cstrs
 
 
-def external_ref(m, x, logic_expr = None):
+def external_ref(m, x, logic_expr=None):
     # External variable fix
     ext_var_1 = x[0]
-    ext_var_2 = x[1] 
+    ext_var_2 = x[1]
     for n in m.N:
         if n == ext_var_1:
             m.YF[n].fix(True)
@@ -44,13 +44,16 @@ def external_ref(m, x, logic_expr = None):
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
-    pe.TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
+    pe.TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+        m, tmp=False, ignore_infeasible=True)
 
     return m
 
-def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='msnlp', timelimit = 10):
+
+def complete_enumeration_external(model_function=build_cstrs, model_args={'NT': 5}, reformulation_function=external_ref, nlp='msnlp', timelimit=10):
     X1 = list(range(1, NT+1))
-    X2 = list(range(1, NT+1)) # TODO how to generalize for N external variables?
+    # TODO how to generalize for N external variables?
+    X2 = list(range(1, NT+1))
     # Input variable should be dictionary of the external variables with lower and upper bounds
     print()
     feas_x, feas_y, objs = [], [], []
@@ -64,7 +67,8 @@ def complete_enumeration_external(model_function=build_cstrs, model_args={'NT':5
         for Xj in X2:
             m = model_function(**model_args)
             x = [Xi, Xj]
-            m_init = initialize_model(m,from_feasible=True, feasible_name='cstr_initialization.json')
+            m_init = initialize_model(
+                m, from_feasible=True,  feasible_model='cstr')
             m_fixed = reformulation_function(m_init, x)
             m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
@@ -162,29 +166,34 @@ def visualize_cstr_superstructure(m, NT):
 
     plt.show()
 
+
 if __name__ == "__main__":
     # Inputs
     NT = 5
     timelimit = 10
 
-    #Complete enumeration
-    x, y, objs = complete_enumeration_external(model_function=build_cstrs, model_args={'NT':NT}, nlp='msnlp', timelimit=10)
+    # Complete enumeration
+    x, y, objs = complete_enumeration_external(
+        model_function=build_cstrs, model_args={'NT': NT}, nlp='msnlp', timelimit=10)
 
     # MINLP and GDPopt methods
     m = build_cstrs(NT)
-    m_init = initialize_model(m, from_feasible=True, feasible_name='cstr_initialization.json')
-    m_solved = solve_with_minlp(m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
+    m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
+    m_solved = solve_with_minlp(
+        m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
     # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     print(m_solved.results)
     visualize_cstr_superstructure(m_solved, NT)
 
     # D-SDA
     k = 'Infinity'
-    starting_point = [1,1]
+    starting_point = [1, 1]
     min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, reformulation_function=external_ref, k=k, provide_starting_initialization=True, feasible_name='cstr_initialization.json', nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
-    visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
+    m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
+                                      provide_starting_initialization=True, feasible_model='cstr', nlp='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k,
+                   ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
     print(m_solved.results)
     visualize_cstr_superstructure(m_solved, NT)

@@ -222,13 +222,13 @@ def neighborhood_k_eq_inf(dimension: str = 2) -> dict:
     return temp
 
 
-def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasible_name: str = '') -> pe.ConcreteModel():
+def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasible_model: str = '') -> pe.ConcreteModel():
     """
     Function that return an initialized model from an existing json file
     Args:
         m: Pyomo model that is to be initialized
         from_feasible: If initialization is made from an external file
-        feasible_name: Feasible initialization name
+        feasible_model: Feasible initialization path or example
     Returns:
         m: Initialized Pyomo model
     """
@@ -237,7 +237,7 @@ def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasibl
     os.path.join(os.path.curdir)
     
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(dir_path, "../column/", feasible_name)
+    json_path = os.path.join(dir_path, "../",feasible_model,'initialization.json')
     # TODO decide whether providing argument for folder of initialization file and/or filename
 
     if from_feasible:
@@ -456,7 +456,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     return fmin, best_var, moved
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_name: str='' ,nlp: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str='' ,nlp: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:
@@ -489,7 +489,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
     # Check if  feasible initialization is provided
     m = model_function(**model_args)
     if provide_starting_initialization:
-        m_init = initialize_model(m, from_feasible=True, feasible_name=feasible_name)
+        m_init = initialize_model(m, from_feasible=True, feasible_model=feasible_model)
         m_fixed = reformulation_function(m_init, ext_var)
     else:
         m_fixed = reformulation_function(m, ext_var)

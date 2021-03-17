@@ -135,7 +135,7 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
     for i in range(len(X1)):
         x = [X1[i], X2[i]]
         m = model_function(**model_args)
-        m_init = initialize_model(m, from_feasible=True, feasible_name='column_initialization.json')
+        m_init = initialize_model(m, from_feasible=True, feasible_model='column')
         m_fixed = reformulation_function(m_init, x)
         m_solved = solve_nlp(m_fixed, nlp=nlp, timelimit=timelimit)
 
@@ -163,7 +163,7 @@ if __name__ == "__main__":
 
     # MINLP and GDPopt methods
     m = build_column(**model_args)
-    m_init = initialize_model(m, from_feasible=True, feasible_name='column_initialization.json')
+    m_init = initialize_model(m, from_feasible=True, feasible_model='column')
     m_solved = solve_with_minlp(
         m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
     # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
@@ -176,6 +176,6 @@ if __name__ == "__main__":
     max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
     m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
-                                      k=k, provide_starting_initialization=True, feasible_name='column_initialization.json', nlp='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+                                      k=k, provide_starting_initialization=True, feasible_model='column', nlp='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
     visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     print(m_solved.results)

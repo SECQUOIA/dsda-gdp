@@ -70,7 +70,8 @@ def complete_enumeration_external(model_function=build_cstrs, model_args={'NT': 
             m_init = initialize_model(
                 m, from_feasible=True,  feasible_model='cstr')
             m_fixed = reformulation_function(m_init, x)
-            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=timelimit)
+            m_solved = solve_subproblem(
+                m_fixed, subproblem_solver=subproblem_solver, timelimit=timelimit)
 
             if m_solved.dsda_status == 'Optimal':
                 print('%6s %6s %12s' %
@@ -172,28 +173,38 @@ if __name__ == "__main__":
     NT = 5
     timelimit = 10
 
-    # Complete enumeration
-    x, y, objs = complete_enumeration_external(
-        model_function=build_cstrs, model_args={'NT': NT}, subproblem_solver='msnlp', timelimit=10)
+    # # Complete enumeration
+    # x, y, objs = complete_enumeration_external(
+    #     model_function=build_cstrs, model_args={'NT': NT}, subproblem_solver='msnlp', timelimit=10)
 
-    # MINLP and GDPopt methods
+    # # MINLP solution
+    # m = build_cstrs(NT)
+    # m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
+    # m_solved = solve_with_minlp(
+    #     m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
+    # m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp='conopt',
+    #                              timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
+    # print(m_solved.results)
+    # visualize_cstr_superstructure(m_solved, NT)
+
+    # GDPopt method
     m = build_cstrs(NT)
     m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-    m_solved = solve_with_minlp(
-        m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
-    # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
+    m_init.YR_is_recycle[1].pprint()
+    m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp='conopt',
+                                 timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     print(m_solved.results)
     visualize_cstr_superstructure(m_solved, NT)
 
-    # D-SDA
-    k = 'Infinity'
-    starting_point = [1, 1]
-    min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
-    max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
+    # # D-SDA
+    # k = 'Infinity'
+    # starting_point = [1, 1]
+    # min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
+    # max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
-                                      provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
-    visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k,
-                   ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
-    print(m_solved.results)
-    visualize_cstr_superstructure(m_solved, NT)
+    # m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
+    #                                   provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k,
+    #                ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
+    # print(m_solved.results)
+    # visualize_cstr_superstructure(m_solved, NT)

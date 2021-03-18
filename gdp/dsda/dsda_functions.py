@@ -13,7 +13,7 @@ from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_f
 from pyomo.opt import SolutionStatus
 from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
-from .model_serializer import to_json, from_json, StoreSpec
+from gdp.dsda.model_serializer import to_json, from_json, StoreSpec
 
 
 def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', timelimit: int = 10, gams_output: bool = False) -> pe.ConcreteModel():
@@ -171,7 +171,7 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
                           nlp_solver_args=dict(
                               solver=nlp, warmstart=True, tee=True, **nlp_output_options),
                           #   mip_presolve=True,
-                          #   init_strategy='fix_disjuncts',
+                          init_strategy='fix_disjuncts',
                           #   set_cover_iterlim=0,
                           iterlim=20,
                           force_subproblem_nlp=True,
@@ -235,9 +235,10 @@ def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasibl
 
     wts = StoreSpec.value()
     os.path.join(os.path.curdir)
-    
+
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(dir_path, "../",feasible_model,'initialization.json')
+    json_path = os.path.join(
+        dir_path, "../", feasible_model, 'initialization.json')
     # TODO decide whether providing argument for folder of initialization file and/or filename
 
     if from_feasible:
@@ -333,7 +334,8 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         m = model_function(**model_args)
         m_init = initialize_model(m)
         m_fixed = reformulation_function(m_init, temp[i])
-        m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m_solved = solve_subproblem(
+            m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
 
         if m_solved.dsda_status == 'Optimal':   # Check if D-SDA status is optimal
             objectives[i] = pe.value(m_solved.obj)
@@ -378,7 +380,8 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         m2 = model_function(**model_args)
         m2_init = initialize_model(m2)
         m2_fixed = reformulation_function(m2_init, best_var)
-        m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m2_solved = solve_subproblem(
+            m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
         generate_initialization(m2_solved)
 
     return fmin, best_var, best_dir, improve
@@ -424,7 +427,8 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
             m = model_function(**model_args)
             m_init = initialize_model(m)
             m_fixed = reformulation_function(m_init, moved_point)
-            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+            m_solved = solve_subproblem(
+                m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
 
             if m_solved.dsda_status == 'Optimal':   # Check status
                 act_obj = pe.value(m_solved.obj)
@@ -436,7 +440,8 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         m = model_function(**model_args)    # Solve model
         m_init = initialize_model(m)
         m_fixed = reformulation_function(m_init, moved_point)
-        m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m_solved = solve_subproblem(
+            m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
 
         if m_solved.dsda_status == 'Optimal':   # Check status
             act_obj = pe.value(m_solved.obj)
@@ -449,13 +454,14 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         m2 = model_function(**model_args)
         m2_init = initialize_model(m2)
         m2_fixed = reformulation_function(m2_init, best_var)
-        m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m2_solved = solve_subproblem(
+            m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
         generate_initialization(m2_solved)
 
     return fmin, best_var, moved
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str='' ,subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:
@@ -488,13 +494,15 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
     # Check if  feasible initialization is provided
     m = model_function(**model_args)
     if provide_starting_initialization:
-        m_init = initialize_model(m, from_feasible=True, feasible_model=feasible_model)
+        m_init = initialize_model(
+            m, from_feasible=True, feasible_model=feasible_model)
         m_fixed = reformulation_function(m_init, ext_var)
     else:
         m_fixed = reformulation_function(m, ext_var)
 
     # Solve for initialization
-    m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+    m_solved = solve_subproblem(
+        m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
     fmin = pe.value(m_solved.obj)
     generate_initialization(m_solved)
 
@@ -549,7 +557,8 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
     m2 = model_function(**model_args)
     m2_init = initialize_model(m2)
     m2_fixed = reformulation_function(m2_init, route[-1])
-    m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+    m2_solved = solve_subproblem(
+        m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
     m2_solved.dsda_time = t_end
 
     return m2_solved, route

@@ -51,7 +51,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
         # Solve
         solvername = 'gams'
         opt = SolverFactory(solvername, solver=subproblem_solver)
-        m.results = opt.solve(m, tee=True,
+        m.results = opt.solve(m, tee=False,
                               **output_options,
                               skip_trivial_constraints=True,
                               add_options=[
@@ -238,9 +238,8 @@ def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasibl
 
     dir_path = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(
-        dir_path, "../", feasible_model, 'initialization.json')
-    # TODO decide whether providing argument for folder of initialization file and/or filename
-
+        dir_path, feasible_model+'_initialization.json')
+ 
     if from_feasible:
         from_json(m, fname=json_path, wts=wts)
     else:

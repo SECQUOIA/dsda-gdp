@@ -51,7 +51,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
         # Solve
         solvername = 'gams'
         opt = SolverFactory(solvername, solver=subproblem_solver)
-        m.results = opt.solve(m, tee=False,
+        m.results = opt.solve(m, tee=True,
                               **output_options,
                               skip_trivial_constraints=True,
                               add_options=[

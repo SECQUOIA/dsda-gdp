@@ -60,7 +60,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
                               ])
 
     # Assign D-SDA status
-        if m.results.solver.termination_condition == 'locallyOptimal' or m.results.solver.termination_condition == 'optimal':
+        if m.results.solver.termination_condition == 'locallyOptimal' or m.results.solver.termination_condition == 'optimal' or or m.results.solver.termination_condition == 'globallyOptimal':
             m.dsda_status = 'Optimal'
         elif m.results.solver.termination_condition == 'infeasible':
             m.dsda_status = 'Evaluated_Infeasible'

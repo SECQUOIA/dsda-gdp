@@ -200,7 +200,7 @@ if __name__ == "__main__":
     max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
     m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
-                                      provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+                                      provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=3600)
     #visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k,
     #               ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
     print(m_solved.results)

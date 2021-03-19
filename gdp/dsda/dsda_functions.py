@@ -460,7 +460,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     return fmin, best_var, moved
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, timelimit: int=3600, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:
@@ -518,12 +518,21 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
     # Look in neighbors (outter cycle)
     while looking_in_neighbors:
 
+        if time.process_time() - t_start > timelimit:
+            break
+
         # Find neighbors of the actual point
         neighbors = find_actual_neighbors(ext_var, neighborhood, optimize=True,
                                           min_allowed=min_allowed, max_allowed=max_allowed)
 
+        if time.process_time() - t_start > timelimit:
+            break
+
         fmin, best_var, best_dir, improve = evaluate_neighbors(
             neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, tol=tol)
+
+        if time.process_time() - t_start > timelimit:
+            break
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve == True:
@@ -532,8 +541,15 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
 
             # If improvement was made start line search (inner cycle)
             while line_searching:
+
+                if time.process_time() - t_start > timelimit:
+                    break
+
                 fmin, best_var, moved = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
                                                        reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
+
+                if time.process_time() - t_start > timelimit:
+                    break
 
                 # Stopping condition in case no movement was done
                 if moved == True:

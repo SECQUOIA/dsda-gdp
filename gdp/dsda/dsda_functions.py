@@ -16,7 +16,7 @@ import os
 from gdp.dsda.model_serializer import to_json, from_json, StoreSpec
 
 
-def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', timelimit: int = 10, gams_output: bool = False) -> pe.ConcreteModel():
+def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', timelimit: int = 10, gams_output: bool = True) -> pe.ConcreteModel():
     """
     Function that checks feasibility and subproblem model. 
     Note integer variables have to be previously fixed in the external reformulation
@@ -111,7 +111,7 @@ def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp:
                               'option reslim = ' + str(timelimit) + ';'
                               'option optcr = 0.0;'
                           ])
-    update_boolean_vars_from_binary(m)
+    # update_boolean_vars_from_binary(m)
     return m
 
 
@@ -178,7 +178,7 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
                           subproblem_presolve=False,
                           #   calc_disjunctive_bounds=True
                           )
-    update_boolean_vars_from_binary(m)
+    # update_boolean_vars_from_binary(m)
     return m
 
 
@@ -460,7 +460,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     return fmin, best_var, moved
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, timelimit: int=3600, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, gams_output:bool=False, timelimit: int=3600, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:

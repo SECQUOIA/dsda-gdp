@@ -160,17 +160,19 @@ if __name__ == "__main__":
 
     # Complete enumeration
     # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, subproblem_solver='conopt', timelimit=20)
-
+    
+    # Generate initialization
+    # m = build_column(**model_args)
+    # m_fixed = external_ref(m, [16, 2])
+    # m_solved = solve_subproblem(
+    #     m_fixed, subproblem_solver='baron', timelimit=30, tee=True)
+    
     # MINLP methods
-    #m = build_column(**model_args)
-    #m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-    #m_solved = solve_with_minlp(
-    #    m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
-    #print(m_solved.results)
-
     m = build_column(**model_args)
-    m_fixed = external_ref(m, [16,2])
-    m_solved = solve_subproblem(m_fixed, subproblem_solver='baron', timelimit=30, tee=True)
+    m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+    m_solved = solve_with_minlp(
+       m_init, transformation='hull', minlp='antigone', timelimit=timelimit, gams_output=False)
+    print(m_solved.results)
 
     # GDPopt methods
     # m = build_column(**model_args)
@@ -179,12 +181,13 @@ if __name__ == "__main__":
     # print(m_solved.results)
 
     # # D-SDA
-    # k = 'Infinity'
-    # starting_point = [16, 2]
-    # min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
-    # max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
+    k = 'Infinity'
+    starting_point = [16, 2]
+    min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
+    max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
     # m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
     #                                   k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=3600)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
+    # TODO This visualization code does not work
     # print(m_solved.results)

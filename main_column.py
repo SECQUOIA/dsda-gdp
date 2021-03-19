@@ -162,11 +162,15 @@ if __name__ == "__main__":
     # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, subproblem_solver='conopt', timelimit=20)
 
     # MINLP methods
+    #m = build_column(**model_args)
+    #m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+    #m_solved = solve_with_minlp(
+    #    m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
+    #print(m_solved.results)
+
     m = build_column(**model_args)
-    m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-    m_solved = solve_with_minlp(
-        m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
-    print(m_solved.results)
+    m_fixed = external_ref(m, [16,2])
+    m_solved = solve_subproblem(m_fixed, subproblem_solver='baron', timelimit=30, tee=True)
 
     # GDPopt methods
     # m = build_column(**model_args)

@@ -16,7 +16,7 @@ import os
 from gdp.dsda.model_serializer import to_json, from_json, StoreSpec
 
 
-def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', timelimit: int = 10, gams_output: bool = True) -> pe.ConcreteModel():
+def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', timelimit: int = 10, gams_output: bool = False, tee:bool=False) -> pe.ConcreteModel():
     """
     Function that checks feasibility and subproblem model. 
     Note integer variables have to be previously fixed in the external reformulation
@@ -25,6 +25,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
         subproblem_solver: MINLP or NLP solver algorithm
         timelimit: time limit in seconds for the solve statement
         gams_output: Determine keeping or not GAMS files
+        tee: Display iteration output
     Returns:
         m: Solved subproblem model
     """
@@ -51,7 +52,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
         # Solve
         solvername = 'gams'
         opt = SolverFactory(solvername, solver=subproblem_solver)
-        m.results = opt.solve(m, tee=False,
+        m.results = opt.solve(m, tee=tee,
                               **output_options,
                               skip_trivial_constraints=True,
                               add_options=[
@@ -247,12 +248,13 @@ def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasibl
     return m
 
 
-def generate_initialization(m: pe.ConcreteModel(), starting_initialization: bool = False):
+def generate_initialization(m: pe.ConcreteModel(), starting_initialization: bool = False, model_name: str = ''):
     """
     Function that creates a json file for initialization based on a model m 
     Args:
         m: Base Pyomo model for initializtion
         starting_intialization: Use to create "dsda_starting_initialization.json" file with a known feasible initialized model m
+        model_name: Name of the model for the initialization
     Returns:
 
     """
@@ -260,7 +262,8 @@ def generate_initialization(m: pe.ConcreteModel(), starting_initialization: bool
     wts = StoreSpec.value()
 
     if starting_initialization:
-        to_json(m, fname='initialization.json', human_read=True, wts=wts)
+        name = str(model_name+'_initialization.json')
+        to_json(m, fname=name, human_read=True, wts=wts)
     else:
         to_json(m, fname='dsda_initialization.json', human_read=True, wts=wts)
 

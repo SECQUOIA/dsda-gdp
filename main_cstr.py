@@ -5,6 +5,7 @@ from math import ceil, fabs
 import matplotlib.pyplot as plt
 import networkx as nx
 import pyomo.environ as pe
+import csv
 from pyomo.environ import SolverFactory, Suffix, value
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
@@ -169,39 +170,102 @@ def visualize_cstr_superstructure(m, NT):
 
 
 if __name__ == "__main__":
-    # Inputs
-    NT = 5
-    timelimit = 10
+    # # Inputs
+    # NT = 5
+    # timelimit = 10
 
     # # Complete enumeration
     # x, y, objs = complete_enumeration_external(
     #     model_function=build_cstrs, model_args={'NT': NT}, subproblem_solver='msnlp', timelimit=10)
 
     # # MINLP solution
-    m = build_cstrs(NT)
-    m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-    m_solved = solve_with_minlp(
-        m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
-    print(m_solved.results)
+    # m = build_cstrs(NT)
+    # m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
+    # m_solved = solve_with_minlp(
+    #     m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
+    # print(m_solved.results)
     # visualize_cstr_superstructure(m_solved, NT)
 
-    # GDPopt method
-    m = build_cstrs(NT)
-    m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-    m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp='conopt',
-                                 timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
-    print(m_solved.results)
+    # # GDPopt method
+    # m = build_cstrs(NT)
+    # m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
+    # m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp='conopt',
+    #                              timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
+    # print(m_solved.results)
     #visualize_cstr_superstructure(m_solved, NT)
 
     # # D-SDA
-    k = 'Infinity'
+    # k = 'Infinity'
+    # starting_point = [1, 1]
+    # min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
+    # max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
+
+    # m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
+    #                                   provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    #visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k,
+    #               ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
+    # print(m_solved.results)
+    # visualize_cstr_superstructure(m_solved, NT)
+
+    # Results
+
+    NT = 5
+    timelimit = 3600
+
+    csv_columns = ['Method','Approach','Solver','Objective', 'Time', 'Status']
+    dict_data = []
+    csv_file = "cstr_results.csv"
+
+    # MINLPS    
+    minlps = ['antigone', 'scip', 'baron']
+    transformations = ['bigm','hull']
+
+    for solver in minlps:
+        for transformation in transformations:
+            new_result = {}
+            m = build_cstrs(NT)
+            m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
+            m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=True)
+            new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+            dict_data.append(new_result)
+
+
+    # GDPopt
+    nlps = ['msnlp', 'baron', 'conopt']
+    strategies = ['LOA']
+
+    for solver in nlps:
+        for strategy in strategies:
+            new_result = {}
+            m = build_cstrs(NT)
+            m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
+            m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy)
+            new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+            dict_data.append(new_result)
+
+    
+    # D-SDA
+    ks = ['Infinity','2']
     starting_point = [1, 1]
     min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
-                                      provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=3600)
-    #visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k,
-    #               ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
-    print(m_solved.results)
-    # visualize_cstr_superstructure(m_solved, NT)
+    #for solver in nlps:
+    #    for k in ks:
+    #        new_result = {}
+    #        m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
+    #                    provide_starting_initialization=True, feasible_model='cstr', subproblem_solver=solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=timelimit, timelimit=timelimit)
+    #        new_result = {'Method':'D-SDA', 'Approach':str('k = '+k), 'Solver':solver,'Objective':pe.value(m_solved.obj), 'Time':m_solved.dsda_time, 'Status':m_solved.dsda_status}
+    #        dict_data.append(new_result)
+
+    print(dict_data)
+
+
+    try:
+        with open(csv_file, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in dict_data:
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")

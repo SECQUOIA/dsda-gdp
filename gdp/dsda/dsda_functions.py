@@ -571,12 +571,12 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
                 if time.perf_counter() - t_start > timelimit:
                     break
 
+                if global_tee:
+                    print('Evaluated:',best_var, '   |   Objective:', round(fmin, 5) ,'   |   Global Time:', round(time.perf_counter() - t_start,2))
+
                 fmin, best_var, moved = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
                                                        reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
 
-                if global_tee:
-                    print('Evaluated:',best_var, '   |   Objective:', round(fmin, 5) ,'   |   Global Time:', round(time.perf_counter() - t_start,2))
-                
                 
                 if time.perf_counter() - t_start > timelimit:
                     break

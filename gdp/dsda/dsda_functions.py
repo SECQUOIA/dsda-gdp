@@ -302,7 +302,7 @@ def find_actual_neighbors(start: list, neighborhood: dict, optimize: bool = True
     return neighbors
 
 
-def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, reformulation_function, subproblem_solver: str = 'conopt', iter_timelimit: int = 10, gams_output: bool = False, tee:bool=False, tol: int = 0.000001):
+def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, reformulation_function, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time:int= 0, timelimit:int = 3600, gams_output: bool = False, tee:bool=False, tol: int = 0.000001):
     """
     Function that evaluates a group of given points and returns the best
     Args:
@@ -313,6 +313,8 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         reformulation_function: function usted to reformulate external variables
         subproblem_solver: MINLP or NLP solver algorithm
         iter_timelimit: time limit in seconds for the solve statement for each iteration
+        current_time: Current time in global algorithm
+        timelimit: time limit in seconds for the algorithm
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
         tol: Numerical tolerance
@@ -325,6 +327,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
     """
 
     # Initialize
+    t_start = time.process_time()
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
@@ -334,11 +337,16 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
     objectives = {}
     feasibles = {}
 
+    print(len(temp))
     for i in temp.keys():   # Solve all models
         m = model_function(**model_args)
         m_init = initialize_model(m)
         m_fixed = reformulation_function(m_init, temp[i])
         m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
+        t_end = time.process_time()
+        print('variables:',temp[i], 'current:',current_time, 'tiempo:', current_time + t_end - t_start)
+        if current_time + t_end - t_start> timelimit:
+            break
 
         if m_solved.dsda_status == 'Optimal':   # Check if D-SDA status is optimal
             objectives[i] = pe.value(m_solved.obj)
@@ -477,7 +485,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
         min_allowed: In keys contains external variables and in items their respective lower bounds
         max_allowed: In keys contains external variables and in items their respective upper bounds
         iter_timelimit: time limit in seconds for the solve statement for each iteration
-        iter_timelimit: time limit in seconds for the algorithm
+        timelimit: time limit in seconds for the algorithm
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
         tol: Numerical tolerance
@@ -533,8 +541,10 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
         if time.process_time() - t_start > timelimit:
             break
 
+        current_time = time.process_time()
+
         fmin, best_var, best_dir, improve = evaluate_neighbors(
-            neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
+            neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=current_time, gams_output=gams_output, tee=tee, tol=tol)
 
         if time.process_time() - t_start > timelimit:
             break
@@ -553,6 +563,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
                 fmin, best_var, moved = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
                                                        reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
 
+                print('tiempo', time.process_time() - t_start)
                 if time.process_time() - t_start > timelimit:
                     break
 

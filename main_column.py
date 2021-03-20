@@ -182,7 +182,7 @@ if __name__ == "__main__":
     max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
     m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
-                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=3600, gams_output=False, tee=False)
+                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=20, gams_output=False, tee=False)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     # TODO This visualization code does not work
     # print(m_solved.results)

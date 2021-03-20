@@ -302,7 +302,7 @@ def find_actual_neighbors(start: list, neighborhood: dict, optimize: bool = True
     return neighbors
 
 
-def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, reformulation_function, subproblem_solver: str = 'conopt', iter_timelimit: int = 10, tol: int = 0.000001):
+def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, reformulation_function, subproblem_solver: str = 'conopt', iter_timelimit: int = 10, gams_output: bool = False, tee:bool=False, tol: int = 0.000001):
     """
     Function that evaluates a group of given points and returns the best
     Args:
@@ -313,6 +313,8 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         reformulation_function: function usted to reformulate external variables
         subproblem_solver: MINLP or NLP solver algorithm
         iter_timelimit: time limit in seconds for the solve statement for each iteration
+        gams_output: Determine keeping or not GAMS files
+        tee: Display iteration output
         tol: Numerical tolerance
     Returns:
         fmin: Type int and gives the best neighbor's objective
@@ -336,8 +338,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         m = model_function(**model_args)
         m_init = initialize_model(m)
         m_fixed = reformulation_function(m_init, temp[i])
-        m_solved = solve_subproblem(
-            m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
 
         if m_solved.dsda_status == 'Optimal':   # Check if D-SDA status is optimal
             objectives[i] = pe.value(m_solved.obj)
@@ -382,14 +383,13 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         m2 = model_function(**model_args)
         m2_init = initialize_model(m2)
         m2_fixed = reformulation_function(m2_init, best_var)
-        m2_solved = solve_subproblem(
-            m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
         generate_initialization(m2_solved)
 
     return fmin, best_var, best_dir, improve
 
 
-def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, reformulation_function, subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
+def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, reformulation_function, subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10,  gams_output: bool = False, tee:bool=False, tol: int = 0.000001):
     """
     Function that moves in a given "best direction" and evaluates the new moved point
     Args:
@@ -403,6 +403,8 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         min_allowed: In keys contains external variables and in items their respective lower bounds
         max_allowed: In keys contains external variables and in items their respective upper bounds
         iter_timelimit: time limit in seconds for the solve statement for each iteration
+        gams_output: Determine keeping or not GAMS files
+        tee: Display iteration output
         tol: Numerical tolerance
     Returns:
         fmin: Type int and gives the moved point objective
@@ -429,8 +431,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
             m = model_function(**model_args)
             m_init = initialize_model(m)
             m_fixed = reformulation_function(m_init, moved_point)
-            m_solved = solve_subproblem(
-                m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
 
             if m_solved.dsda_status == 'Optimal':   # Check status
                 act_obj = pe.value(m_solved.obj)
@@ -442,8 +443,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         m = model_function(**model_args)    # Solve model
         m_init = initialize_model(m)
         m_fixed = reformulation_function(m_init, moved_point)
-        m_solved = solve_subproblem(
-            m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
 
         if m_solved.dsda_status == 'Optimal':   # Check status
             act_obj = pe.value(m_solved.obj)
@@ -456,14 +456,13 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         m2 = model_function(**model_args)
         m2_init = initialize_model(m2)
         m2_fixed = reformulation_function(m2_init, best_var)
-        m2_solved = solve_subproblem(
-            m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
         generate_initialization(m2_solved)
 
     return fmin, best_var, moved
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, gams_output:bool=False, timelimit: int=3600, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, timelimit: int=3600, gams_output: bool = False, tee:bool=False, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:
@@ -478,6 +477,9 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
         min_allowed: In keys contains external variables and in items their respective lower bounds
         max_allowed: In keys contains external variables and in items their respective upper bounds
         iter_timelimit: time limit in seconds for the solve statement for each iteration
+        iter_timelimit: time limit in seconds for the algorithm
+        gams_output: Determine keeping or not GAMS files
+        tee: Display iteration output
         tol: Numerical tolerance
     Returns:
         m2_solved: Solved Pyomo Model
@@ -504,7 +506,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
 
     # Solve for initialization
     m_solved = solve_subproblem(
-        m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
     fmin = pe.value(m_solved.obj)
     generate_initialization(m_solved)
 
@@ -532,7 +534,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
             break
 
         fmin, best_var, best_dir, improve = evaluate_neighbors(
-            neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, tol=tol)
+            neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
 
         if time.process_time() - t_start > timelimit:
             break
@@ -549,7 +551,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
                     break
 
                 fmin, best_var, moved = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
-                                                       reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, tol=tol)
+                                                       reformulation_function=reformulation_function, subproblem_solver=subproblem_solver, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
 
                 if time.process_time() - t_start > timelimit:
                     break
@@ -566,18 +568,19 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
 
     t_end = round(time.process_time() - t_start, 2)
 
-    # Print results
-    print('Objective:', round(fmin, 5))
-    print('External variables:', route[-1])
-    print('Execution time [s]:', t_end)
 
     # Generate final solved model
     m2 = model_function(**model_args)
     m2_init = initialize_model(m2)
     m2_fixed = reformulation_function(m2_init, route[-1])
     m2_solved = solve_subproblem(
-        m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit)
+        m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
     m2_solved.dsda_time = t_end
+
+    # Print results
+    print('Objective:', round(fmin, 5))
+    print('External variables:', route[-1])
+    print('Execution time [s]:', t_end)
 
     return m2_solved, route
 

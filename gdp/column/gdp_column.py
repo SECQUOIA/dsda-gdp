@@ -12,6 +12,7 @@ from pyomo.opt import SolutionStatus
 from pyomo.opt import TerminationCondition as tc, SolverResults
 import os
 
+
 def build_column(min_trays, max_trays, xD, xB):
     """Builds the column model."""
     m = ConcreteModel('benzene-toluene column')
@@ -66,17 +67,17 @@ def build_column(min_trays, max_trays, xD, xB):
     m.feed = Var(
         m.comps, doc='Total component feed flow [mol/s]', initialize=50)
     m.x = Var(m.comps, m.trays, doc='Liquid mole fraction',
-                bounds=(0, 1), domain=NonNegativeReals, initialize=0.5)
+              bounds=(0, 1), domain=NonNegativeReals, initialize=0.5)
     m.y = Var(m.comps, m.trays, doc='Vapor mole fraction',
-                bounds=(0, 1), domain=NonNegativeReals, initialize=0.5)
+              bounds=(0, 1), domain=NonNegativeReals, initialize=0.5)
     m.L = Var(m.comps, m.trays,
-                doc='component liquid flows from tray in kmol',
-                domain=NonNegativeReals, bounds=(0, max_flow),
-                initialize=50)
+              doc='component liquid flows from tray in kmol',
+              domain=NonNegativeReals, bounds=(0, max_flow),
+              initialize=50)
     m.V = Var(m.comps, m.trays,
-                doc='component vapor flows from tray in kmol',
-                domain=NonNegativeReals, bounds=(0, max_flow),
-                initialize=50)
+              doc='component vapor flows from tray in kmol',
+              domain=NonNegativeReals, bounds=(0, max_flow),
+              initialize=50)
     m.liq = Var(m.trays, domain=NonNegativeReals,
                 doc='liquid flows from tray in kmol', initialize=100,
                 bounds=(0, max_flow))
@@ -84,19 +85,19 @@ def build_column(min_trays, max_trays, xD, xB):
                 doc='vapor flows from tray in kmol', initialize=100,
                 bounds=(0, max_flow))
     m.B = Var(m.comps, domain=NonNegativeReals,
-                doc='bottoms component flows in kmol',
-                bounds=(0, max_flow), initialize=50)
+              doc='bottoms component flows in kmol',
+              bounds=(0, max_flow), initialize=50)
     m.D = Var(m.comps, domain=NonNegativeReals,
-                doc='distillate component flows in kmol',
-                bounds=(0, max_flow), initialize=50)
+              doc='distillate component flows in kmol',
+              bounds=(0, max_flow), initialize=50)
     m.bot = Var(domain=NonNegativeReals, initialize=50, bounds=(0, 100),
                 doc='bottoms flow in kmol')
     m.dis = Var(domain=NonNegativeReals, initialize=50,
                 doc='distillate flow in kmol', bounds=(0, 100))
     m.reflux_ratio = Var(domain=NonNegativeReals, bounds=(0.5, 4),
-                            doc='reflux ratio', initialize=1.4)
+                         doc='reflux ratio', initialize=1.4)
     m.reboil_ratio = Var(domain=NonNegativeReals, bounds=(1.3, 4),
-                            doc='reboil ratio', initialize=0.9527)
+                         doc='reboil ratio', initialize=0.9527)
     m.reflux_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
                         doc='reflux fractions')
     m.boilup_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6),
@@ -105,10 +106,10 @@ def build_column(min_trays, max_trays, xD, xB):
         m.comps, m.trays, doc='Phase equilibrium constant',
         domain=NonNegativeReals, initialize=1, bounds=(0, 1000))
     m.T = Var(m.trays, doc='Temperature [K]',
-                domain=NonNegativeReals,
-                bounds=(min_T, max_T))
+              domain=NonNegativeReals,
+              bounds=(min_T, max_T))
     m.P = Var(doc='Pressure [bar]',
-                bounds=(0, 5))
+              bounds=(0, 5))
     m.gamma = Var(
         m.comps, m.trays,
         doc='liquid activity coefficent of component on tray',
@@ -117,6 +118,10 @@ def build_column(min_trays, max_trays, xD, xB):
         m.comps, m.trays,
         doc='pure component vapor pressure of component on tray in bar',
         domain=NonNegativeReals, bounds=(1E-3, 5), initialize=0.4)
+    m.Pvap_rel = Var(
+        m.comps, m.trays,
+        doc='pure component relative vapor pressure of component on tray in bar (to avoid numerical problems)',
+        domain=NonNegativeReals, bounds=(0, 5), initialize=0.4)
     m.Pvap_X = Var(
         m.comps, m.trays,
         doc='Related to fraction of critical temperature (1 - T/Tc)',
@@ -134,9 +139,9 @@ def build_column(min_trays, max_trays, xD, xB):
         m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]',
         initialize=0, bounds=(30, 16 + 40))
     m.Qb = Var(domain=NonNegativeReals, doc='reboiler duty (MJ/s)',
-                initialize=1, bounds=(0, 8))
+               initialize=1, bounds=(0, 8))
     m.Qc = Var(domain=NonNegativeReals, doc='condenser duty (MJ/s)',
-                initialize=1, bounds=(0, 8))
+               initialize=1, bounds=(0, 8))
 
     m.partial_cond = Disjunct()
     m.total_cond = Disjunct()
@@ -231,6 +236,7 @@ def build_column(min_trays, max_trays, xD, xB):
     m.total_cond.indicator_var.fix(1)
 
     return m
+
 
 def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     """
@@ -372,10 +378,14 @@ def _build_tray_phase_equilibrium(m, t, tray):
             m.gamma[c, t] * m.Pvap[c, t])
 
     @tray.Constraint(m.comps)
+    def Pvap_relative(_, c):
+        return m.Pvap_rel[c, t] == m.Pvap[c, t] - m.Pvap[c, t].lb
+
+    @tray.Constraint(m.comps)
     def Pvap_relation(_, c):
         k = m.pvap_const[c]
         x = m.Pvap_X[c, t]
-        return (log(m.Pvap[c, t]) - log(k['Pc'])) * (1 - x) == (
+        return (log(m.Pvap_rel[c, t] + m.Pvap[c, t].lb) - log(k['Pc'])) * (1 - x) == (
             k['A'] * x +
             k['B'] * x ** 1.5 +
             k['C'] * x ** 3 +
@@ -553,3 +563,10 @@ def _build_reboiler_energy_balance(m):
     @m.Constraint(m.comps)
     def reboiler_vap_enthalpy_calc(_, c):
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
+
+
+if __name__ == "__main__":
+    # Inputs
+    NT = 17
+    model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
+    m = build_column(**model_args)

@@ -135,9 +135,11 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
     for i in range(len(X1)):
         x = [X1[i], X2[i]]
         m = model_function(**model_args)
-        m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+        m_init = initialize_model(
+            m, from_feasible=True, feasible_model='column')
         m_fixed = reformulation_function(m_init, x)
-        m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, timelimit=timelimit)
+        m_solved = solve_subproblem(
+            m_fixed, subproblem_solver=subproblem_solver, timelimit=timelimit)
 
         if m_solved.dsda_status == 'Optimal':
             print('%6s %6s %12s' %
@@ -160,14 +162,13 @@ if __name__ == "__main__":
 
     # Complete enumeration
     # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, subproblem_solver='conopt', timelimit=20)
-    
-    
+
     # MINLP methods
-    #m = build_column(**model_args)
-    #m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-    #m_solved = solve_with_minlp(
+    # m = build_column(**model_args)
+    # m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+    # m_solved = solve_with_minlp(
     #   m_init, transformation='hull', minlp='antigone', timelimit=timelimit, gams_output=False)
-    #print(m_solved.results)
+    # print(m_solved.results)
 
     # GDPopt methods
     # m = build_column(**model_args)
@@ -182,7 +183,75 @@ if __name__ == "__main__":
     max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
     m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
-                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=20, gams_output=False, tee=False, global_tee=False)
+                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=30, gams_output=False, tee=False, global_tee=True)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     # TODO This visualization code does not work
     # print(m_solved.results)
+
+     # Results
+
+    NT = 17
+    timelimit = 3600
+
+    csv_columns = ['Method', 'Approach',
+        'Solver', 'Objective', 'Time', 'Status']
+    dict_data = []
+    csv_file = "column_results.csv"
+
+   # MINLPS
+   minlps = ['antigone', 'scip', 'baron']
+   transformations = ['bigm','hull']#
+
+   for solver in minlps:
+       for transformation in transformations:
+           new_result = {}
+           m = build_column(**model_args)
+           m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+           m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=True)
+           new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+           dict_data.append(new_result)
+
+
+# GDPopt
+   nlps = ['msnlp', 'baron', 'conopt']
+   strategies = ['LOA','GLOA']
+
+    for solver in nlps:
+       for strategy in strategies:
+           new_result = {}
+           m = build_column(**model_args)
+           m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+           m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy)
+           new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+           dict_data.append(new_result)
+
+    
+    # D-SDA
+    k = ['Infinity','2']
+    starting_point = [16, 2]
+    min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
+    max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
+
+    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
+                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=timelimit, timelimit=timelimit, gams_output=False, tee=False, global_tee=True)
+    
+
+    for solver in nlps:
+       for k in ks:
+           new_result = {}
+           m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_arg, starting_point=starting_point, reformulation_function=external_ref, k=k,
+                       provide_starting_initialization=True, feasible_model='cstr', subproblem_solver=solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=timelimit, timelimit=timelimit)
+           new_result = {'Method':'D-SDA', 'Approach':str('k = '+k), 'Solver':solver,'Objective':pe.value(m_solved.obj), 'Time':m_solved.dsda_time, 'Status':m_solved.dsda_status}
+           dict_data.append(new_result)
+
+   print(dict_data)
+
+
+   try:
+       with open(csv_file, 'w') as csvfile:
+           writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+           writer.writeheader()
+           for data in dict_data:
+               writer.writerow(data)
+   except IOError:
+       print("I/O error")

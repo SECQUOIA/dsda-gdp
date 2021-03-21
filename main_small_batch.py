@@ -33,7 +33,9 @@ if __name__ == "__main__":
     min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: 3 for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(model_function=build_small_batch, model_args={}, starting_point=starting_point, reformulation_function=external_ref, k=k,
-                                      provide_starting_initialization=True, feasible_model='small_batch', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=3600)
+    m_solved, route = solve_with_dsda(model_function=build_small_batch, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
+                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=30, gams_output=False, tee=False, global_tee=True)
+    
+
     print(route)
     print(m_solved.results)

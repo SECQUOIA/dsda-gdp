@@ -115,7 +115,7 @@ def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp:
     return m
 
 
-def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'conopt', timelimit: int = 10, strategy: str = 'LOA', mip_output: bool = False, nlp_output: bool = False) -> pe.ConcreteModel():
+def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'conopt', minlp: str = 'baron', timelimit: int = 10, strategy: str = 'LOA', mip_output: bool = False, nlp_output: bool = False, minlp_output: bool = False) -> pe.ConcreteModel():
     """
     Function that solves GDP model using GDPopt
     Args:
@@ -136,6 +136,7 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
     # Output report
     mip_output_options = {}
     nlp_output_options = {}
+    minlp_output_options = {}
     if mip_output:
         dir_path = os.path.dirname(os.path.abspath(__file__))
         gams_path = os.path.join(dir_path, "gamsfiles/")
@@ -158,6 +159,17 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
                               'tmpdir': gams_path,
                               'symbolic_solver_labels': True}
 
+    if minlp_output:
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        gams_path = os.path.join(dir_path, "gamsfiles/")
+        if not(os.path.exists(gams_path)):
+            print('Directory for automatically generated files ' +
+                  gams_path + ' does not exist. We will create it')
+            os.makedirs(gams_path)
+        minlp_output_options = {'keepfiles': True,
+                                'tmpdir': gams_path,
+                                'symbolic_solver_labels': True}
+
     # Solve
     solvername = 'gdpopt'
     opt = SolverFactory(solvername)
@@ -170,6 +182,9 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
                           nlp_solver='gams',
                           nlp_solver_args=dict(
                               solver=nlp, warmstart=True, tee=True, **nlp_output_options),
+                          minlp_solver='gams',
+                          minlp_solver_args=dict(
+                              solver=minlp, warmstart=True, tee=True, **minlp_output_options),
                           #   mip_presolve=True,
                           init_strategy='fix_disjuncts',
                           #   set_cover_iterlim=0,
@@ -239,7 +254,7 @@ def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasibl
     dir_path = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(
         dir_path, feasible_model+'_initialization.json')
- 
+
     if from_feasible:
         from_json(m, fname=json_path, wts=wts)
     else:
@@ -460,7 +475,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     return fmin, best_var, moved
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, gams_output:bool=False, timelimit: int=3600, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, gams_output: bool = False, timelimit: int = 3600, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:

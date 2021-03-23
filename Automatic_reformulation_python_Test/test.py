@@ -20,6 +20,9 @@ Ext_Ref={m.Y:m.k}
 get_info=get_external_information(m,Ext_Ref) #It is enough to run this function once (it depends on the model only)
 dict_extvar=get_info[0] #dictionary required by external_ref function
 num_extvar=get_info[1] #number of external variables
+lower=get_info[2]  #lower bounds
+upper=get_info[3]  #upper bounds
+
 
 
 #4: User must specify equivalences between disjunctions and Boolean variables in the model
@@ -47,6 +50,9 @@ Ext_Ref={m.YF:m.N,m.YR:m.N}
 get_info=get_external_information(m,Ext_Ref) #It is enough to run this function once (it depends on the model only)
 dict_extvar=get_info[0]
 num_extvar=get_info[1]
+lower=get_info[2]
+upper=get_info[3]
+
 
 #4: User must specify equivalences between disjunctions and Boolean variables in the model
 # List of list Value 1: Independent Boolean var or expression of independent boolean vars, Value 2: Equivalent indicator var or boolean var
@@ -76,6 +82,9 @@ Ext_Ref={m.YB:m.intTrays,m.YR:m.intTrays}
 get_info=get_external_information(m,Ext_Ref) #It is enough to run this function once (it depends on the model only)
 dict_extvar=get_info[0]
 num_extvar=get_info[1]
+lower=get_info[2]
+upper=get_info[3]
+
 
 #4: User must specify equivalences between disjunctions and Boolean variables in the model
 # List of list Value 1: Independent Boolean var or expression of independent boolean vars, Value 2: Equivalent indicator var or boolean var

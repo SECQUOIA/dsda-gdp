@@ -18,8 +18,8 @@ Ext_Ref={m.Y:m.k}
 
 #3: Now we can get information from the model
 get_info=get_external_information(m,Ext_Ref) #It is enough to run this function once (it depends on the model only)
-dict_extvar=get_info[0]
-num_extvar=get_info[1]
+dict_extvar=get_info[0] #dictionary required by external_ref function
+num_extvar=get_info[1] #number of external variables
 
 
 #4: User must specify equivalences between disjunctions and Boolean variables in the model

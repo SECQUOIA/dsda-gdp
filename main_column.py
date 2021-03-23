@@ -2,6 +2,7 @@
 
 from __future__ import division
 
+import csv
 from math import ceil, fabs
 
 import pyomo.environ as pe
@@ -13,9 +14,10 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from gdp.column.gdp_column import build_column
-from gdp.dsda.dsda_functions import (
-    generate_initialization, initialize_model, solve_subproblem, solve_with_dsda,
-    solve_with_gdpopt, solve_with_minlp, visualize_dsda)
+from gdp.dsda.dsda_functions import (generate_initialization, initialize_model,
+                                     solve_subproblem, solve_with_dsda,
+                                     solve_with_gdpopt, solve_with_minlp,
+                                     visualize_dsda)
 
 
 def external_ref(m, x, logic_expr=None):
@@ -156,9 +158,9 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
 
 if __name__ == "__main__":
     # Inputs
-    NT = 17
-    timelimit = 30
-    model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
+    # NT = 17
+    # # timelimit = 30
+    # model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
 
     # Complete enumeration
     # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, subproblem_solver='conopt', timelimit=20)
@@ -177,13 +179,13 @@ if __name__ == "__main__":
     # print(m_solved.results)
 
     # # D-SDA
-    k = 'Infinity'
-    starting_point = [16, 2]
-    min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
-    max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
+    # k = 'Infinity'
+    # starting_point = [16, 2]
+    # min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
+    # max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
-                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=30, gams_output=False, tee=False, global_tee=True)
+    # m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
+    #                                   k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=30, gams_output=False, tee=False, global_tee=True)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     # TODO This visualization code does not work
     # print(m_solved.results)
@@ -192,66 +194,63 @@ if __name__ == "__main__":
 
     NT = 17
     timelimit = 3600
+    model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
 
     csv_columns = ['Method', 'Approach',
         'Solver', 'Objective', 'Time', 'Status']
     dict_data = []
     csv_file = "column_results.csv"
 
-   # MINLPS
-   minlps = ['antigone', 'scip', 'baron']
-   transformations = ['bigm','hull']#
+    # MINLPS
+    minlps = ['antigone', 'scip', 'baron','sbb','dicopt','alphaecp','bonminh']
+    transformations = ['bigm','hull']#
 
-   for solver in minlps:
-       for transformation in transformations:
-           new_result = {}
-           m = build_column(**model_args)
-           m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-           m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=True)
-           new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
-           dict_data.append(new_result)
+    for solver in minlps:
+        for transformation in transformations:
+            new_result = {}
+            m = build_column(**model_args)
+            m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+            m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=True)
+            new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+            dict_data.append(new_result)
 
 
 # GDPopt
-   nlps = ['msnlp', 'baron', 'conopt']
-   strategies = ['LOA','GLOA']
+    nlps = ['msnlp', 'baron', 'conopt']
+    strategies = ['LOA','GLOA']
 
-    for solver in nlps:
-       for strategy in strategies:
-           new_result = {}
-           m = build_column(**model_args)
-           m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-           m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy)
-           new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
-           dict_data.append(new_result)
+    # for solver in nlps:
+    #     for strategy in strategies:
+    #         new_result = {}
+    #         m = build_column(**model_args)
+    #         m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+    #         m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy)
+    #         new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+    #         dict_data.append(new_result)
 
     
     # D-SDA
-    k = ['Infinity','2']
+    ks = ['Infinity','2']
     starting_point = [16, 2]
     min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
-                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=timelimit, timelimit=timelimit, gams_output=False, tee=False, global_tee=True)
-    
-
     for solver in nlps:
        for k in ks:
            new_result = {}
-           m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_arg, starting_point=starting_point, reformulation_function=external_ref, k=k,
+           m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref, k=k,
                        provide_starting_initialization=True, feasible_model='cstr', subproblem_solver=solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=timelimit, timelimit=timelimit)
            new_result = {'Method':'D-SDA', 'Approach':str('k = '+k), 'Solver':solver,'Objective':pe.value(m_solved.obj), 'Time':m_solved.dsda_time, 'Status':m_solved.dsda_status}
            dict_data.append(new_result)
 
-   print(dict_data)
+    print(dict_data)
 
 
-   try:
-       with open(csv_file, 'w') as csvfile:
-           writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-           writer.writeheader()
-           for data in dict_data:
-               writer.writerow(data)
-   except IOError:
-       print("I/O error")
+    try:
+        with open(csv_file, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in dict_data:
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")

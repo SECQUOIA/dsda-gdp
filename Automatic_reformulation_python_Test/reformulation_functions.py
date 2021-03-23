@@ -82,6 +82,15 @@ def get_external_information(m,Ext_Ref):
     number_of_external_variables=sum(reformulation_dict[j]['exactly_number'] for j in reformulation_dict)
 
 
+    lower_bounds=[]
+    upper_bounds=[]
+
+    for i in reformulation_dict:
+        for j in range(reformulation_dict[i]['exactly_number']):
+            lower_bounds=lower_bounds+[reformulation_dict[i]['Ext_var_lower_bound']]
+            upper_bounds=upper_bounds+[reformulation_dict[i]['Ext_var_upper_bound']]
+
+
     print('\n------------------------Reformulation Summary---------------------\n')
     exvar_num=0
     for i in reformulation_dict:
@@ -91,7 +100,7 @@ def get_external_information(m,Ext_Ref):
 
     print('\nThere are '+str(number_of_external_variables)+' external variables in total')
 
-    return reformulation_dict,number_of_external_variables
+    return reformulation_dict,number_of_external_variables,lower_bounds,upper_bounds
 
 
 def external_ref(m, x, dict_extvar,logic_expr):

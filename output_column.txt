@@ -24790,3 +24790,502 @@ Objective: 19449.85151
 External variables: [13.0, 4.0]
 Execution time [s]: 10.38
 [{'Method': 'MINLP', 'Approach': 'bigm', 'Solver': 'antigone', 'Objective': 19346.124801098988, 'Time': 3599.5500003453344, 'Status': <TerminationCondition.optimal: 'optimal'>}, {'Method': 'MINLP', 'Approach': 'hull', 'Solver': 'antigone', 'Objective': 22271.54901417141, 'Time': 31.670000217854977, 'Status': <TerminationCondition.optimal: 'optimal'>}, {'Method': 'MINLP', 'Approach': 'bigm', 'Solver': 'scip', 'Objective': 19956.974872213566, 'Time': 3605.684000090696, 'Status': <TerminationCondition.optimal: 'optimal'>}, {'Method': 'MINLP', 'Approach': 'hull', 'Solver': 'scip', 'Objective': 19956.974872213566, 'Time': 3600.5950000835583, 'Status': <TerminationCondition.maxTimeLimit: 'maxTimeLimit'>}, {'Method': 'MINLP', 'Approach': 'bigm', 'Solver': 'baron', 'Objective': 22271.54812300559, 'Time': 0.6159994751214981, 'Status': <TerminationCondition.optimal: 'optimal'>}, {'Method': 'MINLP', 'Approach': 'hull', 'Solver': 'baron', 'Objective': 22271.54812300559, 'Time': 27.654000325128436, 'Status': <TerminationCondition.infeasible: 'infeasible'>}, {'Method': 'MINLP', 'Approach': 'bigm', 'Solver': 'sbb', 'Objective': 22271.54812300559, 'Time': 1.8200005637481809, 'Status': <TerminationCondition.infeasible: 'infeasible'>}, {'Method': 'MINLP', 'Approach': 'hull', 'Solver': 'sbb', 'Objective': 22271.54812300559, 'Time': 2.5640005012974143, 'Status': <TerminationCondition.maxEvaluations: 'maxEvaluations'>}, {'Method': 'MINLP', 'Approach': 'bigm', 'Solver': 'dicopt', 'Objective': 7999.999999999997, 'Time': 2.1919999038800597, 'Status': <TerminationCondition.intermediateNonInteger: 'intermediateNonInteger'>}, {'Method': 'MINLP', 'Approach': 'hull', 'Solver': 'dicopt', 'Objective': 11557.23544449221, 'Time': 15.17200015950948, 'Status': <TerminationCondition.intermediateNonInteger: 'intermediateNonInteger'>}, {'Method': 'MINLP', 'Approach': 'bigm', 'Solver': 'alphaecp', 'Objective': 20392.21951721466, 'Time': 2807.654999708757, 'Status': <TerminationCondition.optimal: 'optimal'>}, {'Method': 'MINLP', 'Approach': 'hull', 'Solver': 'alphaecp', 'Objective': 19346.1248010994, 'Time': 3601.3529998948798, 'Status': <TerminationCondition.optimal: 'optimal'>}, {'Method': 'MINLP', 'Approach': 'bigm', 'Solver': 'bonminh', 'Objective': 20916.360715821007, 'Time': 61.62800006568432, 'Status': <TerminationCondition.optimal: 'optimal'>}, {'Method': 'MINLP', 'Approach': 'hull', 'Solver': 'bonminh', 'Objective': 22271.549014074964, 'Time': 1263.2699999492615, 'Status': <TerminationCondition.optimal: 'optimal'>}, {'Method': 'D-SDA', 'Approach': 'k = Infinity', 'Solver': 'msnlp', 'Objective': 19346.12480109943, 'Time': 88.6, 'Status': 'Optimal'}, {'Method': 'D-SDA', 'Approach': 'k = 2', 'Solver': 'msnlp', 'Objective': 19449.851511967016, 'Time': 72.07, 'Status': 'Optimal'}, {'Method': 'D-SDA', 'Approach': 'k = Infinity', 'Solver': 'baron', 'Objective': 22271.5477894648, 'Time': 3600.67, 'Status': 'Initialized'}, {'Method': 'D-SDA', 'Approach': 'k = 2', 'Solver': 'baron', 'Objective': 22271.54706450866, 'Time': 3600.72, 'Status': 'Initialized'}, {'Method': 'D-SDA', 'Approach': 'k = Infinity', 'Solver': 'conopt', 'Objective': 19346.124801099424, 'Time': 13.16, 'Status': 'Optimal'}, {'Method': 'D-SDA', 'Approach': 'k = 2', 'Solver': 'conopt', 'Objective': 19449.851511967016, 'Time': 10.38, 'Status': 'Optimal'}]
+INFO: Starting GDPopt version 20.2.28 using LOA algorithm
+INFO: Subsolvers:
+    - MILP: gams
+       - solver: cplex
+       - warmstart: true
+    - NLP: gams
+       - keepfiles: true
+       - solver: baron
+       - symbolic_solver_labels: true
+       - tee: true
+       - tmpdir: /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/
+       - warmstart: true
+    - MINLP: gams
+       - solver: baron
+       - tee: true
+       - warmstart: true
+    - local MINLP: bonmin
+INFO: If you use this software, you may cite the following:
+    - Implementation:
+    Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE. Pyomo.GDP: Disjunctive
+    Models in Python. Proc. of the 13th Intl. Symposium on Process Systems
+    Eng. San Diego, 2018.
+    - LOA algorithm:
+    Türkay, M; Grossmann, IE. Logic-based MINLP algorithms for the optimal
+    synthesis of process networks. Comp. and Chem. Eng. 1996, 20(8), 959–978.
+    DOI: 10.1016/0098-1354(95)00219-7.
+INFO: ---Starting GDPopt initialization---
+INFO: Generating initial linear GDP approximation by solving subproblem with
+    original user-specified disjunct values.
+INFO: Solving nonlinear subproblem for fixed binaries and logical
+    realizations.
+--- Job model.gms Start 03/22/21 22:50:16 34.2.0 r6925a71 LEX-LEG x86 64bit/Linux
+--- Applying:
+    /home/bernalde/packages/gams34.2_linux_x64_64_sfx/gmsprmun.txt
+--- GAMS Parameters defined
+    Input /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/model.gms
+    Output /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/output.lst
+    ScrDir /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/225a/
+    SysDir /home/bernalde/packages/gams34.2_linux_x64_64_sfx/
+    CurDir /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/
+    LogOption 3
+Licensee: Eval License                                   G201207/0001AO-GEN
+          Carnegie Mellon University, Dept. of Chemical Engineering  DCE375
+          /home/bernalde/packages/gams34.2_linux_x64_64_sfx/gamslice.txt
+          Evaluation license: Not for commercial or production use
+GAMS 34.2.0   Copyright (C) 1987-2021 GAMS Development. All rights reserved
+--- Starting compilation
+--- model.gms(2468) 2 Mb
+--- Starting execution: elapsed 0:00:00.006
+--- model.gms(2438) 3 Mb
+--- Generating NLP model GAMS_MODEL
+--- model.gms(2442) 5 Mb
+--- Reset Solvelink = 2
+---   457 rows  440 columns  1,347 non-zeroes
+---   3,094 nl-code  673 nl-non-zeroes
+--- model.gms(2442) 3 Mb
+--- Executing BARON (Solvelink=2): elapsed 0:00:00.011
+
+GAMS/BARON       34.2.0 r6925a71 Released Feb 05, 2021 LEG x86 64bit/Linux    
+
+===========================================================================
+ BARON version 21.1.13. Built: LNX-64 Wed Jan 13 16:01:25 EST 2021
+
+ BARON is a product of The Optimization Firm.
+ For information on BARON, see https://minlp.com/about-baron
+
+ If you use this software, please cite publications from
+ https://minlp.com/baron-publications, such as: 
+
+ Khajavirad, A. and N. V. Sahinidis,
+ A hybrid LP/NLP paradigm for global optimization relaxations,
+ Mathematical Programming Computation, 10, 383-421, 2018.
+===========================================================================
+ This BARON run may utilize the following subsolver(s)
+ For LP/MIP/QP: ILOG CPLEX                                      
+ For NLP: MINOS, SNOPT, GAMS external NLP, IPOPT, FILTERSD, FILTERSQP
+===========================================================================
+ Starting solution is feasible with a value of     22271.5481230     
+ Doing local search
+ Solving bounding LP
+ Starting multi-start local search
+ Done with local search
+===========================================================================
+  Iteration    Open nodes         Time (s)    Lower bound      Upper bound
+          1             1             2.91     18215.1          22271.5    
+        990            97            32.92     20122.2          22271.5    
+       2171           210            63.01     20133.2          22271.5    
+       3399           343            93.03     20133.2          22271.5    
+       4481           473           123.03     20133.2          22271.5    
+       5527           622           153.03     20137.1          22271.5    
+       6463           730           183.03     20137.1          22271.5    
+       7381           860           213.02     20137.1          22271.5    
+       8244          1045           243.04     20137.1          22271.5    
+       9222          1182           273.05     20137.1          22271.5    
+      10127          1354           303.05     20137.1          22271.5    
+      11147          1566           333.06     20137.1          22271.5    
+      12089          1756           363.08     20137.1          22271.5    
+      13066          1885           393.09     20137.1          22271.5    
+      14017          2034           423.12     20137.1          22271.5    
+      15002          2213           453.16     20137.1          22271.5    
+      15828+         2330           483.18     20137.1          22271.5    
+      15909+         2333           513.19     20137.1          22271.5    
+      15913+         2333           543.25     20137.1          22271.5    
+      15927+         2332           573.32     20137.1          22271.5    
+      15932+         2332           603.42     20137.1          22271.5    
+      15935+         2331           633.44     20137.1          22271.5    
+      15947+         2336           663.49     20137.1          22271.5    
+      15964          2338           693.49     20137.1          22271.5    
+      15973          2343           723.57     20137.1          22271.5    
+      16993          2486           753.58     20137.1          22271.5    
+      17960          2589           783.58     20137.1          22271.5    
+      18993          2762           813.58     20137.1          22271.5    
+      19976          2988           843.66     20137.1          22271.5    
+      20976          3151           873.72     20137.1          22271.5    
+      21998          3285           903.77     20137.1          22271.5    
+      22895          3429           933.78     20137.1          22271.5    
+      23850          3519           963.82     20137.1          22271.5    
+      24911          3632           993.86     20137.1          22271.5    
+      25930          3756          1023.94     20137.1          22271.5    
+      26955          3855          1053.94     20137.1          22271.5    
+      27988          3989          1083.98     20137.1          22271.5    
+      28869          4087          1114.00     20137.1          22271.5    
+      29765          4180          1144.00     20137.1          22271.5    
+      30710          4334          1174.02     20137.1          22271.5    
+      31647          4441          1204.03     20137.1          22271.5    
+      32574          4532          1234.03     20137.1          22271.5    
+      33577          4627          1264.08     20137.1          22271.5    
+      34416          4740          1294.10     20137.1          22271.5    
+      35434          4861          1324.11     20137.1          22271.5    
+      36328          4976          1354.15     20137.1          22271.5    
+      37262          5106          1384.16     20137.1          22271.5    
+      38295          5230          1414.18     20137.1          22271.5    
+      39389          5316          1444.19     20137.1          22271.5    
+      40486          5384          1474.18     20137.1          22271.5    
+      41528          5501          1504.23     20137.1          22271.5    
+      42570          5578          1534.22     20137.1          22271.5    
+      43602          5675          1564.22     20137.1          22271.5    
+      44665          5802          1594.23     20137.1          22271.5    
+      45534          5914          1624.27     20137.1          22271.5    
+      46640          6008          1654.27     20137.1          22271.5    
+      47723          6133          1684.29     20137.1          22271.5    
+      48699          6248          1714.30     20137.1          22271.5    
+      49591          6341          1744.32     20137.1          22271.5    
+      50641          6385          1774.34     20137.1          22271.5    
+      51481          6435          1804.42     20137.1          22271.5    
+      52630          6536          1834.41     20137.1          22271.5    
+      53583          6658          1864.42     20137.1          22271.5    
+      54651          6775          1894.48     20137.1          22271.5    
+      55478          6871          1924.54     20137.1          22271.5    
+      56577          7000          1954.58     20137.1          22271.5    
+      57500          7112          1984.58     20137.1          22271.5    
+      58439          7250          2014.58     20137.1          22271.5    
+      59398          7368          2044.59     20137.1          22271.5    
+      59815+         7423          2074.63     20137.1          22271.5    
+      59827+         7425          2104.93     20137.1          22271.5    
+      59881+         7431          2135.01     20137.1          22271.5    
+      59890+         7426          2165.06     20137.1          22271.5    
+      59900+         7421          2195.08     20137.1          22271.5    
+      59923+         7410          2225.13     20137.1          22271.5    
+      59931+         7406          2255.20     20137.1          22271.5    
+      59936+         7403          2285.27     20137.1          22271.5    
+      59939+         7402          2315.30     20137.1          22271.5    
+      59942+         7400          2345.33     20137.1          22271.5    
+      59945+         7399          2375.39     20137.1          22271.5    
+      59946+         7398          2405.42     20137.1          22271.5    
+      59949+         7399          2435.42     20137.1          22271.5    
+      59971+         7397          2465.43     20137.1          22271.5    
+      60006+         7403          2495.56     20137.1          22271.5    
+      60009          7405          2525.59     20137.1          22271.5    
+      60100+         7418          2555.74     20137.1          22271.5    
+      60112          7412          2585.78     20137.1          22271.5    
+      60118+         7409          2615.85     20137.1          22271.5    
+      60123+         7407          2645.88     20137.1          22271.5    
+      60131+         7403          2676.02     20137.1          22271.5    
+      60134+         7401          2706.09     20137.1          22271.5    
+      60135+         7401          2736.09     20137.1          22271.5    
+      60137+         7402          2766.22     20137.1          22271.5    
+      60140+         7401          2796.26     20137.1          22271.5    
+      60142+         7400          2826.28     20137.1          22271.5    
+      60144          7400          2856.34     20137.1          22271.5    
+      60147+         7402          2886.48     20137.1          22271.5    
+      60151+         7401          2916.54     20137.1          22271.5    
+      60152+         7401          2946.65     20137.1          22271.5    
+      60155+         7400          2976.69     20137.1          22271.5    
+      60157+         7399          3006.70     20137.1          22271.5    
+      60160+         7400          3036.74     20137.1          22271.5    
+      60165+         7403          3066.82     20137.1          22271.5    
+      60167+         7404          3096.98     20137.1          22271.5    
+      60172+         7402          3127.16     20137.1          22271.5    
+      60175+         7401          3157.27     20137.1          22271.5    
+      60178+         7399          3187.43     20137.1          22271.5    
+      60179+         7399          3217.53     20137.1          22271.5    
+      60185+         7396          3247.55     20137.1          22271.5    
+      60196+         7393          3277.56     20137.1          22271.5    
+      60200+         7394          3307.58     20137.1          22271.5    
+      60203+         7396          3337.58     20137.1          22271.5    
+      60207+         7394          3367.64     20137.1          22271.5    
+      60212+         7392          3397.65     20137.1          22271.5    
+      60220+         7391          3427.70     20137.1          22271.5    
+      60244+         7390          3457.78     20137.1          22271.5    
+      60247+         7392          3487.95     20137.1          22271.5    
+      60252+         7390          3518.00     20137.1          22271.5    
+      60256+         7389          3548.14     20137.1          22271.5    
+      60259          7390          3578.18     20137.1          22271.5    
+      60261          7390          3599.45     20137.1          22271.5    
+
+                    *** Max. allowable time exceeded ***      
+
+ Wall clock time:                  3599.58
+ Total CPU time used:              3599.46
+
+ Total no. of BaR iterations:   60261
+ Best solution found at node:      -2
+ Max. no. of nodes in memory:    7436
+ 
+ All done
+===========================================================================
+
+Solution      = 22271.5481230056  initial point is best found
+Best possible = 20137.1491654
+Absolute gap  = 2134.39895760559  optca = 1E-9
+Relative gap  = 0.0958352309330865  optcr = 0.0001
+  (Note that BARON uses a different formula to compute the relative gap as
+   was used for the above reported value.)
+
+--- Reading solution for model GAMS_MODEL
+***
+*** Solver did not provide marginals for model GAMS_MODEL
+***
+--- GDX Point /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/GAMS_MODEL_p.gdx
+--- Executing after solve: elapsed 0:59:59.707
+--- model.gms(2445) 3 Mb
+--- model.gms(2468) 3 Mb
+--- GDX File (execute_unload) /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/results_s.gdx
+*** Status: Normal completion
+--- Job model.gms Stop 03/22/21 23:50:16 elapsed 0:59:59.708
+
+GAMS WORKING DIRECTORY: /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/
+
+INFO: ITER 0.1.1-NLP: OBJ: 22271.54812  LB: -inf  UB: 22271.54812 (IMPROVED)
+INFO: Added 12 OA cuts
+INFO: Adding integer cut
+INFO: ---GDPopt Master Iteration 1---
+INFO: ITER 1.1.0-MIP: OBJ: 8000  LB: 8000  UB: 22271.54812
+INFO: GDPopt unable to converge bounds before time limit of 3600 seconds.
+    Elapsed: 3600.971911099972 seconds
+INFO: Final bound values: LB: 8000.0  UB: 22271.54812300559
+INFO: Original model has 637 constraints (255 nonlinear) and 15 disjunctions,
+    with 467 variables, of which 28 are binary, 0 are integer, and 439 are
+    continuous.
+INFO: Starting GDPopt version 20.2.28 using GLOA algorithm
+INFO: Subsolvers:
+    - MILP: gams
+       - solver: cplex
+       - warmstart: true
+    - NLP: gams
+       - keepfiles: true
+       - solver: baron
+       - symbolic_solver_labels: true
+       - tee: true
+       - tmpdir: /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/
+       - warmstart: true
+    - MINLP: gams
+       - solver: baron
+       - tee: true
+       - warmstart: true
+    - local MINLP: bonmin
+INFO: If you use this software, you may cite the following:
+    - Implementation:
+    Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE. Pyomo.GDP: Disjunctive
+    Models in Python. Proc. of the 13th Intl. Symposium on Process Systems
+    Eng. San Diego, 2018.
+    - GLOA algorithm:
+    Lee, S; Grossmann, IE. A Global Optimization Algorithm for Nonconvex
+    Generalized Disjunctive Programming and Applications to Process Systems.
+    Comp. and Chem. Eng. 2001, 25, 1675-1697. DOI:
+    10.1016/S0098-1354(01)00732-3.
+INFO: ---Starting GDPopt initialization---
+INFO: Generating initial linear GDP approximation by solving subproblem with
+    original user-specified disjunct values.
+INFO: Solving nonlinear subproblem for fixed binaries and logical
+    realizations.
+--- Job model.gms Start 03/22/21 23:50:17 34.2.0 r6925a71 LEX-LEG x86 64bit/Linux
+--- Applying:
+    /home/bernalde/packages/gams34.2_linux_x64_64_sfx/gmsprmun.txt
+--- GAMS Parameters defined
+    Input /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/model.gms
+    Output /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/output.lst
+    ScrDir /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/225a/
+    SysDir /home/bernalde/packages/gams34.2_linux_x64_64_sfx/
+    CurDir /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/
+    LogOption 3
+Licensee: Eval License                                   G201207/0001AO-GEN
+          Carnegie Mellon University, Dept. of Chemical Engineering  DCE375
+          /home/bernalde/packages/gams34.2_linux_x64_64_sfx/gamslice.txt
+          Evaluation license: Not for commercial or production use
+GAMS 34.2.0   Copyright (C) 1987-2021 GAMS Development. All rights reserved
+--- Starting compilation
+--- model.gms(2468) 2 Mb
+--- Starting execution: elapsed 0:00:00.005
+--- model.gms(2438) 3 Mb
+--- Generating NLP model GAMS_MODEL
+--- model.gms(2442) 5 Mb
+--- Reset Solvelink = 2
+---   457 rows  440 columns  1,347 non-zeroes
+---   3,094 nl-code  673 nl-non-zeroes
+--- model.gms(2442) 3 Mb
+--- Executing BARON (Solvelink=2): elapsed 0:00:00.011
+
+GAMS/BARON       34.2.0 r6925a71 Released Feb 05, 2021 LEG x86 64bit/Linux    
+
+===========================================================================
+ BARON version 21.1.13. Built: LNX-64 Wed Jan 13 16:01:25 EST 2021
+
+ BARON is a product of The Optimization Firm.
+ For information on BARON, see https://minlp.com/about-baron
+
+ If you use this software, please cite publications from
+ https://minlp.com/baron-publications, such as: 
+
+ Khajavirad, A. and N. V. Sahinidis,
+ A hybrid LP/NLP paradigm for global optimization relaxations,
+ Mathematical Programming Computation, 10, 383-421, 2018.
+===========================================================================
+ This BARON run may utilize the following subsolver(s)
+ For LP/MIP/QP: ILOG CPLEX                                      
+ For NLP: MINOS, SNOPT, GAMS external NLP, IPOPT, FILTERSD, FILTERSQP
+===========================================================================
+ Starting solution is feasible with a value of     22271.5481230     
+ Doing local search
+ Solving bounding LP
+ Starting multi-start local search
+ Done with local search
+===========================================================================
+  Iteration    Open nodes         Time (s)    Lower bound      Upper bound
+          1             1             3.01     18215.1          22271.5    
+        985            98            33.01     20122.2          22271.5    
+       2161           213            63.03     20133.2          22271.5    
+       3386           344            93.04     20133.2          22271.5    
+       4473           472           123.04     20133.2          22271.5    
+       5519           619           153.05     20137.1          22271.5    
+       6449           732           183.05     20137.1          22271.5    
+       7371           858           213.07     20137.1          22271.5    
+       8232          1047           243.15     20137.1          22271.5    
+       9216          1179           273.17     20137.1          22271.5    
+      10126          1354           303.16     20137.1          22271.5    
+      11147          1566           333.18     20137.1          22271.5    
+      12091          1757           363.19     20137.1          22271.5    
+      13077          1883           393.22     20137.1          22271.5    
+      14022          2036           423.24     20137.1          22271.5    
+      15006          2214           453.25     20137.1          22271.5    
+      15828+         2330           483.32     20137.1          22271.5    
+      15909+         2333           513.48     20137.1          22271.5    
+      15913+         2333           543.50     20137.1          22271.5    
+      15927+         2332           573.52     20137.1          22271.5    
+      15932+         2332           603.61     20137.1          22271.5    
+      15935+         2331           633.61     20137.1          22271.5    
+      15947+         2336           663.63     20137.1          22271.5    
+      15964+         2338           693.67     20137.1          22271.5    
+      15973          2343           723.77     20137.1          22271.5    
+      17007          2487           753.80     20137.1          22271.5    
+      17971          2589           783.88     20137.1          22271.5    
+      19003          2765           813.89     20137.1          22271.5    
+      19984          2988           843.89     20137.1          22271.5    
+      20975          3151           873.94     20137.1          22271.5    
+      21994          3284           903.96     20137.1          22271.5    
+      22894          3428           933.97     20137.1          22271.5    
+      23850          3519           963.99     20137.1          22271.5    
+      24909          3631           993.98     20137.1          22271.5    
+      25929          3756          1023.99     20137.1          22271.5    
+      26951          3856          1054.01     20137.1          22271.5    
+      27986          3988          1084.05     20137.1          22271.5    
+      28869          4087          1114.10     20137.1          22271.5    
+      29763          4180          1144.11     20137.1          22271.5    
+      30705          4333          1174.12     20137.1          22271.5    
+      31642          4442          1204.15     20137.1          22271.5    
+      32565          4529          1234.15     20137.1          22271.5    
+      33574          4628          1264.16     20137.1          22271.5    
+      34406          4739          1294.17     20137.1          22271.5    
+      35407          4862          1324.17     20137.1          22271.5    
+      36322          4974          1354.22     20137.1          22271.5    
+      37254          5105          1384.23     20137.1          22271.5    
+      38291          5229          1414.25     20137.1          22271.5    
+      39379          5316          1444.26     20137.1          22271.5    
+      40471          5386          1474.26     20137.1          22271.5    
+      41515          5496          1504.29     20137.1          22271.5    
+      42551          5579          1534.32     20137.1          22271.5    
+      43562          5678          1564.32     20137.1          22271.5    
+      44644          5797          1594.36     20137.1          22271.5    
+      45514          5914          1624.36     20137.1          22271.5    
+      46627          6005          1654.43     20137.1          22271.5    
+      47716          6131          1684.44     20137.1          22271.5    
+      48691          6245          1714.46     20137.1          22271.5    
+      49573          6341          1744.47     20137.1          22271.5    
+      50623          6385          1774.47     20137.1          22271.5    
+      51468          6431          1804.48     20137.1          22271.5    
+      52614          6536          1834.57     20137.1          22271.5    
+      53570          6653          1864.60     20137.1          22271.5    
+      54633          6777          1894.61     20137.1          22271.5    
+      55469          6866          1924.65     20137.1          22271.5    
+      56557          6999          1954.70     20137.1          22271.5    
+      57476          7111          1984.77     20137.1          22271.5    
+      58428          7245          2014.80     20137.1          22271.5    
+      59348          7364          2044.80     20137.1          22271.5    
+      59814+         7423          2074.85     20137.1          22271.5    
+      59827+         7425          2104.90     20137.1          22271.5    
+      59880+         7431          2134.99     20137.1          22271.5    
+      59889+         7427          2165.09     20137.1          22271.5    
+      59900+         7421          2195.17     20137.1          22271.5    
+      59923+         7410          2225.18     20137.1          22271.5    
+      59930+         7406          2255.21     20137.1          22271.5    
+      59935          7404          2285.23     20137.1          22271.5    
+      59939+         7402          2315.25     20137.1          22271.5    
+      59942+         7400          2345.28     20137.1          22271.5    
+      59945+         7399          2375.35     20137.1          22271.5    
+      59946+         7398          2405.36     20137.1          22271.5    
+      59949+         7399          2435.39     20137.1          22271.5    
+      59971+         7397          2465.44     20137.1          22271.5    
+      60005+         7403          2495.55     20137.1          22271.5    
+      60009          7405          2525.60     20137.1          22271.5    
+      60100+         7418          2555.78     20137.1          22271.5    
+      60112+         7412          2585.86     20137.1          22271.5    
+      60118+         7409          2615.95     20137.1          22271.5    
+      60122          7407          2646.00     20137.1          22271.5    
+      60130+         7403          2676.07     20137.1          22271.5    
+      60134+         7401          2706.14     20137.1          22271.5    
+      60135+         7401          2736.18     20137.1          22271.5    
+      60137+         7402          2766.19     20137.1          22271.5    
+      60140+         7401          2796.34     20137.1          22271.5    
+      60142+         7400          2826.38     20137.1          22271.5    
+      60144+         7400          2856.60     20137.1          22271.5    
+      60147+         7402          2886.63     20137.1          22271.5    
+      60151+         7401          2916.71     20137.1          22271.5    
+      60152+         7401          2946.81     20137.1          22271.5    
+      60155+         7400          2976.89     20137.1          22271.5    
+      60157+         7399          3006.98     20137.1          22271.5    
+      60160+         7400          3037.06     20137.1          22271.5    
+      60165+         7403          3067.15     20137.1          22271.5    
+      60167+         7404          3097.18     20137.1          22271.5    
+      60172+         7402          3127.33     20137.1          22271.5    
+      60175+         7401          3157.39     20137.1          22271.5    
+      60178+         7399          3187.44     20137.1          22271.5    
+      60179+         7399          3217.67     20137.1          22271.5    
+      60181          7398          3247.69     20137.1          22271.5    
+      60196+         7393          3277.74     20137.1          22271.5    
+      60200+         7394          3307.84     20137.1          22271.5    
+      60203+         7396          3338.01     20137.1          22271.5    
+      60207+         7394          3368.15     20137.1          22271.5    
+      60211          7392          3398.20     20137.1          22271.5    
+      60220+         7391          3428.26     20137.1          22271.5    
+      60244+         7390          3458.40     20137.1          22271.5    
+      60247+         7392          3488.52     20137.1          22271.5    
+      60251+         7391          3518.55     20137.1          22271.5    
+      60256+         7389          3548.59     20137.1          22271.5    
+      60258+         7389          3578.60     20137.1          22271.5    
+      60261          7390          3599.34     20137.1          22271.5    
+
+                    *** Max. allowable time exceeded ***      
+
+ Wall clock time:                  3599.47
+ Total CPU time used:              3599.34
+
+ Total no. of BaR iterations:   60261
+ Best solution found at node:      -2
+ Max. no. of nodes in memory:    7436
+ 
+ All done
+===========================================================================
+
+Solution      = 22271.5481230056  initial point is best found
+Best possible = 20137.1491654
+Absolute gap  = 2134.39895760559  optca = 1E-9
+Relative gap  = 0.0958352309330865  optcr = 0.0001
+  (Note that BARON uses a different formula to compute the relative gap as
+   was used for the above reported value.)
+
+--- Reading solution for model GAMS_MODEL
+***
+*** Solver did not provide marginals for model GAMS_MODEL
+***
+--- GDX Point /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/GAMS_MODEL_p.gdx
+--- Executing after solve: elapsed 0:59:59.593
+--- model.gms(2445) 3 Mb
+--- model.gms(2468) 3 Mb
+--- GDX File (execute_unload) /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/results_s.gdx
+*** Status: Normal completion
+--- Job model.gms Stop 03/23/21 00:50:17 elapsed 0:59:59.594
+
+GAMS WORKING DIRECTORY: /home/bernalde/repos/dsda-gdp/gdp/dsda/gamsfiles/
+
+INFO: ITER 0.1.1-NLP: OBJ: 22271.54812  LB: -inf  UB: 22271.54812 (IMPROVED)
+INFO: Adding affine cuts.
+INFO: Added 510 affine cuts
+INFO: Adding integer cut
+INFO: ---GDPopt Master Iteration 1---
+INFO: ITER 1.1.0-MIP: OBJ: 8663.157895  LB: 8663.157895  UB: 22271.54812
+INFO: GDPopt unable to converge bounds before time limit of 3600 seconds.
+    Elapsed: 3601.4989078999497 seconds
+INFO: Final bound values: LB: 8663.157894736842  UB: 22271.54812300559

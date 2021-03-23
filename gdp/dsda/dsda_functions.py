@@ -189,7 +189,7 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
                           #   mip_presolve=True,
                           init_strategy='fix_disjuncts',
                           #   set_cover_iterlim=0,
-                          iterlim=20,
+                          iterlim=1000,
                           force_subproblem_nlp=True,
                           subproblem_presolve=False,
                           #   calc_disjunctive_bounds=True

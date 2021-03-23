@@ -205,45 +205,58 @@ if __name__ == "__main__":
     minlps = ['antigone', 'scip', 'baron','sbb','dicopt','alphaecp','bonminh']
     transformations = ['bigm','hull']#
 
-    for solver in minlps:
-        for transformation in transformations:
-            new_result = {}
-            m = build_column(**model_args)
-            m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-            m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=True)
-            new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
-            dict_data.append(new_result)
+    # for solver in minlps:
+    #     for transformation in transformations:
+    #         new_result = {}
+    #         m = build_column(**model_args)
+    #         m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+    #         m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=True)
+    #         new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+    #         dict_data.append(new_result)
 
 
-# GDPopt
-    nlps = ['msnlp', 'baron', 'conopt']
-    strategies = ['LOA','GLOA']
+    # GDPopt
+    # nlps = ['msnlp', 'conopt']
+    # strategies = ['LOA','GLOA']
 
     # for solver in nlps:
     #     for strategy in strategies:
     #         new_result = {}
     #         m = build_column(**model_args)
     #         m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-    #         m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy)
+    #         m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy, nlp_output=True)
     #         new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
     #         dict_data.append(new_result)
+            
+    # GDPopt LBB
+    minlps = ['baron', 'scip']
+    strategies = ['LBB']
+
+    for solver in minlps:
+        for strategy in strategies:
+            new_result = {}
+            m = build_column(**model_args)
+            m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+            m_solved = solve_with_gdpopt(m_init, mip='cplex', minlp=solver, timelimit=timelimit, strategy=strategy, minlp_output=True)
+            new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+            dict_data.append(new_result)
 
     
     # D-SDA
-    ks = ['Infinity','2']
-    starting_point = [16, 2]
-    min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
-    max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
+    # ks = ['Infinity','2']
+    # starting_point = [16, 2]
+    # min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
+    # max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
-    for solver in nlps:
-       for k in ks:
-           new_result = {}
-           m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref, k=k,
-                       provide_starting_initialization=True, feasible_model='cstr', subproblem_solver=solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=timelimit, timelimit=timelimit)
-           new_result = {'Method':'D-SDA', 'Approach':str('k = '+k), 'Solver':solver,'Objective':pe.value(m_solved.obj), 'Time':m_solved.dsda_time, 'Status':m_solved.dsda_status}
-           dict_data.append(new_result)
+    # for solver in nlps:
+    #    for k in ks:
+    #        new_result = {}
+    #        m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref, k=k,
+    #                    provide_starting_initialization=True, feasible_model='cstr', subproblem_solver=solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=timelimit, timelimit=timelimit)
+    #        new_result = {'Method':'D-SDA', 'Approach':str('k = '+k), 'Solver':solver,'Objective':pe.value(m_solved.obj), 'Time':m_solved.dsda_time, 'Status':m_solved.dsda_status}
+    #        dict_data.append(new_result)
 
-    print(dict_data)
+    # print(dict_data)
 
 
     try:

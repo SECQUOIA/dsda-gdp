@@ -102,15 +102,15 @@ def get_external_information(m, Ext_Ref):
     number_of_external_variables = sum(
         reformulation_dict[j]['exactly_number'] for j in reformulation_dict)
 
-    lower_bounds = []
-    upper_bounds = []
+    lower_bounds = {}
+    upper_bounds = {}
 
+    exvar_num=1
     for i in reformulation_dict:
         for j in range(reformulation_dict[i]['exactly_number']):
-            lower_bounds = lower_bounds + \
-                [reformulation_dict[i]['Ext_var_lower_bound']]
-            upper_bounds = upper_bounds + \
-                [reformulation_dict[i]['Ext_var_upper_bound']]
+            lower_bounds[exvar_num] = reformulation_dict[i]['Ext_var_lower_bound']
+            upper_bounds[exvar_num] = reformulation_dict[i]['Ext_var_upper_bound']
+        exvar_num=exvar_num+1
 
     print('\n------------------------Reformulation Summary---------------------\n')
     exvar_num = 0

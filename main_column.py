@@ -158,9 +158,9 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
 
 if __name__ == "__main__":
     # Inputs
-    # NT = 17
-    # # timelimit = 30
-    # model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
+    NT = 17
+    timelimit = 30
+    model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
 
     # Complete enumeration
     # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, subproblem_solver='conopt', timelimit=20)
@@ -179,13 +179,13 @@ if __name__ == "__main__":
     # print(m_solved.results)
 
     # # D-SDA
-    # k = 'Infinity'
-    # starting_point = [16, 2]
-    # min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
-    # max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
+    k = 'Infinity'
+    starting_point = [16, 2]
+    min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
+    max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
-    # m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
-    #                                   k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=30, gams_output=False, tee=False, global_tee=True)
+    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
+                                       k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=60, gams_output=False, tee=False, global_tee=True)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     # TODO This visualization code does not work
     # print(m_solved.results)
@@ -229,17 +229,17 @@ if __name__ == "__main__":
     #         dict_data.append(new_result)
             
     # GDPopt LBB
-    minlps = ['baron', 'scip']
-    strategies = ['LBB']
+    #minlps = ['baron', 'scip']
+    #strategies = ['LBB']
 
-    for solver in minlps:
-        for strategy in strategies:
-            new_result = {}
-            m = build_column(**model_args)
-            m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-            m_solved = solve_with_gdpopt(m_init, mip='cplex', minlp=solver, timelimit=timelimit, strategy=strategy, minlp_output=True)
-            new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
-            dict_data.append(new_result)
+   # for solver in minlps:
+   #     for strategy in strategies:
+   #         new_result = {}
+   #         m = build_column(**model_args)
+   #         m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+   #         m_solved = solve_with_gdpopt(m_init, mip='cplex', minlp=solver, timelimit=timelimit, strategy=strategy, minlp_output=True)
+   #         new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
+   #         dict_data.append(new_result)
 
     
     # D-SDA
@@ -259,11 +259,11 @@ if __name__ == "__main__":
     # print(dict_data)
 
 
-    try:
-        with open(csv_file, 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-            writer.writeheader()
-            for data in dict_data:
-                writer.writerow(data)
-    except IOError:
-        print("I/O error")
+  #  try:
+  #      with open(csv_file, 'w') as csvfile:
+  #          writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+  #          writer.writeheader()
+  #          for data in dict_data:
+  #              writer.writerow(data)
+  #  except IOError:
+  #      print("I/O error")

@@ -23,10 +23,6 @@ num_extvar = get_info[1]  # number of external variables
 lower = get_info[2]  # lower bounds
 upper = get_info[3]  # upper bounds
 
-print(lower)
-print(upper)
-
-
 # 4: User must specify equivalences between disjunctions and Boolean variables in the model
 # List of list Value 1: Independent Boolean var or expression of independent boolean vars, Value 2: Equivalent indicator var or boolean var
 # [[A,b],[C,d],[E,f]], where A<->b, C<->d, E<->f. A,C,E are Independent Boolean variables or expressions and b,d, and f are indicator or boolean vars

@@ -246,6 +246,9 @@ if __name__ == "__main__":
     Ext_Ref = {m.YF: m.N, m.YR: m.N}
 
 
+    get_external_information(m,Ext_Ref,tee=True)
+
+
 
 
 

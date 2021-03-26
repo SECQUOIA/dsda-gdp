@@ -93,7 +93,11 @@ if __name__ == "__main__":
 
     # # D-SDA
     m = build_column(**model_args)
+
     Ext_Ref = {m.YB: m.intTrays, m.YR: m.intTrays}
+
+
+    get_external_information(m,Ext_Ref,tee=True)
 
     def problem_logic_column(m):
         logic_expr = []

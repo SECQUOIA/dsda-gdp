@@ -19,6 +19,9 @@ if __name__ == "__main__":
     # D-SDA
     m = build_small_batch()
     Ext_Ref = {m.Y: m.k}
+
+    get_external_information(m,Ext_Ref,tee=True)
+
     def problem_logic_batch(m): 
         logic_expr = []
         for k in m.k:

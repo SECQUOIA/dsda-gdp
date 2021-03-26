@@ -22,22 +22,15 @@ from gdp.dsda.dsda_functions import (generate_initialization, initialize_model,
 
 def external_ref(m, x, logic_expr=None):
 
-    @m.LogicalConstraint()
-    def no_reflux_down(m):
-        return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
+    # TODO These constraints are not required, they should go under the logic_exp argument since they are 
+    # only required for the translation of the model using external variables.
+    # @m.LogicalConstraint()
+    # def no_reflux_down(m):
+    #     return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
 
-    @m.LogicalConstraint()
-    def no_boilup_up(m):
-        return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
-
-    @m.LogicalConstraint(m.conditional_trays)
-    def YP_or_notYP(m, n):
-        return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
-
-    # Associate Boolean variables with with disjunctions
-    for n in m.conditional_trays:
-        m.YP[n].associate_binary_var(m.tray[n].indicator_var)
-
+    # @m.LogicalConstraint()
+    # def no_boilup_up(m):
+    #     return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
 
     # Fix externals
 

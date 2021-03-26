@@ -228,8 +228,15 @@ def build_column(min_trays, max_trays, xD, xB):
     # Boolean variables and intTrays set definition
     m.intTrays = Set(initialize=m.trays -
                      [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
-    m.YB = BooleanVar(m.intTrays,  doc='Existence of boil-up flow in stage n')
-    m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')
+    m.YB = BooleanVar(m.intTrays, initialize=False,
+                      doc='Existence of boil-up flow in stage n')
+    m.YR = BooleanVar(m.intTrays, initialize=False,
+                      doc='Existence of reflux flow in stage n')
+    
+    # Initialize at least one reflux and boilup trays to avoid errors in MINLP solvers
+    m.YB[m.reboil_tray+1].set_value(True)
+    m.YR[m.max_trays-1].set_value(True)
+    
     m.YP = BooleanVar(
         m.intTrays, doc='Boolean var associated with tray and no_tray')
     m.YB_is_up = BooleanVar(
@@ -247,13 +254,13 @@ def build_column(min_trays, max_trays, xD, xB):
     def one_boilup(m):
         return exactly(1, m.YB)
 
-    # @m.LogicalConstraint()
-    # def boilup_fix(m):
-    #     return exactly(1, m.YB_is_up)
+    @m.LogicalConstraint(m.conditional_trays)
+    def YP_or_notYP(m, n):
+        return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
 
-    # @m.LogicalConstraint()
-    # def reflux_fix(m):
-    #     return exactly(1, m.YR_is_down)
+    # Associate Boolean variables with with disjunctions
+    for n in m.conditional_trays:
+        m.YP[n].associate_binary_var(m.tray[n].indicator_var)
 
     # Fix feed conditions
     m.feed['benzene'].fix(50)
@@ -264,6 +271,8 @@ def build_column(min_trays, max_trays, xD, xB):
     # Fix to be total condenser
     m.partial_cond.deactivate()
     m.total_cond.indicator_var.fix(1)
+
+    # Fix auxiliary Boolean variables denoting logical position of boilup and reflux
     m.YB_is_up.fix(True)
     m.YR_is_down.fix(True)
 

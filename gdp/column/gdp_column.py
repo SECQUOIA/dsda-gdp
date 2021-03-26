@@ -225,6 +225,43 @@ def build_column(min_trays, max_trays, xD, xB):
         else:
             return Constraint.NoConstraint
 
+    # Boolean variables and intTrays set definition
+    m.intTrays = Set(initialize=m.trays -
+                     [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
+    m.YB = BooleanVar(m.intTrays, initialize=False,
+                      doc='Existence of boil-up flow in stage n')
+    m.YR = BooleanVar(m.intTrays, initialize=False,
+                      doc='Existence of reflux flow in stage n')
+    
+    # Initialize at least one reflux and boilup trays to avoid errors in MINLP solvers
+    m.YB[m.reboil_tray+1].set_value(True)
+    m.YR[m.max_trays-1].set_value(True)
+    
+    m.YP = BooleanVar(
+        m.intTrays, doc='Boolean var associated with tray and no_tray')
+    m.YB_is_up = BooleanVar(
+        doc='Boolean var for intermediate sum determining if Boilup is above the feed')
+    m.YR_is_down = BooleanVar(
+        doc='Boolean var for intermediate sum determining if Reflux is below the feed')
+
+    # Logical constraints
+
+    @m.LogicalConstraint()
+    def one_reflux(m):
+        return exactly(1, m.YR)
+
+    @m.LogicalConstraint()
+    def one_boilup(m):
+        return exactly(1, m.YB)
+
+    @m.LogicalConstraint(m.conditional_trays)
+    def YP_or_notYP(m, n):
+        return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
+
+    # Associate Boolean variables with with disjunctions
+    for n in m.conditional_trays:
+        m.YP[n].associate_binary_var(m.tray[n].indicator_var)
+
     # Fix feed conditions
     m.feed['benzene'].fix(50)
     m.feed['toluene'].fix(50)
@@ -234,6 +271,10 @@ def build_column(min_trays, max_trays, xD, xB):
     # Fix to be total condenser
     m.partial_cond.deactivate()
     m.total_cond.indicator_var.fix(1)
+
+    # Fix auxiliary Boolean variables denoting logical position of boilup and reflux
+    m.YB_is_up.fix(True)
+    m.YR_is_down.fix(True)
 
     return m
 

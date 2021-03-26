@@ -225,6 +225,36 @@ def build_column(min_trays, max_trays, xD, xB):
         else:
             return Constraint.NoConstraint
 
+    # Boolean variables and intTrays set definition
+    m.intTrays = Set(initialize=m.trays -
+                     [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
+    m.YB = BooleanVar(m.intTrays,  doc='Existence of boil-up flow in stage n')
+    m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')
+    m.YP = BooleanVar(
+        m.intTrays, doc='Boolean var associated with tray and no_tray')
+    m.YB_is_up = BooleanVar(
+        doc='Boolean var for intermediate sum determining if Boilup is above the feed')
+    m.YR_is_down = BooleanVar(
+        doc='Boolean var for intermediate sum determining if Reflux is below the feed')
+
+    # Logical constraints
+
+    @m.LogicalConstraint()
+    def one_reflux(m):
+        return exactly(1, m.YR)
+
+    @m.LogicalConstraint()
+    def one_boilup(m):
+        return exactly(1, m.YB)
+
+    # @m.LogicalConstraint()
+    # def boilup_fix(m):
+    #     return exactly(1, m.YB_is_up)
+
+    # @m.LogicalConstraint()
+    # def reflux_fix(m):
+    #     return exactly(1, m.YR_is_down)
+
     # Fix feed conditions
     m.feed['benzene'].fix(50)
     m.feed['toluene'].fix(50)
@@ -234,6 +264,8 @@ def build_column(min_trays, max_trays, xD, xB):
     # Fix to be total condenser
     m.partial_cond.deactivate()
     m.total_cond.indicator_var.fix(1)
+    m.YB_is_up.fix(True)
+    m.YR_is_down.fix(True)
 
     return m
 

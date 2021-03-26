@@ -22,34 +22,6 @@ from gdp.dsda.dsda_functions import (generate_initialization, initialize_model,
 
 def external_ref(m, x, logic_expr=None):
 
-    # Boolean variables and intTrays set definition
-    m.intTrays = Set(initialize=m.trays -
-                     [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
-    m.YB = BooleanVar(m.intTrays, doc='Existence of boil-up flow in stage n')
-    m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')
-    m.YP = BooleanVar(
-        m.intTrays, doc='Boolean var associated with tray and no_tray')
-    m.YB_is_up = BooleanVar()
-    m.YR_is_down = BooleanVar()
-
-    # Logical constraints
-
-    @m.LogicalConstraint()
-    def one_reflux(m):
-        return exactly(1, m.YR)
-
-    @m.LogicalConstraint()
-    def one_boilup(m):
-        return exactly(1, m.YB)
-
-    @m.LogicalConstraint()
-    def boilup_fix(m):
-        return exactly(1, m.YB_is_up)
-
-    @m.LogicalConstraint()
-    def reflux_fix(m):
-        return exactly(1, m.YR_is_down)
-
     @m.LogicalConstraint()
     def no_reflux_down(m):
         return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
@@ -65,6 +37,7 @@ def external_ref(m, x, logic_expr=None):
     # Associate Boolean variables with with disjunctions
     for n in m.conditional_trays:
         m.YP[n].associate_binary_var(m.tray[n].indicator_var)
+
 
     # Fix externals
 
@@ -166,11 +139,11 @@ if __name__ == "__main__":
     # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, subproblem_solver='conopt', timelimit=20)
 
     # MINLP methods
-    # m = build_column(**model_args)
-    # m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-    # m_solved = solve_with_minlp(
-    #   m_init, transformation='hull', minlp='antigone', timelimit=timelimit, gams_output=False)
-    # print(m_solved.results)
+    m = build_column(**model_args)
+    m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+    m_solved = solve_with_minlp(
+        m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=True)
+    print(m_solved.results)
 
     # GDPopt methods
     # m = build_column(**model_args)
@@ -185,25 +158,33 @@ if __name__ == "__main__":
     max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
     m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,
-                                       k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=60, gams_output=False, tee=False, global_tee=True)
+                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', min_allowed=min_allowed, 
+                                      max_allowed=max_allowed, iter_timelimit=10, timelimit=60, gams_output=False, tee=False, global_tee=True)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     # TODO This visualization code does not work
     # print(m_solved.results)
 
-     # Results
+    # Results
 
     NT = 17
     timelimit = 3600
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
 
     csv_columns = ['Method', 'Approach',
-        'Solver', 'Objective', 'Time', 'Status']
+                   'Solver', 'Objective', 'Time', 'Status']
     dict_data = []
     csv_file = "column_results.csv"
 
     # MINLPS
-    minlps = ['antigone', 'scip', 'baron','sbb','dicopt','alphaecp','bonminh']
-    transformations = ['bigm','hull']#
+    minlps = ['antigone', 'scip', 'baron',
+              'sbb', 'dicopt', 'alphaecp', 'bonminh']
+    transformations = ['bigm', 'hull']
+
+    # m = build_column(**model_args)
+    # m_fixed = external_ref(m, [16, 2])
+    # m_solved = solve_subproblem(m_fixed)
+    # m_solved.YR.pprint()
+    # generate_initialization(m_solved, True, 'column')
 
     # for solver in minlps:
     #     for transformation in transformations:
@@ -213,7 +194,6 @@ if __name__ == "__main__":
     #         m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=True)
     #         new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
     #         dict_data.append(new_result)
-
 
     # GDPopt
     # nlps = ['msnlp', 'conopt']
@@ -227,7 +207,7 @@ if __name__ == "__main__":
     #         m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy, nlp_output=True)
     #         new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
     #         dict_data.append(new_result)
-            
+
     # GDPopt LBB
     #minlps = ['baron', 'scip']
     #strategies = ['LBB']
@@ -241,7 +221,6 @@ if __name__ == "__main__":
    #         new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
    #         dict_data.append(new_result)
 
-    
     # D-SDA
     # ks = ['Infinity','2']
     # starting_point = [16, 2]
@@ -257,7 +236,6 @@ if __name__ == "__main__":
     #        dict_data.append(new_result)
 
     # print(dict_data)
-
 
   #  try:
   #      with open(csv_file, 'w') as csvfile:

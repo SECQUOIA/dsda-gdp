@@ -123,7 +123,7 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
         exvar_num = exvar_num+1
 
     if tee:
-        print('\n------------------------Reformulation Summary---------------------\n')
+        print('\nReformulation Summary\n--------------------------------------------------------------------------')
         exvar_num = 0
         for i in reformulation_dict:
             for j in range(reformulation_dict[i]['exactly_number']):
@@ -174,7 +174,7 @@ def external_ref(m, x, other_function, dict_extvar={}, tee: bool = False):
         m, tmp=False, ignore_infeasible=True)
 
     if tee:
-        print('\n------------------------Fixed variables at current iteration---------------------\n')
+        print('\nFixed variables at current iteration:\n')
         print('\n Independent Boolean variables\n')
         for i in dict_extvar:
             for k in range(1, len(dict_extvar[i]['Boolean_vars'])+1):

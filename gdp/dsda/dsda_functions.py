@@ -456,38 +456,34 @@ def generate_initialization(m: pe.ConcreteModel(), starting_initialization: bool
         to_json(m, fname='dsda_initialization.json', human_read=True, wts=wts)
 
 
-def find_actual_neighbors(start: list, neighborhood: dict, optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}) -> dict:
+def find_actual_neighbors(start: list, neighborhood: dict, min_allowed: dict = {}, max_allowed: dict = {}) -> dict:
     """
     Function that creates all neighbors of a given point. Neighbor 0 is the starting point
     Args:
         start: Point of which neighbors want to be created
         neighborhood: Neighborhood (output of a k-Neighborhood function)
-        optimize: If True, avoids creating neighbors out of bounds
         min_allowed: In keys contains external variables and in items their respective lower bounds
         max_allowed: In keys contains external variables and in items their respective upper bounds
     Returns:
-        neighbors: Contains neighbors of the actual point without optimizing
-        new_neighbors: Contains neighbors of the actual point optimizing
+        new_neighbors: Contains neighbors of the actual point
     """
 
     neighbors = {0: start}
     for i in neighborhood.keys():   # Calculate neighbors
         neighbors[i] = list(map(sum, zip(start, list(neighborhood[i]))))
 
-    # Check if optimize
-    if optimize:
-        new_neighbors = {}
-        num_vars = len(neighbors[0])
-        for i in neighbors.keys():
-            checked = 0
-            for j in range(num_vars):  # Check if within bounds
-                if neighbors[i][j] >= min_allowed[j+1] and neighbors[i][j] <= max_allowed[j+1]:
-                    checked += 1
-            if checked == num_vars:  # Add neighbor if all variables are within bounds
-                new_neighbors[i] = neighbors[i]
+    new_neighbors = {}
+    num_vars = len(neighbors[0])
+    for i in neighbors.keys():
+        checked = 0
+        for j in range(num_vars):  # Check if within bounds
+            if neighbors[i][j] >= min_allowed[j+1] and neighbors[i][j] <= max_allowed[j+1]:
+                checked += 1
+        if checked == num_vars:  # Add neighbor if all variables are within bounds
+            new_neighbors[i] = neighbors[i]
 
-        return new_neighbors
-    return neighbors
+    return new_neighbors
+
 
 
 def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
@@ -606,7 +602,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         return fmin, best_var, best_dir, improve, evaluation_time
 
 
-def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10,  gams_output: bool = False, tee: bool = False, tol: int = 0.000001):
+def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10,  gams_output: bool = False, tee: bool = False, tol: int = 0.000001):
     """
     Function that moves in a given "best direction" and evaluates the new moved point
     Args:
@@ -617,7 +613,6 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         ext_dict: Dictionary with Boolean variables to be reformualted and their corresponding ordered sets
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         subproblem_solver: MINLP or NLP solver algorithm
-        optimize: If True, avoids creating neighbors out of bounds
         min_allowed: In keys contains external variables and in items their respective lower bounds
         max_allowed: In keys contains external variables and in items their respective upper bounds
         iter_timelimit: time limit in seconds for the solve statement for each iteration
@@ -639,31 +634,13 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
 
     # Line search in given direction
     moved_point = list(map(sum, zip(list(start), list(direction))))
+    checked = 0
+    for j in range(len(moved_point)):   # Check if within bounds
+        if moved_point[j] >= min_allowed[j+1] and moved_point[j] <= max_allowed[j+1]:
+            checked += 1
 
-    # Check if optimize
-    if optimize:
-        checked = 0
-        for j in range(len(moved_point)):   # Check if within bounds
-            if moved_point[j] >= min_allowed[j+1] and moved_point[j] <= max_allowed[j+1]:
-                checked += 1
-
-        if checked == len(moved_point):     # Solve model
-            m = model_function(**model_args)
-            m_init = initialize_model(m)
-            m_fixed = external_ref(
-                m_init, moved_point, ext_logic, ext_dict)
-            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
-                                        timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-            ls_time += m_solved.dsda_usertime
-
-            if m_solved.dsda_status == 'Optimal':   # Check status
-                act_obj = pe.value(m_solved.obj)
-                if act_obj + tol < fmin:    # Return moved point
-                    fmin = act_obj
-                    best_var = moved_point
-                    moved = True
-    else:
-        m = model_function(**model_args)    # Solve model
+    if checked == len(moved_point):     # Solve model
+        m = model_function(**model_args)
         m_init = initialize_model(m)
         m_fixed = external_ref(
             m_init, moved_point, ext_logic, ext_dict)
@@ -691,7 +668,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     return fmin, best_var, moved, ls_time
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:
@@ -703,7 +680,6 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         provide_intialization: If an existing json file is provided with a feasible initialization of starting_point
         subproblem_solver: MINLP or NLP solver algorithm
-        optimize: If True, avoids creating neighbors out of bounds
         iter_timelimit: time limit in seconds for the solve statement for each iteration
         timelimit: time limit in seconds for the algorithm
         gams_output: Determine keeping or not GAMS files
@@ -770,7 +746,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
             break
 
         # Find neighbors of the actual point
-        neighbors = find_actual_neighbors(ext_var, neighborhood, optimize=True,
+        neighbors = find_actual_neighbors(ext_var, neighborhood,
                                           min_allowed=min_allowed, max_allowed=max_allowed)
 
         if time.perf_counter() - t_start > timelimit:
@@ -803,7 +779,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
                         fmin, 5), '   |   Global Time:', round(time.perf_counter() - t_start, 2))
 
                 fmin, best_var, moved, ls_time = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
-                                                        ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
+                                                        ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
                 dsda_usertime += ls_time
 
                 if time.perf_counter() - t_start > timelimit:

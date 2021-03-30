@@ -245,7 +245,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
     return m
 
 
-def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp: str = 'baron', timelimit: int = 10, gams_output: bool = False) -> pe.ConcreteModel():
+def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp: str = 'baron', timelimit: int = 10, gams_output: bool = False, tee:bool=False) -> pe.ConcreteModel():
     """
     Function that transforms a GDP model and solves it as a mixed-integer nonlinear
     programming (MINLP) model. 
@@ -255,6 +255,7 @@ def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp:
         minlp: MINLP solver algorithm
         timelimit: time limit in seconds for the solve statement
         gams_output: Determine keeping or not GAMS files
+        tee: Dsiplay iterations
     Returns:
         m: Solved MINLP model
     """
@@ -279,7 +280,7 @@ def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp:
     # Solve
     solvername = 'gams'
     opt = SolverFactory(solvername, solver=minlp)
-    m.results = opt.solve(m, tee=True,
+    m.results = opt.solve(m, tee=tee,
                           **output_options,
                           add_options=[
                               'option reslim = ' + str(timelimit) + ';'
@@ -289,7 +290,7 @@ def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp:
     return m
 
 
-def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'conopt', minlp: str = 'baron', timelimit: int = 10, strategy: str = 'LOA', mip_output: bool = False, nlp_output: bool = False, minlp_output: bool = False) -> pe.ConcreteModel():
+def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'conopt', minlp: str = 'baron', timelimit: int = 10, strategy: str = 'LOA', mip_output: bool = False, nlp_output: bool = False, minlp_output: bool = False, tee:bool=False) -> pe.ConcreteModel():
     """
     Function that solves GDP model using GDPopt
     Args:
@@ -300,6 +301,7 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
         strategy: GDPopt strategy
         mip_output: Determine keeping or not GAMS files of the MIP model
         nlp_output: Determine keeping or not GAMS files of the NLP model
+        tee: Display iterations
     Returns:
         m: Solved GDP model
     """
@@ -347,7 +349,7 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
     # Solve
     solvername = 'gdpopt'
     opt = SolverFactory(solvername)
-    m.results = opt.solve(m, tee=True,
+    m.results = opt.solve(m, tee=tee,
                           strategy=strategy,
                           time_limit=timelimit,
                           mip_solver='gams',
@@ -355,10 +357,10 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
                               solver=mip, warmstart=True, **mip_output_options),
                           nlp_solver='gams',
                           nlp_solver_args=dict(
-                              solver=nlp, warmstart=True, tee=True, **nlp_output_options),
+                              solver=nlp, warmstart=True, tee=tee, **nlp_output_options),
                           minlp_solver='gams',
                           minlp_solver_args=dict(
-                              solver=minlp, warmstart=True, tee=True, **minlp_output_options),
+                              solver=minlp, warmstart=True, tee=tee, **minlp_output_options),
                           #   mip_presolve=True,
                           init_strategy='fix_disjuncts',
                           #   set_cover_iterlim=0,

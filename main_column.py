@@ -68,59 +68,96 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
     print('=============================')
     return feas_x, feas_y, objs
 
+def problem_logic_column(m):
+    logic_expr = []
+    for n in m.intTrays:
+        logic_expr.append([pe.land(~m.YR[n] for n in range(
+            m.reboil_tray+1, m.feed_tray)), m.YR_is_down])
+        logic_expr.append([pe.land(~m.YB[n]
+                        for n in range(m.feed_tray+1, m.max_trays)), m.YB_is_up])
+    for n in m.conditional_trays:
+        logic_expr.append([pe.land(pe.lor(m.YR[j] for j in range(n, m.max_trays)), pe.lor(
+            pe.land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])), m.tray[n].indicator_var])
+        logic_expr.append([~pe.land(pe.lor(m.YR[j] for j in range(n, m.max_trays)), pe.lor(
+            pe.land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])), m.no_tray[n].indicator_var])
+    return logic_expr
+
 
 if __name__ == "__main__":
     # Inputs
     NT = 17
-    timelimit = 60
+    
+    timelimit = 10
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
+    starting_point = [15, 1]
 
-    # Complete enumeration
-    # x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, subproblem_solver='conopt', timelimit=20)
+    csv_columns = ['Method','Approach','Solver','Objective', 'Time', 'Status', 'User time']
+    dict_data = []
+    csv_file = "column_results.csv"
 
-    # MINLP methods
-    # m = build_column(**model_args)
-    # m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-    # m_solved = solve_with_minlp(
-    #     m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=True)
-    # print(m_solved.results)
+    nlps = ['msnlp', 'baron', 'conopt4', 'ipopth']
+    minlps = ['antigone', 'scip', 'baron']
+    transformations = ['bigm','hull']
+    ks = ['Infinity','2']
+    strategies = ['LOA','LBB']
 
-    # GDPopt methods
-    # m = build_column(**model_args)
-    # m_init = initialize_model(m, from_feasible=True, feasible_model='column')
-    # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
-    # print(m_solved.results)
+    #MINLP
+    for solver in minlps:
+        for transformation in transformations:
+            new_result = {}
+            m = build_column(**model_args)
+            m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+            m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=False, tee=False)
+            new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition, 'User time':'NA'}
+            dict_data.append(new_result)
+            print(new_result)
+
+    #GDPopt
+    for solver in nlps:
+        for strategy in strategies:
+            new_result = {}
+            m = build_column(**model_args)
+            m_init = initialize_model(m, from_feasible=True, feasible_model='column')
+            m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy, tee=False)
+            new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition, 'User time':'NA'}
+            dict_data.append(new_result)
+            print(new_result)
+
+
 
     # # D-SDA
     m = build_column(**model_args)
-
     Ext_Ref = {m.YB: m.intTrays, m.YR: m.intTrays}
+    get_external_information(m,Ext_Ref,tee=False)
+
+    for solver in nlps:
+        for k in ks:
+            new_result = {}
+            m_solved, _ = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_column,
+                                    k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver=solver, iter_timelimit=timelimit, timelimit=timelimit, gams_output=False, tee=False, global_tee=False)
+            new_result = {'Method':'D-SDA', 'Approach':str('k = '+k), 'Solver':solver,'Objective':pe.value(m_solved.obj), 'Time':m_solved.dsda_time, 'Status':m_solved.dsda_status, 'User time':m_solved.dsda_usertime, 'NT':NT}
+            dict_data.append(new_result)
+            print(new_result)
+
+    # try:
+    #     with open(csv_file, 'w') as csvfile:
+    #         writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+    #         writer.writeheader()
+    #         for data in dict_data:
+    #             writer.writerow(data)
+    # except IOError:
+    #     print("I/O error")
+
+    
 
 
-    get_external_information(m,Ext_Ref,tee=True)
 
-    def problem_logic_column(m):
-        logic_expr = []
-        for n in m.intTrays:
-            logic_expr.append([pe.land(~m.YR[n] for n in range(
-                m.reboil_tray+1, m.feed_tray)), m.YR_is_down])
-            logic_expr.append([pe.land(~m.YB[n]
-                            for n in range(m.feed_tray+1, m.max_trays)), m.YB_is_up])
-        for n in m.conditional_trays:
-            logic_expr.append([pe.land(pe.lor(m.YR[j] for j in range(n, m.max_trays)), pe.lor(
-                pe.land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])), m.tray[n].indicator_var])
-            logic_expr.append([~pe.land(pe.lor(m.YR[j] for j in range(n, m.max_trays)), pe.lor(
-                pe.land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])), m.no_tray[n].indicator_var])
-        return logic_expr
+    # k = 'Infinity'
+    # starting_point = [15, 1]
 
-
-
-    k = 'Infinity'
-    starting_point = [15, 1]
-
-    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_column,
-                                      k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', 
-                                      iter_timelimit=10, timelimit=60, gams_output=False, tee=False, global_tee=True)
+    # m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_column,
+    #                                   k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', 
+    #                                   iter_timelimit=10, timelimit=60, gams_output=False, tee=False, global_tee=True)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     # TODO This visualization code does not work
     # print(m_solved.results)

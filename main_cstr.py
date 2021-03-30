@@ -136,6 +136,19 @@ def visualize_cstr_superstructure(m, NT):
 
     plt.show()
 
+def problem_logic_cstr(m): 
+    logic_expr = []
+    for n in m.N:
+        logic_expr.append([m.YR[n], m.YR_is_recycle[n].indicator_var])
+        logic_expr.append([~m.YR[n], m.YR_is_not_recycle[n].indicator_var])
+        logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(
+            1, n)), m.YF[n]), m.YP_is_cstr[n].indicator_var])
+        logic_expr.append([~pe.lor(pe.land(~m.YF[n2] for n2 in range(
+            1, n)), m.YF[n]), m.YP_is_bypass[n].indicator_var])
+        logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(
+            1, n)), m.YF[n]),m.YP[n]])
+    return logic_expr
+
 
 if __name__ == "__main__":
     # # Inputs
@@ -176,113 +189,65 @@ if __name__ == "__main__":
     # visualize_cstr_superstructure(m_solved, NT)
 
     # Results
-    NTs = [19,20]
-    timelimit = 600
+
+    NTs = range(1,26)
+    timelimit = 10
     starting_point = [1, 1]
 
     csv_columns = ['Method','Approach','Solver','Objective', 'Time', 'Status', 'User time', 'NT']
     dict_data = []
-    csv_file = "nt_results.csv"
-    nlps = ['msnlp', 'baron', 'conopt4', 'ipopth']
-    ks = ['Infinity']
+    csv_file = "cstr_results.csv"
+
+    nlps = ['msnlp', 'baron', 'conopt4']
+    minlps = ['antigone', 'scip', 'baron']
+    transformations = ['bigm','hull']
+    ks = ['Infinity','2']
+    strategies = ['LOA','LBB']
 
     for NT in NTs:
+
+        #MINLP
+        for solver in minlps:
+            for transformation in transformations:
+                new_result = {}
+                m = build_cstrs(NT)
+                m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
+                m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=False, tee=False)
+                new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition, 'User time':'NA', 'NT':NT}
+                dict_data.append(new_result)
+                print(new_result)
+
+        #GDPopt
+        for solver in nlps:
+            for strategy in strategies:
+                new_result = {}
+                m = build_cstrs(NT)
+                m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
+                m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy, tee=False)
+                new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition, 'User time':'NA', 'NT':NT}
+                dict_data.append(new_result)
+                print(new_result)
+
+        # D-SDA
         m = build_cstrs(NT)
         Ext_Ref = {m.YF: m.N, m.YR: m.N}
         get_external_information(m,Ext_Ref,tee=False)
 
-        def problem_logic_cstr(m): 
-            logic_expr = []
-            for n in m.N:
-                logic_expr.append([m.YR[n], m.YR_is_recycle[n].indicator_var])
-                logic_expr.append([~m.YR[n], m.YR_is_not_recycle[n].indicator_var])
-                logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(
-                    1, n)), m.YF[n]), m.YP_is_cstr[n].indicator_var])
-                logic_expr.append([~pe.lor(pe.land(~m.YF[n2] for n2 in range(
-                    1, n)), m.YF[n]), m.YP_is_bypass[n].indicator_var])
-                logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(
-                    1, n)), m.YF[n]),m.YP[n]])
-            return logic_expr
-        
         for solver in nlps:
             for k in ks:
                 new_result = {}
                 m_solved, _ = solve_with_dsda(model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_cstr,
-                                        k=k, provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', iter_timelimit=timelimit, timelimit=timelimit, gams_output=False, tee=False, global_tee=False)
+                                        k=k, provide_starting_initialization=True, feasible_model='cstr', subproblem_solver=solver, iter_timelimit=timelimit, timelimit=timelimit, gams_output=False, tee=False, global_tee=False)
                 new_result = {'Method':'D-SDA', 'Approach':str('k = '+k), 'Solver':solver,'Objective':pe.value(m_solved.obj), 'Time':m_solved.dsda_time, 'Status':m_solved.dsda_status, 'User time':m_solved.dsda_usertime, 'NT':NT}
                 dict_data.append(new_result)
                 print(new_result)
 
-    
-    
-#     csv_columns = ['Method','Approach','Solver','Objective', 'Time', 'Status']
-#     dict_data = []
-#     csv_file = "cstr_results.csv"
+    # try:
+    #     with open(csv_file, 'w') as csvfile:
+    #         writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+    #         writer.writeheader()
+    #         for data in dict_data:
+    #             writer.writerow(data)
+    # except IOError:
+    #     print("I/O error")
 
-#    # MINLPS    
-#    minlps = ['antigone', 'scip', 'baron']
-#    transformations = ['bigm','hull']#
-
-#    for solver in minlps:
-#        for transformation in transformations:
-#            new_result = {}
-#            m = build_cstrs(NT)
-#            m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-#            m_solved = solve_with_minlp(m_init, transformation=transformation, minlp=solver, timelimit=timelimit, gams_output=True)
-#            new_result = {'Method':'MINLP', 'Approach':transformation, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
-#            dict_data.append(new_result)
-
-
-#     GDPopt
-#    nlps = ['msnlp', 'baron', 'conopt']
-#    strategies = ['LOA']
-
-#     for solver in nlps:
-#        for strategy in strategies:
-#            new_result = {}
-#            m = build_cstrs(NT)
-#            m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-#            m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy)
-#            new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition}
-#            dict_data.append(new_result)
-
-    
-#     # D-SDA
-#     k = '2'
-#     starting_point = [1, 1]
-#     min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
-#     max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
-
-#     m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, reformulation_function=external_ref,
-#                                       k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10, timelimit=30, gams_output=False, tee=False, global_tee=True)
-    
-
-#     for solver in nlps:
-#        for k in ks:
-#            new_result = {}
-#            m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
-#                        provide_starting_initialization=True, feasible_model='cstr', subproblem_solver=solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=timelimit, timelimit=timelimit)
-#            new_result = {'Method':'D-SDA', 'Approach':str('k = '+k), 'Solver':solver,'Objective':pe.value(m_solved.obj), 'Time':m_solved.dsda_time, 'Status':m_solved.dsda_status}
-#            dict_data.append(new_result)
-
-#    print(dict_data)
-
-
-#    try:
-#        with open(csv_file, 'w') as csvfile:
-#            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-#            writer.writeheader()
-#            for data in dict_data:
-#                writer.writerow(data)
-#    except IOError:
-#        print("I/O error")
-
-
-
-    # #D-SDA
-    # k = 'Infinity'
-    # starting_point = [1, 1]
-    
-    # m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_cstr,
-    #                                   k=k, provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', iter_timelimit=timelimit, timelimit=timelimit, gams_output=False, tee=False, global_tee=True)
-    

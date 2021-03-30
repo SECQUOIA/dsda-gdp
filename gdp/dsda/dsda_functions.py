@@ -202,6 +202,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
     """
     # Initialize D-SDA status
     m.dsda_status = 'Initialized'
+    m.dsda_usertime = 0
 
     try:
         # Feasibility check
@@ -231,7 +232,8 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
                                   'option optcr = 0.0;'
                               ])
 
-    # Assign D-SDA status
+        m.dsda_usertime = m.results.solver.user_time
+        # Assign D-SDA status
         if m.results.solver.termination_condition == 'locallyOptimal' or m.results.solver.termination_condition == 'optimal' or m.results.solver.termination_condition == 'globallyOptimal':
             m.dsda_status = 'Optimal'
         elif m.results.solver.termination_condition == 'infeasible':
@@ -534,7 +536,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         m_fixed = external_ref(m_init, temp[i], ext_logic, ext_dict)
         m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
                                     timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-        evaluation_time += m_solved.results.solver.user_time
+        evaluation_time += m_solved.dsda_usertime
         t_end = time.perf_counter()
 
         if t_end - current_time > timelimit:  # current
@@ -590,7 +592,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
                 m2_init, best_var, ext_logic, ext_dict)
             m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver,
                                          timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-            evaluation_time += m2_solved.results.solver.user_time
+            evaluation_time += m2_solved.dsda_usertime
             generate_initialization(m2_solved)
 
         if global_tee:
@@ -652,7 +654,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
                 m_init, moved_point, ext_logic, ext_dict)
             m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
                                         timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-            ls_time += m_solved.results.solver.user_time
+            ls_time += m_solved.dsda_usertime
 
             if m_solved.dsda_status == 'Optimal':   # Check status
                 act_obj = pe.value(m_solved.obj)
@@ -667,7 +669,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
             m_init, moved_point, ext_logic, ext_dict)
         m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
                                     timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-        ls_time += m_solved.results.solver.user_time
+        ls_time += m_solved.dsda_usertime
 
         if m_solved.dsda_status == 'Optimal':   # Check status
             act_obj = pe.value(m_solved.obj)
@@ -683,7 +685,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
             m2_init, best_var, ext_logic, ext_dict)
         m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver,
                                      timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-        ls_time += m2_solved.results.solver.user_time
+        ls_time += m2_solved.dsda_usertime
         generate_initialization(m2_solved)
 
     return fmin, best_var, moved, ls_time
@@ -743,7 +745,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
     # Solve for initialization
     m_solved = solve_subproblem(
         m_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-    dsda_usertime += m_solved.results.solver.user_time
+    dsda_usertime += m_solved.dsda_usertime
     fmin = pe.value(m_solved.obj)
     if global_tee:
         print('Initializing...')
@@ -829,7 +831,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
         m2_init, route[-1], ext_logic, dict_extvar)
     m2_solved = solve_subproblem(
         m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-    dsda_usertime += m2_solved.results.solver.user_time
+    dsda_usertime += m2_solved.dsda_usertime
     m2_solved.dsda_time = t_end
     m2_solved.dsda_usertime = dsda_usertime
 

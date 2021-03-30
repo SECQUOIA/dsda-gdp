@@ -249,9 +249,6 @@ if __name__ == "__main__":
     get_external_information(m,Ext_Ref,tee=True)
 
 
-
-
-
     def problem_logic_cstr(m): 
         logic_expr = []
         for n in m.N:
@@ -270,6 +267,6 @@ if __name__ == "__main__":
     k = 'Infinity'
     starting_point = [1, 1]
     
-    m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, reformulation_function=external_ref, ext_dict=Ext_Ref, ext_logic=problem_logic_cstr,
+    m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT':NT}, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_cstr,
                                       k=k, provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', iter_timelimit=timelimit, timelimit=timelimit, gams_output=False, tee=False, global_tee=True)
     

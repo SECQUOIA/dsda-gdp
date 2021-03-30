@@ -37,7 +37,7 @@ if __name__ == "__main__":
     for solver in nlps:
         for k in ks:
             new_result = {}
-            m_solved, route = solve_with_dsda(model_function=build_small_batch, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref, ext_dict=Ext_Ref, ext_logic=problem_logic_batch, k=k,
+            m_solved, route = solve_with_dsda(model_function=build_small_batch, model_args=model_args, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_batch, k=k,
                                               provide_starting_initialization=True, feasible_model='small_batch', subproblem_solver=solver, iter_timelimit=timelimit, timelimit=timelimit)
             new_result = {'Method': 'D-SDA', 'Approach': str('k = '+k), 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status}

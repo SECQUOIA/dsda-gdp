@@ -488,7 +488,7 @@ def find_actual_neighbors(start: list, neighborhood: dict, optimize: bool = True
     return neighbors
 
 
-def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, reformulation_function, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
+def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
     """
     Function that evaluates a group of given points and returns the best
     Args:
@@ -496,7 +496,6 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         fmin: Objective at actual point
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
-        reformulation_function: function usted to reformulate external variables
         ext_dict: Dictionary with Boolean variables to be reformualted and their corresponding ordered sets
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         subproblem_solver: MINLP or NLP solver algorithm
@@ -530,7 +529,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
     for i in temp.keys():   # Solve all models
         m = model_function(**model_args)
         m_init = initialize_model(m)
-        m_fixed = reformulation_function(m_init, temp[i], ext_logic, ext_dict)
+        m_fixed = external_ref(m_init, temp[i], ext_logic, ext_dict)
         m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
                                     timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
         t_end = time.perf_counter()
@@ -584,7 +583,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         if improve == True:  # Model calculation to generate best model intialization
             m2 = model_function(**model_args)
             m2_init = initialize_model(m2)
-            m2_fixed = reformulation_function(
+            m2_fixed = external_ref(
                 m2_init, best_var, ext_logic, ext_dict)
             m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver,
                                          timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
@@ -595,7 +594,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         return fmin, best_var, best_dir, improve
 
 
-def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, reformulation_function, ext_dict, ext_logic, subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10,  gams_output: bool = False, tee: bool = False, tol: int = 0.000001):
+def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10,  gams_output: bool = False, tee: bool = False, tol: int = 0.000001):
     """
     Function that moves in a given "best direction" and evaluates the new moved point
     Args:
@@ -603,7 +602,6 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         fmin: Objective at actual point
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
-        reformulation_function: function usted to reformulate external variables
         ext_dict: Dictionary with Boolean variables to be reformualted and their corresponding ordered sets
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         subproblem_solver: MINLP or NLP solver algorithm
@@ -638,7 +636,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         if checked == len(moved_point):     # Solve model
             m = model_function(**model_args)
             m_init = initialize_model(m)
-            m_fixed = reformulation_function(
+            m_fixed = external_ref(
                 m_init, moved_point, ext_logic, ext_dict)
             m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
                                         timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
@@ -652,7 +650,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     else:
         m = model_function(**model_args)    # Solve model
         m_init = initialize_model(m)
-        m_fixed = reformulation_function(
+        m_fixed = external_ref(
             m_init, moved_point, ext_logic, ext_dict)
         m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
                                     timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
@@ -667,7 +665,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     if moved == True:   # Model calculation to generate best model intialization
         m2 = model_function(**model_args)
         m2_init = initialize_model(m2)
-        m2_fixed = reformulation_function(
+        m2_fixed = external_ref(
             m2_init, best_var, ext_logic, ext_dict)
         m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver,
                                      timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
@@ -676,7 +674,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     return fmin, best_var, moved
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', optimize: bool = True, iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:
@@ -684,7 +682,6 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
         starting_point: Feasible external variable initial point
-        reformulation_function: function usted to reformulate external variables
         ext_dict: Dictionary with Boolean variables to be reformualted and their corresponding ordered sets
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         provide_intialization: If an existing json file is provided with a feasible initialization of starting_point
@@ -722,10 +719,10 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
     if provide_starting_initialization:
         m_init = initialize_model(
             m, from_feasible=True, feasible_model=feasible_model)
-        m_fixed = reformulation_function(
+        m_fixed = external_ref(
             m_init, ext_var, ext_logic, dict_extvar)
     else:
-        m_fixed = reformulation_function(m, ext_var, ext_logic, dict_extvar)
+        m_fixed = external_ref(m, ext_var, ext_logic, dict_extvar)
 
     # Solve for initialization
     m_solved = solve_subproblem(
@@ -761,7 +758,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
             break
 
         fmin, best_var, best_dir, improve = evaluate_neighbors(
-            neighbors, fmin, model_function=model_function, model_args=model_args, reformulation_function=reformulation_function, ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=t_start, gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol)
+            neighbors, fmin, model_function=model_function, model_args=model_args,  ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=t_start, gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol)
 
         if time.perf_counter() - t_start > timelimit:
             break
@@ -785,7 +782,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
                         fmin, 5), '   |   Global Time:', round(time.perf_counter() - t_start, 2))
 
                 fmin, best_var, moved = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
-                                                       reformulation_function=reformulation_function, ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
+                                                        ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, optimize=optimize, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
 
                 if time.perf_counter() - t_start > timelimit:
                     break
@@ -805,7 +802,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, refo
     # Generate final solved model
     m2 = model_function(**model_args)
     m2_init = initialize_model(m2)
-    m2_fixed = reformulation_function(
+    m2_fixed = external_ref(
         m2_init, route[-1], ext_logic, dict_extvar)
     m2_solved = solve_subproblem(
         m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)

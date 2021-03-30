@@ -72,7 +72,7 @@ def complete_enumeration_external(model_function=build_column, model_args={'min_
 if __name__ == "__main__":
     # Inputs
     NT = 17
-    timelimit = 30
+    timelimit = 60
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
 
     # Complete enumeration
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     k = 'Infinity'
     starting_point = [15, 1]
 
-    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref,ext_dict=Ext_Ref, ext_logic=problem_logic_column,
+    m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_column,
                                       k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', 
                                       iter_timelimit=10, timelimit=60, gams_output=False, tee=False, global_tee=True)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')

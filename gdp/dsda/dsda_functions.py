@@ -486,7 +486,7 @@ def find_actual_neighbors(start: list, neighborhood: dict, min_allowed: dict = {
 
 
 
-def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
+def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001, global_evaluated:list=[]):
     """
     Function that evaluates a group of given points and returns the best
     Args:
@@ -502,17 +502,21 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         timelimit: time limit in seconds for the algorithm
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
+        global_tee: display D-SDA iteration output
         tol: Numerical tolerance
+        global_evaluated: list with points already evaluated
     Returns:
         fmin: Type int and gives the best neighbor's objective
         best_var: Type list and gives the best neighbor
         best_dir: Type int and is the steepest direction (key in neighborhood)
         improve: Type bool and shows if an improvement was made while looking for neighbors
         evaluation_time: Total solver-statement time only
+        ns_evaluated: evaluations in neighbor search 
 
     """
 
     # Initialize
+    ns_evaluated = []
     evaluation_time = 0
     improve = False
     best_var = ext_vars[0]
@@ -527,23 +531,25 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         print('Neighbor search around:',best_var)
 
     for i in temp.keys():   # Solve all models
-        m = model_function(**model_args)
-        m_init = initialize_model(m)
-        m_fixed = external_ref(m_init, temp[i], ext_logic, ext_dict)
-        m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
-                                    timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-        evaluation_time += m_solved.dsda_usertime
-        t_end = time.perf_counter()
+        if temp[i] not in global_evaluated:
+            m = model_function(**model_args)
+            m_init = initialize_model(m)
+            m_fixed = external_ref(m_init, temp[i], ext_logic, ext_dict)
+            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
+                                        timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
+            evaluation_time += m_solved.dsda_usertime
+            ns_evaluated.append(temp[i])
+            t_end = time.perf_counter()
 
-        if t_end - current_time > timelimit:  # current
-            break
+            if t_end - current_time > timelimit:  # current
+                break
 
-        if m_solved.dsda_status == 'Optimal':   # Check if D-SDA status is optimal
-            if global_tee:
-                print('Evaluated:', temp[i], '   |   Objective:', round(pe.value(
-                    m_solved.obj), 5), '   |   Global Time:', round(t_end - current_time, 2))
-            objectives[i] = pe.value(m_solved.obj)
-            feasibles[i] = temp[i]
+            if m_solved.dsda_status == 'Optimal':   # Check if D-SDA status is optimal
+                if global_tee:
+                    print('Evaluated:', temp[i], '   |   Objective:', round(pe.value(
+                        m_solved.obj), 5), '   |   Global Time:', round(t_end - current_time, 2))
+                objectives[i] = pe.value(m_solved.obj)
+                feasibles[i] = temp[i]
 
     # Longest distance heuristic
     try:
@@ -594,20 +600,21 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         if global_tee:
             print()
             print('New best neighbor:',best_var)
-        return fmin, best_var, best_dir, improve, evaluation_time
+        return fmin, best_var, best_dir, improve, evaluation_time, ns_evaluated
     except:
         if global_tee:
             print()
             print('New best neighbor:',best_var)
-        return fmin, best_var, best_dir, improve, evaluation_time
+        return fmin, best_var, best_dir, improve, evaluation_time, ns_evaluated
 
 
-def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10,  gams_output: bool = False, tee: bool = False, tol: int = 0.000001):
+def do_line_search(start: list, fmin: int, direction: list, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, current_time:int=0,  gams_output: bool = False, tee: bool = False, global_tee:bool=False, tol: int = 0.000001, global_evaluated:list=[]):
     """
     Function that moves in a given "best direction" and evaluates the new moved point
     Args:
         start: Point of that is to be moved
         fmin: Objective at actual point
+        direction: moving direction
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
         ext_dict: Dictionary with Boolean variables to be reformualted and their corresponding ordered sets
@@ -616,22 +623,27 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         min_allowed: In keys contains external variables and in items their respective lower bounds
         max_allowed: In keys contains external variables and in items their respective upper bounds
         iter_timelimit: time limit in seconds for the solve statement for each iteration
+        current_time: Current time in global algorithm
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
+        global_tee: display D-SDA iteration output
         tol: Numerical tolerance
+        global_evaluated: list with points already evaluated
     Returns:
         fmin: Type int and gives the moved point objective
         best_var: Type list and gives the moved point
         moved: Type bool and shows if an improvement was made while line searching
         ls_time: Total solver-statement time only
+        ls_evaluated: evaluations in line search 
 
     """
 
     # Initialize
+    ls_evaluated = []
     ls_time = 0
     best_var = start
     moved = False
-
+    
     # Line search in given direction
     moved_point = list(map(sum, zip(list(start), list(direction))))
     checked = 0
@@ -640,20 +652,25 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
             checked += 1
 
     if checked == len(moved_point):     # Solve model
-        m = model_function(**model_args)
-        m_init = initialize_model(m)
-        m_fixed = external_ref(
-            m_init, moved_point, ext_logic, ext_dict)
-        m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
-                                    timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-        ls_time += m_solved.dsda_usertime
+        if moved_point not in global_evaluated:
+            m = model_function(**model_args)
+            m_init = initialize_model(m)
+            m_fixed = external_ref(
+                m_init, moved_point, ext_logic, ext_dict)
+            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver,
+                                        timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
+            ls_time += m_solved.dsda_usertime
+            ls_evaluated.append(moved_point)
 
-        if m_solved.dsda_status == 'Optimal':   # Check status
-            act_obj = pe.value(m_solved.obj)
-            if act_obj + tol < fmin:    # Return moved point
-                fmin = act_obj
-                best_var = moved_point
-                moved = True
+            if m_solved.dsda_status == 'Optimal':   # Check status
+                if global_tee:
+                    print('Evaluated:', moved_point, '   |   Objective:', round(pe.value(
+                        m_solved.obj), 5), '   |   Global Time:', round(time.perf_counter() - current_time, 2))
+                act_obj = pe.value(m_solved.obj)
+                if act_obj + tol < fmin:    # Return moved point
+                    fmin = act_obj
+                    best_var = moved_point
+                    moved = True
 
     if moved == True:   # Model calculation to generate best model intialization
         m2 = model_function(**model_args)
@@ -665,7 +682,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
         ls_time += m2_solved.dsda_usertime
         generate_initialization(m2_solved)
 
-    return fmin, best_var, moved, ls_time
+    return fmin, best_var, moved, ls_time, ls_evaluated
 
 
 def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
@@ -698,8 +715,8 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
 
     # Initialize
     route = []
+    global_evaluated = []
     ext_var = starting_point
-    route.append(ext_var)
 
     # Check if  feasible initialization is provided
     m = model_function(**model_args)
@@ -729,6 +746,9 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
               '   |   Global Time:', round(time.perf_counter() - t_start, 2))
     generate_initialization(m_solved)
 
+    route.append(ext_var)
+    global_evaluated.append(ext_var)
+
     # Define neighborhood
     if k == '2':
         neighborhood = neighborhood_k_eq_2(len(ext_var))
@@ -752,10 +772,11 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
         if time.perf_counter() - t_start > timelimit:
             break
 
-        fmin, best_var, best_dir, improve, eval_time = evaluate_neighbors(
-            neighbors, fmin, model_function=model_function, model_args=model_args,  ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=t_start, gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol)
+        fmin, best_var, best_dir, improve, eval_time, ns_evaluated = evaluate_neighbors(
+            neighbors, fmin, model_function=model_function, model_args=model_args,  ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=t_start, gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol, global_evaluated=global_evaluated)
 
         dsda_usertime += eval_time
+        global_evaluated = global_evaluated + ns_evaluated
 
         if time.perf_counter() - t_start > timelimit:
             break
@@ -774,12 +795,10 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
                 if time.perf_counter() - t_start > timelimit:
                     break
 
-                if global_tee:
-                    print('Evaluated:', best_var, '   |   Objective:', round(
-                        fmin, 5), '   |   Global Time:', round(time.perf_counter() - t_start, 2))
+                fmin, best_var, moved, ls_time, ls_evaluated = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
+                                                        ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol, global_evaluated=global_evaluated)
 
-                fmin, best_var, moved, ls_time = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
-                                                        ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=iter_timelimit, gams_output=gams_output, tee=tee, tol=tol)
+                global_evaluated = global_evaluated + ls_evaluated
                 dsda_usertime += ls_time
 
                 if time.perf_counter() - t_start > timelimit:

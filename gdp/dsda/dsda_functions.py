@@ -524,7 +524,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
     feasibles = {}
     if global_tee:
         print()
-        print('Neighbor searching...')
+        print('Neighbor search around:',best_var)
 
     for i in temp.keys():   # Solve all models
         m = model_function(**model_args)
@@ -589,8 +589,14 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
                                          timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
             generate_initialization(m2_solved)
 
+        if global_tee:
+            print()
+            print('New best neighbor:',best_var)
         return fmin, best_var, best_dir, improve
     except:
+        if global_tee:
+            print()
+            print('New best neighbor:',best_var)
         return fmin, best_var, best_dir, improve
 
 
@@ -704,7 +710,6 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
         print('--------------------------------------------------------------------------')
 
     # Initialize
-    t_start = time.perf_counter()
     route = []
     ext_var = starting_point
     route.append(ext_var)
@@ -716,6 +721,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
     if len(starting_point) != num_ext_var:
         print("The size of the initialization vector must be equal to"+str(num_ext_var))
 
+    t_start = time.perf_counter()
     if provide_starting_initialization:
         m_init = initialize_model(
             m, from_feasible=True, feasible_model=feasible_model)
@@ -769,7 +775,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
             route.append(best_var)
             if global_tee:
                 print()
-                print('Line searching...')
+                print('Line search in direction:',neighborhood[best_dir])
 
             # If improvement was made start line search (inner cycle)
             while line_searching:
@@ -793,6 +799,9 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
                 else:
                     ext_var = best_var
                     line_searching = False
+                    if global_tee:
+                        print()
+                        print('New best point:',best_var)
 
         else:
             looking_in_neighbors = False

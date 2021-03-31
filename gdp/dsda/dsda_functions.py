@@ -954,7 +954,10 @@ def solve_with_dsda(
     m2_solved = initialize_model(m2, json_path=best_path)
     m2_solved.dsda_time = t_end
     m2_solved.dsda_usertime = dsda_usertime
-    m2_solved.dsda_status = 'Optimal'
+    if t_end > timelimit:
+        m2_solved.dsda_status = 'Time Limit'
+    else:
+        m2_solved.dsda_status = 'Optimal'
 
     # Print results
     if global_tee:

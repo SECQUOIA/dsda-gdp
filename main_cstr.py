@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     # Results
 
-    NTs = range(5, 6)
+    NTs = range(5, 7)
     timelimit = 60
     starting_point = [1, 1]
 
@@ -215,7 +215,7 @@ if __name__ == "__main__":
         m_solved = solve_subproblem(
             m=m_fixed, subproblem_solver='baron', timelimit=100, tee=False)
         generate_initialization(
-            m=m_solved, starting_initialization=True, model_name='cstr')
+            m=m_solved, starting_initialization=True, model_name='cstr_' + str(NT))
 
         # MINLP
         # for solver in minlps:
@@ -248,7 +248,7 @@ if __name__ == "__main__":
             for k in ks:
                 new_result = {}
                 m_solved, _ = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_cstr,
-                                              k=k, provide_starting_initialization=True, feasible_model='cstr', subproblem_solver=solver, iter_timelimit=timelimit, timelimit=timelimit,
+                                              k=k, provide_starting_initialization=True, feasible_model='cstr_' + str(NT), subproblem_solver=solver, iter_timelimit=timelimit, timelimit=timelimit,
                                               gams_output=False, tee=False, global_tee=True)
                 new_result = {'Method': 'D-SDA', 'Approach': str('k = '+k), 'Solver': solver, 'Objective': pe.value(
                     m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User time': m_solved.dsda_usertime, 'NT': NT}

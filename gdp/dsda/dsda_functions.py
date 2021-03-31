@@ -419,8 +419,8 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
                           #   set_cover_iterlim=0,
                           iterlim=1000,
                           force_subproblem_nlp=True,
-                          subproblem_presolve=False,
-                          bound_tolerance=optimality_gap
+                          subproblem_presolve=False
+                          #   bound_tolerance=optimality_gap
                           #   calc_disjunctive_bounds=True
                           )
     # update_boolean_vars_from_binary(m)

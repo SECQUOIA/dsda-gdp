@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # Inputs
     NT = 17
     
-    timelimit = 2
+    timelimit = 60
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
     starting_point = [15, 1]
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     dict_data = []
     csv_file = "column_results.csv"
 
-    nlps = ['baron']#, 'baron', 'conopt4', 'ipopth']
+    nlps = ['conopt4']#, 'baron', 'conopt4', 'ipopth']
     minlps = ['antigone', 'scip', 'baron']
     transformations = ['bigm','hull']
     ks = ['Infinity']#,'2']

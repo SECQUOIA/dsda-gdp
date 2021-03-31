@@ -556,7 +556,7 @@ def find_actual_neighbors(start: list, neighborhood: dict, min_allowed: dict = {
     return new_neighbors
 
 
-def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: float = 0.000001, global_evaluated: list = [], init_path = None):
+def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: float = 0.001, global_evaluated: list = [], init_path = None):
     """
     Function that evaluates a group of given points and returns the best
     Args:
@@ -622,7 +622,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
                 #feasibles[i] = temp[i]
                 dist = sum((x-y)**2 for x,y in zip(temp[i],here))
                 # Assuming minimization problem
-                if  pe.value(m_solved.obj) + tol < fmin and dist >= best_dist: # Implmements heuristic of largest move
+                if  (pe.value(m_solved.obj) - fmin < 0.00001 and dist >= best_dist) or (abs(fmin - pe.value(m_solved.obj))/(abs(fmin)+0.0000000001) < tol and dist >= best_dist): # Implmements heuristic of largest move
                     fmin = pe.value(m_solved.obj)
                     best_var = temp[i]
                     best_dir = i
@@ -640,7 +640,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
  
 
 
-def do_line_search(start: list, fmin: int, direction: list, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, timelimit: int = 3600, current_time: int = 0,  gams_output: bool = False, tee: bool = False, global_tee: bool = False, tol: float = 0.000001, global_evaluated: list = [], init_path = None):
+def do_line_search(start: list, fmin: int, direction: list, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, timelimit: int = 3600, current_time: int = 0,  gams_output: bool = False, tee: bool = False, global_tee: bool = False, tol: float = 0.001, global_evaluated: list = [], init_path = None):
     """
     Function that moves in a given "best direction" and evaluates the new moved point
     Args:
@@ -703,7 +703,7 @@ def do_line_search(start: list, fmin: int, direction: list, model_function, mode
                     print('Evaluated:', moved_point, '   |   Objective:', round(pe.value(
                         m_solved.obj), 5), '   |   Global Time:', round(time.perf_counter() - current_time, 2))
                 act_obj = pe.value(m_solved.obj)
-                if act_obj + tol < fmin:    # Return moved point
+                if (act_obj - fmin < 0.00001) or (abs(fmin - act_obj)/(abs(fmin)+0.0000000001) < tol):    # Return moved point
                     fmin = act_obj
                     best_var = moved_point
                     moved = True
@@ -712,7 +712,7 @@ def do_line_search(start: list, fmin: int, direction: list, model_function, mode
     return fmin, best_var, moved, ls_time, ls_evaluated, new_path
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: float = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: float = 0.001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:

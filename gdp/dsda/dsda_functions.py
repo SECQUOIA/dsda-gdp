@@ -19,8 +19,32 @@ from pyomo.opt.base.solvers import SolverFactory
 
 
 def get_external_information(m, Ext_Ref, tee: bool = False):
+
+    """
+    Function that obtains information from the model to perform the reformulation with external variables.
+    The model must be a GDP problem with exactly one "Exactly(k_j, [Y_j1,Y_j2,Y_j3,...])" constraint for each list of variables 
+    [Y_j1,Y_j2,Y_j3,...] that is going to be reformualted over set j.  
+    Args:
+        m: GDP model that is going to be reformulated
+        Ext_Ref: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts. 
+        tee: Display reformulation
+    Returns:
+        reformulation_dict: A dictionary of dictionaries that looks as follows:
+            {1:{'exactly_number':Number of external variables for this type,'Boolean_vars_names':list with names of the ordered Boolean variables to be reformualted,'Boolean_vars_ordered_index': Indexes where the external reformualtion is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
+             2:{...},...}
+            
+            The first key (positive integer) represent a type of external variable identified in the model. For this type of external variable
+            a dictionary is created. 
+        number_of_external_variables: Number of external variables
+        lower_bounds: Dictionary with positive integer keys identifying the external variable, and its lower bound as value 
+        upper_bounds: Dictionary with positive integer keys identifying the external variable, and its upper bound as value
+        
+    """
+
+    #If Boolean variables that are going to be reformualted are defined over multiple sets try:  
     try:
-        ref_index = {}  # index of the set where reformultion can be applied for a given boolean variable
+        # index of the set where reformultion can be applied for a given boolean variable
+        ref_index = {}  
         # index of the sets where the reformulation cannot be applied for a given boolean variable
         no_ref_index = {}
         for i in Ext_Ref:
@@ -31,9 +55,10 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
                     ref_index[i].append(index_set)
                 else:
                     no_ref_index[i].append(index_set)
-
+    #If boolean variables that are going to be reformulated are defined over a single set except:
     except:
-        ref_index = {}  # index of the set where reformultion can be applied for a given boolean variable
+        # index of the set where reformultion can be applied for a given boolean variable
+        ref_index = {}  
         # index of the sets where the reformulation cannot be applied for a given boolean variable
         no_ref_index = {}
         for i in Ext_Ref:
@@ -45,7 +70,6 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
                 no_ref_index[i].append(0)
 
     # Identify the variables that can be reformualted by performing a loop over logical constraints
-    # For the moment we will work with exactly 1 type constraints only
     count = 1
     # dict of dicts: it contains information from the exactly variables that can be reformualted into external variables.
     reformulation_dict = {}
@@ -77,12 +101,13 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
                             else:
                                 verification_Other_Sets_listOFlists.append(
                                     False)
-                        # If we get to this point and it is true, it means that we can apply the reformulation for this combination of boolean var and exactly variable
+                        # If we get to this point and it is true, it means that we can apply the reformulation for this combination of Boolean var and Exactly-type constraint
                         if all(verification_Other_Sets_listOFlists):
                             reformulation_dict[count] = {}
                             reformulation_dict[count]['exactly_number'] = exactly_number
+                            # rearange boolean vars in cosntranit
                             sorted_args = sorted(c.body.args[1:], key=lambda x: x.index()[
-                                                 expected_ordered_set_index[0]])  # rearange boolean vars in cosntranit
+                                                 expected_ordered_set_index[0]])
                             # Now work with the ordered version sorted_args instead of c.body.args[1:]
                             reformulation_dict[count]['Boolean_vars_names'] = [
                                 sorted_args[k].name for k in range(len(sorted_args))]
@@ -93,8 +118,8 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
                                 sorted_args)
 
                             count = count+1
-
-                    else:  # If there is only one index, then we can apply the reformulation at this point
+                    # If there is only one index, then we can apply the reformulation at this point
+                    else:  
                         reformulation_dict[count] = {}
                         reformulation_dict[count]['exactly_number'] = exactly_number
                         # rearange boolean vars in cosntranit
@@ -141,6 +166,26 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
 
 def external_ref(m, x, other_function, dict_extvar={}, tee: bool = False):
 
+    """
+    Function that  
+    Args:
+        m: GDP model that is going to be reformulated
+        x: List with current value of the external variables
+        other_function: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a) 
+        dict_extvar: A dictionary of dictionaries that looks as follows:
+            {1:{'exactly_number':Number of external variables for this type,'Boolean_vars_names':list with names of the ordered Boolean variables to be reformualted,'Boolean_vars_ordered_index': Indexes where the external reformualtion is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
+             2:{...},...}
+            
+            The first key (positive integer) represent a type of external variable identified in the model. For this type of external variable
+            a dictionary is created.  
+        tee: Display reformulation
+    Returns:
+        m: A model where the independent Boolean variables that were reformulated are fixed and Boolean/indicator variables that are calculated in
+        terms of the independent Boolean variables are fixed too (depending on the other_function provided by the user)
+        
+    """
+
+
     # This part of code is required due to the deep copy issue: we have to compare Boolean variables by name
     for i in dict_extvar:
         dict_extvar[i]['Boolean_vars'] = []
@@ -149,23 +194,24 @@ def external_ref(m, x, other_function, dict_extvar={}, tee: bool = False):
                 if(boolean.name == j):
                     dict_extvar[i]['Boolean_vars'] = dict_extvar[i]['Boolean_vars']+[boolean]
 
-# The function would start here if there were no problems
+# The function would start here if there were no problems with deep copy.
     ext_var_position = 0
+     # fix True variables: depending on the current value of the external variables, some Independent Boolean variables can be fixed
     for i in dict_extvar:
         for j in range(dict_extvar[i]['exactly_number']):
             for k in range(1, len(dict_extvar[i]['Boolean_vars'])+1):
                 if x[ext_var_position] == k:
                     dict_extvar[i]['Boolean_vars'][k -
-                                                   1].fix(True)  # fix True variables
+                                                   1].fix(True)
             ext_var_position = ext_var_position+1
-
+    # fix False variables: If the independent Boolean variable is not fixed at "True", then it is fixed at "False".
     for i in dict_extvar:
         for j in range(dict_extvar[i]['exactly_number']):
             for k in range(1, len(dict_extvar[i]['Boolean_vars'])+1):
-                if dict_extvar[i]['Boolean_vars'][k-1].is_fixed() == False:
-                    # fix False variables
+                if dict_extvar[i]['Boolean_vars'][k-1].is_fixed() == False:                    
                     dict_extvar[i]['Boolean_vars'][k-1].fix(False)
 
+    # Other Boolean and Indicator variables are fixed depending on the information provided by the user
     logic_expr = other_function(m)
     for i in logic_expr:
         i[1].fix(pe.value(i[0]))
@@ -502,7 +548,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         fmin: Objective at actual point
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
-        ext_dict: Dictionary with Boolean variables to be reformualted and their corresponding ordered sets
+        ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values)
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         subproblem_solver: MINLP or NLP solver algorithm
         iter_timelimit: time limit in seconds for the solve statement for each iteration
@@ -627,7 +673,7 @@ def do_line_search(start: list, fmin: int, direction: list, model_function, mode
         direction: moving direction
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
-        ext_dict: Dictionary with Boolean variables to be reformualted and their corresponding ordered sets
+        ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values)
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         subproblem_solver: MINLP or NLP solver algorithm
         min_allowed: In keys contains external variables and in items their respective lower bounds
@@ -705,8 +751,8 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
         starting_point: Feasible external variable initial point
-        ext_dict: Dictionary with Boolean variables to be reformualted and their corresponding ordered sets
-        ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
+        ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
+        ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
         provide_intialization: If an existing json file is provided with a feasible initialization of starting_point
         subproblem_solver: MINLP or NLP solver algorithm
         iter_timelimit: time limit in seconds for the solve statement for each iteration

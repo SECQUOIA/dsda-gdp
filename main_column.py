@@ -23,7 +23,7 @@ from gdp.dsda.dsda_functions import (generate_initialization, initialize_model,
 
 
 
-def complete_enumeration_external(model_function=build_column, model_args={'min_trays': 8, 'max_trays': 17, 'xD': 0.95, 'xB': 0.95}, reformulation_function=external_ref, subproblem_solver='conopt', timelimit=10):
+def complete_enumeration_external(model_function=build_column, model_args={'min_trays': 8, 'max_trays': 17, 'xD': 0.95, 'xB': 0.95}, reformulation_function=external_ref, subproblem_solver='knitro', timelimit=10):
     NT = model_args['max_trays']
     X1, X2, aux, aux2, x = [], [], [], 2, {}
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     dict_data = []
     csv_file = "column_results.csv"
 
-    nlps = ['baron', 'msnlp', 'conopt4', 'ipopth','knitro']
+    nlps = ['baron', 'msnlp', 'knitro', 'ipopth']
     minlps = ['antigone', 'scip', 'baron']
     transformations = ['bigm','hull']
     ks = ['Infinity','2']
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     # starting_point = [15, 1]
 
     # m_solved, route = solve_with_dsda(model_function=build_column, model_args=model_args, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_column,
-    #                                   k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='conopt', 
+    #                                   k=k, provide_starting_initialization=True, feasible_model='column', subproblem_solver='knitro', 
     #                                   iter_timelimit=10, timelimit=60, gams_output=False, tee=False, global_tee=True)
     # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k, ext1_name='YR (Reflux position)', ext2_name='YB (Boil-up position)')
     # TODO This visualization code does not work
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 #     #         dict_data.append(new_result)
 
 #     # GDPopt
-#     # nlps = ['msnlp', 'conopt']
+#     # nlps = ['msnlp', 'knitro']
 #     # strategies = ['LOA','GLOA']
 
 #     # for solver in nlps:

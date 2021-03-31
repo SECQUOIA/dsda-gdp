@@ -451,7 +451,7 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10, gams
     return m
 
 
-def solve_with_gdpopt(m, mip='cplex', nlp='conopt', timelimit=10, strategy='LOA', mip_output=False, nlp_output=False):
+def solve_with_gdpopt(m, mip='cplex', nlp='knitro', timelimit=10, strategy='LOA', mip_output=False, nlp_output=False):
     """
     Function documentation
     """
@@ -725,7 +725,7 @@ def find_actual_neighbors(start, neighborhood, optimize=True, min_allowed={}, ma
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
 # improve is type bool and shows if an improvement was made while looking for neighbors
-def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='conopt', iter_timelimit=10, tol=0.000001):
+def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='knitro', iter_timelimit=10, tol=0.000001):
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
@@ -801,7 +801,7 @@ def evaluate_neighbors(ext_vars, fmin, model_function=build_cstrs, model_args={'
 # best_var is type list and gives the best point (between moved and actual)
 # move is type bool and shows if an improvement was made while looking for neighbors
 # best_init is type dict and contains solved variables for the best point
-def do_line_search(start, fmin, direction, model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+def do_line_search(start, fmin, direction, model_function=build_cstrs, model_args={'NT':5}, reformulation_function=external_ref, nlp='knitro', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
     best_var = start
     moved = False
 
@@ -847,7 +847,7 @@ def do_line_search(start, fmin, direction, model_function=build_cstrs, model_arg
 
     return fmin, best_var, moved
 
-def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5}, starting_point=[1,1], reformulation_function=external_ref, provide_starting_initialization=True, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+def solve_with_dsda(k='Infinity', model_function=build_cstrs, model_args={'NT':5}, starting_point=[1,1], reformulation_function=external_ref, provide_starting_initialization=True, nlp='knitro', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
 
     print('\nStarting D-SDA with k =', k)
 
@@ -941,7 +941,7 @@ if __name__ == "__main__":
     m = build_cstrs(NT)
     m_init = initialize_model(m, from_feasible=True)
     m_solved = solve_with_minlp(m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
-    # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
+    # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='knitro', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     print(m_solved.results)
     visualize_cstr_superstructure(m_solved, NT)
 

@@ -170,7 +170,7 @@ if __name__ == "__main__":
     # # GDPopt method
     # m = build_cstrs(NT)
     # m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-    # m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp='conopt',
+    # m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp='knitro',
     #                              timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     # print(m_solved.results)
     #visualize_cstr_superstructure(m_solved, NT)

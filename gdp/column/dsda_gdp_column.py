@@ -266,7 +266,7 @@ def dsda(NT, k='Infinity'):
     ext_var = [16, 2]
     route.append(ext_var)
     boolean_reformulation = True
-    nlp = 'conopt'
+    nlp = 'knitro'
     m = build_column(min_trays=8, max_trays=NT, xD=0.95, xB=0.95, x_input=ext_var,
                               nlp_solver=nlp, provide_init=False, init={}, boolean_ref=boolean_reformulation)
 
@@ -333,7 +333,7 @@ def dsda(NT, k='Infinity'):
 if __name__ == "__main__":
     NT = 17
     k = 'Infinity'  # or k = '2'
-    x, y, objs = complete_enumeration(NT, nlp='conopt')
+    x, y, objs = complete_enumeration(NT, nlp='knitro')
     route, fmin, time = dsda(NT, k)
     print(route[-1], fmin, time)
 

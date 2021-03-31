@@ -394,7 +394,7 @@ def list_generator(NT):
     return X1, X2
 
 
-def complete_enumeration_external(model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, reformulation_function=external_ref, nlp='conopt', timelimit = 10):
+def complete_enumeration_external(model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, reformulation_function=external_ref, nlp='knitro', timelimit = 10):
     NT = model_args['max_trays']
     X1, X2 = list_generator(NT)
 
@@ -809,7 +809,7 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10, gams
     return m
 
 
-def solve_with_gdpopt(m, mip='cplex', nlp='conopt', timelimit=10, strategy='LOA', mip_output=False, nlp_output=False):
+def solve_with_gdpopt(m, mip='cplex', nlp='knitro', timelimit=10, strategy='LOA', mip_output=False, nlp_output=False):
     """
     Function documentation
     """
@@ -926,7 +926,7 @@ def find_actual_neighbors(start, neighborhood, optimize=True, min_allowed={}, ma
 # best_dir is type int and is the steepest direction (key in neighborhood)
 # best_init is type dict and contains solved variables for the best point
 # improve is type bool and shows if an improvement was made while looking for neighbors
-def evaluate_neighbors(ext_vars, fmin, model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, reformulation_function=external_ref, nlp='conopt', iter_timelimit=10, tol=0.000001):
+def evaluate_neighbors(ext_vars, fmin, model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, reformulation_function=external_ref, nlp='knitro', iter_timelimit=10, tol=0.000001):
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
@@ -1002,7 +1002,7 @@ def evaluate_neighbors(ext_vars, fmin, model_function=build_column, model_args={
 # best_var is type list and gives the best point (between moved and actual)
 # move is type bool and shows if an improvement was made while looking for neighbors
 # best_init is type dict and contains solved variables for the best point
-def do_line_search(start, fmin, direction, model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, reformulation_function=external_ref, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+def do_line_search(start, fmin, direction, model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, reformulation_function=external_ref, nlp='knitro', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
     best_var = start
     moved = False
 
@@ -1068,7 +1068,7 @@ def generate_initialization(m, starting_initialization=False):
         to_json(m, fname='dsda_initialization.json', human_read=True, wts=wts)
 
 
-def solve_with_dsda(k='Infinity', model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, starting_point=[16,2], reformulation_function=external_ref, provide_starting_initialization=True, nlp='conopt', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
+def solve_with_dsda(k='Infinity', model_function=build_column, model_args={'min_trays':8, 'max_trays':17, 'xD':0.95, 'xB':0.95}, starting_point=[16,2], reformulation_function=external_ref, provide_starting_initialization=True, nlp='knitro', optimize=True, min_allowed={}, max_allowed={}, iter_timelimit=10, tol=0.000001):
 
     print('\nStarting D-SDA with k =', k)
 
@@ -1157,13 +1157,13 @@ if __name__ == "__main__":
     model_args = {'min_trays':8, 'max_trays':NT, 'xD':0.95, 'xB':0.95}
 
     #Complete enumeration
-    x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, nlp='conopt', timelimit=20)
+    x, y, objs = complete_enumeration_external(model_function=build_column, model_args=model_args, nlp='knitro', timelimit=20)
 
     # MINLP and GDPopt methods
     m = build_column(**model_args)
     m_init = initialize_model(m, from_feasible=True)
     m_solved = solve_with_minlp(m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
-    # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='conopt', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
+    # m_solved = solve_with_gdpopt(m_init, mip='cplex',nlp='knitro', timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
     print(m_solved.results)
     
     # D-SDA
@@ -1172,6 +1172,6 @@ if __name__ == "__main__":
     min_allowed = {i: 2 for i in range(1, len(starting_point)+1)}
     max_allowed = {i: NT-1 for i in range(1, len(starting_point)+1)}
 
-    m_solved, route = solve_with_dsda(k=k, model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref, provide_starting_initialization=True, nlp='conopt', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
+    m_solved, route = solve_with_dsda(k=k, model_function=build_column, model_args=model_args, starting_point=starting_point, reformulation_function=external_ref, provide_starting_initialization=True, nlp='knitro', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
     visualize_dsda(points=route, feas_x=x, feas_y=y, objs=objs, k=k)
     print(m_solved.results)

@@ -16,7 +16,7 @@ import os
 from model_serializer import to_json, from_json, StoreSpec
 
 
-def solve_nlp(m: pe.ConcreteModel(), nlp: str = 'conopt', timelimit: int = 10, gams_output: bool = False) -> pe.ConcreteModel():
+def solve_nlp(m: pe.ConcreteModel(), nlp: str = 'knitro', timelimit: int = 10, gams_output: bool = False) -> pe.ConcreteModel():
     """
     Function that checks feasibility and solves a nonlinear programming (NLP) model. 
     Note integer variables have to be previously fixed in the external reformulation
@@ -115,7 +115,7 @@ def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp:
     return m
 
 
-def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'conopt', timelimit: int = 10, strategy: str = 'LOA', mip_output: bool = False, nlp_output: bool = False) -> pe.ConcreteModel():
+def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'knitro', timelimit: int = 10, strategy: str = 'LOA', mip_output: bool = False, nlp_output: bool = False) -> pe.ConcreteModel():
     """
     Function that solves GDP model using GDPopt
     Args:
@@ -294,7 +294,7 @@ def find_actual_neighbors(start: list, neighborhood: dict, optimize: bool = True
     return neighbors
 
 
-def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, reformulation_function, nlp: str = 'conopt', iter_timelimit: int = 10, tol: int = 0.000001):
+def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, reformulation_function, nlp: str = 'knitro', iter_timelimit: int = 10, tol: int = 0.000001):
     """
     Function that evaluates a group of given points and returns the best
     Args:
@@ -379,7 +379,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
     return fmin, best_var, best_dir, improve
 
 
-def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, reformulation_function, nlp: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
+def do_line_search(start: list, fmin: int, direction: int, model_function, model_args: dict, reformulation_function, nlp: str = 'knitro', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
     """
     Function that moves in a given "best direction" and evaluates the new moved point
     Args:
@@ -450,7 +450,7 @@ def do_line_search(start: list, fmin: int, direction: int, model_function, model
     return fmin, best_var, moved
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, nlp: str = 'conopt', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, reformulation_function, k: str = 'Infinity', provide_starting_initialization: bool = True, nlp: str = 'knitro', optimize: bool = True, min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, tol: int = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:

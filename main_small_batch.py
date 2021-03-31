@@ -33,7 +33,7 @@ if __name__ == "__main__":
     ks = ['Infinity']
     starting_point = [3, 3, 3]
 
-    nlps=['conopt']
+    nlps=['knitro']
     for solver in nlps:
         for k in ks:
             new_result = {}
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     #         dict_data.append(new_result)
 
     # # GDPopt
-    # nlps = ['msnlp', 'conopt']
+    # nlps = ['msnlp', 'knitro']
     # strategies = ['LOA', 'GLOA']
 
     # for solver in nlps:

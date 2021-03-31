@@ -4,3 +4,4 @@
 *.pyc
 gamsfiles/*
 util/jsonfiles
+.vscode/*

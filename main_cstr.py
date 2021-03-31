@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     # Results
 
-    NTs = range(6, 26)
+    NTs = range(17, 18)
     timelimit = 15
     starting_point = [1, 1]
 
@@ -199,11 +199,21 @@ if __name__ == "__main__":
     dict_data = []
     csv_file = "cstr_results.csv"
 
-    nlps = ['msnlp', 'baron', 'conopt4']
+    nlps = ['msnlp']
+
+    nlp_opts = dict((nlp, {}) for nlp in nlps)
+    nlp_opts['msnlp']['add_options'] = [
+        'GAMS_MODEL.optfile = 1;'
+        '\n'
+        '$onecho > msnlp.opt \n'
+        'nlpsolver knitro \n'
+        '$offecho \n'
+    ]
+
     minlps = ['antigone', 'scip', 'baron']
     transformations = ['bigm', 'hull']
-    ks = ['Infinity','2']
-    strategies = ['LOA','LBB']
+    ks = ['Infinity', '2']
+    strategies = ['LOA', 'LBB']
 
     for NT in NTs:
         m = build_cstrs(NT)
@@ -248,8 +258,8 @@ if __name__ == "__main__":
             for k in ks:
                 new_result = {}
                 m_solved, _ = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_cstr,
-                                              k=k, provide_starting_initialization=True, feasible_model='cstr_' + str(NT), subproblem_solver=solver, iter_timelimit=timelimit, timelimit=timelimit,
-                                              gams_output=False, tee=False, global_tee=False)
+                                              k=k, provide_starting_initialization=True, feasible_model='cstr_' + str(NT), subproblem_solver=solver, subproblem_solver_options=nlp_opts[solver], iter_timelimit=timelimit, timelimit=timelimit,
+                                              gams_output=False, tee=True, global_tee=True)
                 new_result = {'Method': 'D-SDA', 'Approach': str('k = '+k), 'Solver': solver, 'Objective': pe.value(
                     m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User time': m_solved.dsda_usertime, 'NT': NT}
                 dict_data.append(new_result)

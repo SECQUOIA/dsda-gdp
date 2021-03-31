@@ -190,8 +190,8 @@ if __name__ == "__main__":
 
     # Results
 
-    NTs = range(6, 8)
-    timelimit = 10
+    NTs = range(5, 6)
+    timelimit = 60
     starting_point = [1, 1]
 
     csv_columns = ['Method', 'Approach', 'Solver',
@@ -199,11 +199,11 @@ if __name__ == "__main__":
     dict_data = []
     csv_file = "cstr_results.csv"
 
-    nlps = ['msnlp', 'baron', 'conopt4']
+    nlps = ['baron'] #['msnlp', 'baron', 'conopt4']
     minlps = ['antigone', 'scip', 'baron']
     transformations = ['bigm', 'hull']
-    ks = ['Infinity', '2']
-    strategies = ['LOA', 'GLOA', 'LBB']
+    ks = ['Infinity'] #2
+    strategies = ['LOA']
 
     for NT in NTs:
         m = build_cstrs(NT)
@@ -234,7 +234,7 @@ if __name__ == "__main__":
         #         new_result = {}
         #         m = build_cstrs(NT)
         #         m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-        #         m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy, tee=False)
+        #         m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp=solver, timelimit=timelimit, strategy=strategy, tee=True)
         #         new_result = {'Method':'GDPopt','Approach':strategy, 'Solver':solver, 'Objective':pe.value(m_solved.obj), 'Time':m_solved.results.solver.user_time, 'Status':m_solved.results.solver.termination_condition, 'User time':'NA', 'NT':NT}
         #         dict_data.append(new_result)
         #         print(new_result)
@@ -255,11 +255,11 @@ if __name__ == "__main__":
                 dict_data.append(new_result)
                 print(new_result)
 
-    try:
-        with open(csv_file, 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-            writer.writeheader()
-            for data in dict_data:
-                writer.writerow(data)
-    except IOError:
-        print("I/O error")
+    # try:
+    #     with open(csv_file, 'w') as csvfile:
+    #         writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+    #         writer.writeheader()
+    #         for data in dict_data:
+    #             writer.writerow(data)
+    # except IOError:
+    #     print("I/O error")

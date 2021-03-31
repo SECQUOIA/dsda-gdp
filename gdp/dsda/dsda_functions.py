@@ -189,7 +189,7 @@ def external_ref(m, x, other_function, dict_extvar={}, tee: bool = False):
     return m
 
 
-def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', timelimit: int = 10, gams_output: bool = False, tee: bool = False) -> pe.ConcreteModel():
+def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', timelimit: int = 10, gams_output: bool = False, tee: bool = False, optimality_gap:float=0.001) -> pe.ConcreteModel():
     """
     Function that checks feasibility and subproblem model. 
     Note integer variables have to be previously fixed in the external reformulation
@@ -199,6 +199,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
         timelimit: time limit in seconds for the solve statement
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
+        optimality_gap: Relative optimality gap
     Returns:
         m: Solved subproblem model
     """
@@ -231,7 +232,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
                               skip_trivial_constraints=True,
                               add_options=[
                                   'option reslim = ' + str(timelimit) + ';'
-                                  'option optcr = 0.0;'
+                                  'option optcr = ' + str(optimality_gap) + ';'
                               ])
 
         m.dsda_usertime = m.results.solver.user_time
@@ -249,7 +250,7 @@ def solve_subproblem(m: pe.ConcreteModel(), subproblem_solver: str = 'conopt', t
     return m
 
 
-def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp: str = 'baron', timelimit: int = 10, gams_output: bool = False, tee: bool = False) -> pe.ConcreteModel():
+def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp: str = 'baron', timelimit: int = 10, gams_output: bool = False, tee: bool = False, optimality_gap:float=0.001) -> pe.ConcreteModel():
     """
     Function that transforms a GDP model and solves it as a mixed-integer nonlinear
     programming (MINLP) model. 
@@ -260,6 +261,7 @@ def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp:
         timelimit: time limit in seconds for the solve statement
         gams_output: Determine keeping or not GAMS files
         tee: Dsiplay iterations
+        optimality_gap: Relative optimality gap
     Returns:
         m: Solved MINLP model
     """
@@ -288,13 +290,13 @@ def solve_with_minlp(m: pe.ConcreteModel(), transformation: str = 'bigm', minlp:
                           **output_options,
                           add_options=[
                               'option reslim = ' + str(timelimit) + ';'
-                              'option optcr = 0.0;'
+                              'option optcr = ' + str(optimality_gap) + ';'
                           ])
     # update_boolean_vars_from_binary(m)
     return m
 
 
-def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'conopt', minlp: str = 'baron', timelimit: int = 10, strategy: str = 'LOA', mip_output: bool = False, nlp_output: bool = False, minlp_output: bool = False, tee: bool = False) -> pe.ConcreteModel():
+def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'conopt', minlp: str = 'baron', timelimit: int = 10, strategy: str = 'LOA', mip_output: bool = False, nlp_output: bool = False, minlp_output: bool = False, tee: bool = False, optimality_gap:float=0.001) -> pe.ConcreteModel():
     """
     Function that solves GDP model using GDPopt
     Args:
@@ -306,6 +308,7 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
         mip_output: Determine keeping or not GAMS files of the MIP model
         nlp_output: Determine keeping or not GAMS files of the NLP model
         tee: Display iterations
+        optimality_gap: Relative optimality gap for subproblems and GDPOpt itself
     Returns:
         m: Solved GDP model
     """
@@ -314,9 +317,9 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
 
     # Output report
-    mip_output_options = {}
-    nlp_output_options = {}
-    minlp_output_options = {}
+    mip_options = {'add_options': ['option optcr = ' + str(optimality_gap) + ';']}
+    nlp_options = {'add_options': ['option optcr = ' + str(optimality_gap) + ';']}
+    minlp_options = {'add_options': ['option optcr = ' + str(optimality_gap) + ';']}
     if mip_output:
         dir_path = os.path.dirname(os.path.abspath(__file__))
         gams_path = os.path.join(dir_path, "gamsfiles/")
@@ -324,9 +327,9 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
             print('Directory for automatically generated files ' +
                   gams_path + ' does not exist. We will create it')
             os.makedirs(gams_path)
-        mip_output_options = {'keepfiles': True,
-                              'tmpdir': gams_path,
-                              'symbolic_solver_labels': True}
+        mip_options['keepfiles'] = True
+        mip_options['tmpdir'] = gams_path
+        mip_options['symbolic_solver_labels'] = True
 
     if nlp_output:
         dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -335,9 +338,9 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
             print('Directory for automatically generated files ' +
                   gams_path + ' does not exist. We will create it')
             os.makedirs(gams_path)
-        nlp_output_options = {'keepfiles': True,
-                              'tmpdir': gams_path,
-                              'symbolic_solver_labels': True}
+        nlp_options['keepfiles'] = True
+        nlp_options['tmpdir'] = gams_path
+        nlp_options['symbolic_solver_labels'] = True
 
     if minlp_output:
         dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -346,9 +349,9 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
             print('Directory for automatically generated files ' +
                   gams_path + ' does not exist. We will create it')
             os.makedirs(gams_path)
-        minlp_output_options = {'keepfiles': True,
-                                'tmpdir': gams_path,
-                                'symbolic_solver_labels': True}
+        minlp_options['keepfiles'] = True
+        minlp_options['tmpdir'] = gams_path
+        minlp_options['symbolic_solver_labels'] = True
 
     # Solve
     solvername = 'gdpopt'
@@ -358,19 +361,20 @@ def solve_with_gdpopt(m: pe.ConcreteModel(), mip: str = 'cplex', nlp: str = 'con
                           time_limit=timelimit,
                           mip_solver='gams',
                           mip_solver_args=dict(
-                              solver=mip, warmstart=True, **mip_output_options),
+                              solver=mip, warmstart=True, **mip_options),
                           nlp_solver='gams',
                           nlp_solver_args=dict(
-                              solver=nlp, warmstart=True, tee=tee, **nlp_output_options),
+                              solver=nlp, warmstart=True, tee=tee, **nlp_options),
                           minlp_solver='gams',
                           minlp_solver_args=dict(
-                              solver=minlp, warmstart=True, tee=tee, **minlp_output_options),
+                              solver=minlp, warmstart=True, tee=tee, **minlp_options),
                           #   mip_presolve=True,
                           init_strategy='fix_disjuncts',
                           #   set_cover_iterlim=0,
                           iterlim=1000,
                           force_subproblem_nlp=True,
                           subproblem_presolve=False,
+                          bound_tolerance=optimality_gap
                           #   calc_disjunctive_bounds=True
                           )
     # update_boolean_vars_from_binary(m)
@@ -417,7 +421,7 @@ def neighborhood_k_eq_inf(dimension: str = 2) -> dict:
     return temp
 
 
-def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasible_model: str = '') -> pe.ConcreteModel():
+def initialize_model(m: pe.ConcreteModel(), json_path = None, from_feasible: bool = False, feasible_model: str = '') -> pe.ConcreteModel():
     """
     Function that return an initialized model from an existing json file
     Args:
@@ -429,16 +433,20 @@ def initialize_model(m: pe.ConcreteModel(), from_feasible: bool = False, feasibl
     """
 
     wts = StoreSpec.value()
-    os.path.join(os.path.curdir)
 
-    dir_path = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(
-        dir_path, feasible_model+'_initialization.json')
+    if json_path is None:
+        os.path.join(os.path.curdir)
 
-    if from_feasible:
-        from_json(m, fname=json_path, wts=wts)
-    else:
-        from_json(m, fname='dsda_initialization.json', wts=wts)
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+
+        if from_feasible:
+            json_path = os.path.join(
+                dir_path, feasible_model+'_initialization.json')
+        else:
+            json_path = os.path.join(
+                dir_path, 'dsda_initialization.json')
+        
+    from_json(m, fname=json_path, wts=wts)
     return m
 
 
@@ -450,19 +458,27 @@ def generate_initialization(m: pe.ConcreteModel(), starting_initialization: bool
         starting_intialization: Use to create "dsda_starting_initialization.json" file with a known feasible initialized model m
         model_name: Name of the model for the initialization
     Returns:
-
+        json_path: Path where json file is stored
     """
 
     wts = StoreSpec.value()
 
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(
-        dir_path, model_name + '_initialization.json')
 
     if starting_initialization:
-        to_json(m, fname=json_path, human_read=True, wts=wts)
+        json_path = os.path.join(
+            dir_path, model_name + '_initialization.json')
     else:
-        to_json(m, fname='dsda_initialization.json', human_read=True, wts=wts)
+        if model_name != '':
+            json_path = os.path.join(
+            dir_path, model_name + '_initialization.json')
+        else:
+            json_path = os.path.join(
+                dir_path, 'dsda_initialization.json')        
+    
+    to_json(m, fname=json_path, human_read=True, wts=wts)
+
+    return json_path
 
 
 def find_actual_neighbors(start: list, neighborhood: dict, min_allowed: dict = {}, max_allowed: dict = {}) -> dict:
@@ -494,7 +510,7 @@ def find_actual_neighbors(start: list, neighborhood: dict, min_allowed: dict = {
     return new_neighbors
 
 
-def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001, global_evaluated: list = []):
+def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', iter_timelimit: int = 10,  current_time: int = 0, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: float = 0.000001, global_evaluated: list = [], init_path = None):
     """
     Function that evaluates a group of given points and returns the best
     Args:
@@ -513,13 +529,15 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
         global_tee: display D-SDA iteration output
         tol: Numerical tolerance
         global_evaluated: list with points already evaluated
+        init_path: path to initialization file
     Returns:
         fmin: Type int and gives the best neighbor's objective
         best_var: Type list and gives the best neighbor
         best_dir: Type int and is the steepest direction (key in neighborhood)
         improve: Type bool and shows if an improvement was made while looking for neighbors
         evaluation_time: Total solver-statement time only
-        ns_evaluated: evaluations in neighbor search 
+        ns_evaluated: evaluations in neighbor search
+        best_path:¨TODO COMPLETE 
 
     """
 
@@ -529,11 +547,11 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
     improve = False
     best_var = ext_vars[0]
     here = ext_vars[0]
-    best_dir = 0
+    best_dir = 0 # Position in dictionary
+    best_dist = 0
+    best_path = init_path
     temp = ext_vars
     temp.pop(0, None)
-    objectives = {}
-    feasibles = {}
     if global_tee:
         print()
         print('Neighbor search around:', best_var)
@@ -541,7 +559,7 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
     for i in temp.keys():   # Solve all models
         if temp[i] not in global_evaluated:
             m = model_function(**model_args)
-            m_init = initialize_model(m)
+            m_init = initialize_model(m, json_path=init_path)
             m_fixed = external_ref(m_init, temp[i], ext_logic, ext_dict)
             t_remaining = min(iter_timelimit, timelimit -
                               (time.perf_counter() - current_time))
@@ -553,72 +571,30 @@ def evaluate_neighbors(ext_vars: dict, fmin: int, model_function, model_args: di
 
             if m_solved.dsda_status == 'Optimal':   # Check if D-SDA status is optimal
                 if global_tee:
-                    print('Evaluated:', temp[i], '   |   Objective:', round(pe.value(
-                        m_solved.obj), 5), '   |   Global Time:', round(t_end - current_time, 2))
-                objectives[i] = pe.value(m_solved.obj)
-                feasibles[i] = temp[i]
+                    print('Evaluated:', temp[i], '   |   Objective:', round(pe.value(m_solved.obj), 5), '   |   Global Time:', round(t_end - current_time, 2))
+                #objectives[i] = pe.value(m_solved.obj)
+                #feasibles[i] = temp[i]
+                dist = sum((x-y)**2 for x,y in zip(temp[i],here))
+                # Assuming minimization problem
+                if  pe.value(m_solved.obj) + tol < fmin and dist >= best_dist: # Implmements heuristic of largest move
+                    fmin = pe.value(m_solved.obj)
+                    best_var = temp[i]
+                    best_dir = i
+                    best_dist = dist
+                    improve = True
+                    best_path = generate_initialization(m_solved, starting_initialization=False, model_name='best')
 
             if time.perf_counter() - current_time > timelimit:  # current
                 break
 
-    # Longest distance heuristic
-    try:
-        key_min = min(objectives.keys(), key=(lambda k: objectives[k]))
-        min_obj = objectives[key_min]
-        mins = 0
-        min_points = {}
-
-        for i in objectives.keys():  # Calculate how many neighbors share the same minimum objective
-            if abs(objectives[i] - min_obj) < tol:
-                min_points[i] = feasibles[i]
-                mins += 1
-
-        if mins > 1:   # Check if more than one neighbor has the minimum objective
-            ssums = {}
-            for i in min_points.keys():
-                ssum = 0
-                for j in range(len(best_var)):   # Longest distance calculation
-                    ssum += (min_points[i][j] - here[j])**2
-                ssums[i] = ssum
-
-            key_max = max(ssums.keys(), key=(lambda k: ssums[k]))
-
-            # Return values for minimum objective longest distance neighbor
-            if objectives[key_max] + tol < fmin:
-                fmin = objectives[key_max]
-                best_var = ext_vars[key_max]
-                best_dir = key_max
-                improve = True
-        else:
-            # Return values for minimum objective neighbor
-            if objectives[key_min] + tol < fmin:
-                fmin = objectives[key_min]
-                best_var = ext_vars[key_min]
-                best_dir = key_min
-                improve = True
-
-        if improve:  # Model calculation to generate best model intialization
-            m2 = model_function(**model_args)
-            m2_init = initialize_model(m2)
-            m2_fixed = external_ref(
-                m2_init, best_var, ext_logic, ext_dict)
-            m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver,
-                                         timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-            evaluation_time += m2_solved.dsda_usertime
-            generate_initialization(m2_solved)
-
-        if global_tee:
-            print()
-            print('New best neighbor:', best_var)
-        return fmin, best_var, best_dir, improve, evaluation_time, ns_evaluated
-    except:
-        if global_tee:
-            print()
-            print('New best neighbor:', best_var)
-        return fmin, best_var, best_dir, improve, evaluation_time, ns_evaluated
+    if global_tee:
+        print()
+        print('New best neighbor:', best_var)
+    return fmin, best_var, best_dir, improve, evaluation_time, ns_evaluated, best_path
+ 
 
 
-def do_line_search(start: list, fmin: int, direction: list, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, timelimit: int = 3600, current_time: int = 0,  gams_output: bool = False, tee: bool = False, global_tee: bool = False, tol: int = 0.000001, global_evaluated: list = []):
+def do_line_search(start: list, fmin: int, direction: list, model_function, model_args: dict, ext_dict, ext_logic, subproblem_solver: str = 'conopt', min_allowed: dict = {}, max_allowed: dict = {}, iter_timelimit: int = 10, timelimit: int = 3600, current_time: int = 0,  gams_output: bool = False, tee: bool = False, global_tee: bool = False, tol: float = 0.000001, global_evaluated: list = [], init_path = None):
     """
     Function that moves in a given "best direction" and evaluates the new moved point
     Args:
@@ -639,13 +615,14 @@ def do_line_search(start: list, fmin: int, direction: list, model_function, mode
         global_tee: display D-SDA iteration output
         tol: Numerical tolerance
         global_evaluated: list with points already evaluated
+        init_path:¨TODO complete
     Returns:
         fmin: Type int and gives the moved point objective
         best_var: Type list and gives the moved point
         moved: Type bool and shows if an improvement was made while line searching
         ls_time: Total solver-statement time only
         ls_evaluated: evaluations in line search 
-
+        new_path: path of best json file
     """
 
     # Initialize
@@ -653,6 +630,7 @@ def do_line_search(start: list, fmin: int, direction: list, model_function, mode
     ls_time = 0
     best_var = start
     moved = False
+    new_path = init_path
 
     # Line search in given direction
     moved_point = list(map(sum, zip(list(start), list(direction))))
@@ -664,7 +642,7 @@ def do_line_search(start: list, fmin: int, direction: list, model_function, mode
     if checked == len(moved_point):     # Solve model
         if moved_point not in global_evaluated:
             m = model_function(**model_args)
-            m_init = initialize_model(m)
+            m_init = initialize_model(m, json_path=init_path)
             m_fixed = external_ref(
                 m_init, moved_point, ext_logic, ext_dict)
             t_remaining = min(iter_timelimit, timelimit -
@@ -683,21 +661,12 @@ def do_line_search(start: list, fmin: int, direction: list, model_function, mode
                     fmin = act_obj
                     best_var = moved_point
                     moved = True
+                    new_path = generate_initialization(m_solved, starting_initialization=False, model_name='best')
 
-    if moved:   # Model calculation to generate best model intialization
-        m2 = model_function(**model_args)
-        m2_init = initialize_model(m2)
-        m2_fixed = external_ref(
-            m2_init, best_var, ext_logic, ext_dict)
-        m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver,
-                                     timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-        ls_time += m2_solved.dsda_usertime
-        generate_initialization(m2_solved)
-
-    return fmin, best_var, moved, ls_time, ls_evaluated
+    return fmin, best_var, moved, ls_time, ls_evaluated, new_path
 
 
-def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: int = 0.000001):
+def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_dict, ext_logic, k: str = 'Infinity', provide_starting_initialization: bool = True, feasible_model: str = '', subproblem_solver: str = 'conopt', iter_timelimit: int = 10, timelimit: int = 3600, gams_output: bool = False, tee: bool = False, global_tee: bool = True, tol: float = 0.000001):
     """
     Function that computes Discrete-Steepest Descend Algorithm
     Args:
@@ -741,7 +710,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
     dsda_usertime = 0
     if provide_starting_initialization:
         m_init = initialize_model(
-            m, from_feasible=True, feasible_model=feasible_model)
+            m, from_feasible=True, feasible_model=feasible_model, json_path = None)
         m_fixed = external_ref(
             m_init, ext_var, ext_logic, dict_extvar)
     else:
@@ -756,7 +725,7 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
         print('Initializing...')
         print('Evaluated:', ext_var, '   |   Objective:', round(fmin, 5),
               '   |   Global Time:', round(time.perf_counter() - t_start, 2))
-    generate_initialization(m_solved)
+    best_path = generate_initialization(m_solved)
 
     route.append(ext_var)
     global_evaluated.append(ext_var)
@@ -784,8 +753,11 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
         if time.perf_counter() - t_start > timelimit:
             break
 
-        fmin, best_var, best_dir, improve, eval_time, ns_evaluated = evaluate_neighbors(
-            neighbors, fmin, model_function=model_function, model_args=model_args,  ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=t_start, gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol, global_evaluated=global_evaluated)
+        fmin, best_var, best_dir, improve, eval_time, ns_evaluated, best_path = evaluate_neighbors(
+            neighbors, fmin, model_function=model_function, model_args=model_args,  
+            ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, 
+            iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=t_start, 
+            gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol, global_evaluated=global_evaluated, init_path=best_path)
 
         dsda_usertime += eval_time
         global_evaluated = global_evaluated + ns_evaluated
@@ -804,11 +776,10 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
                 if time.perf_counter() - t_start > timelimit:
                     break
 
-                fmin, best_var, moved, ls_time, ls_evaluated = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
+                fmin, best_var, moved, ls_time, ls_evaluated, best_path = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
                                                                               ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, min_allowed=min_allowed, max_allowed=max_allowed,
                                                                               iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=time.perf_counter(),
-                                                                              gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol, global_evaluated=global_evaluated)
-
+                                                                              gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol, global_evaluated=global_evaluated, init_path=best_path)
                 global_evaluated = global_evaluated + ls_evaluated
                 dsda_usertime += ls_time
 
@@ -832,14 +803,10 @@ def solve_with_dsda(model_function, model_args: dict, starting_point: list, ext_
 
     # Generate final solved model
     m2 = model_function(**model_args)
-    m2_init = initialize_model(m2)
-    m2_fixed = external_ref(
-        m2_init, route[-1], ext_logic, dict_extvar)
-    m2_solved = solve_subproblem(
-        m2_fixed, subproblem_solver=subproblem_solver, timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
-    dsda_usertime += m2_solved.dsda_usertime
+    m2_solved = initialize_model(m2, json_path = best_path)
     m2_solved.dsda_time = t_end
     m2_solved.dsda_usertime = dsda_usertime
+    m2_solved.dsda_status = 'Optimal'
 
     # Print results
     if global_tee:

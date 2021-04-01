@@ -88,7 +88,7 @@ if __name__ == "__main__":
     # Inputs
     NT = 17
     
-    timelimit = 120
+    timelimit = 10
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
     starting_point = [15, 1]
 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     dict_data = []
     csv_file = "column_results.csv"
 
-    nlps = ['conopt4','msnlp', 'knitro', 'baron']
+    nlps = ['msnlp', 'knitro', 'baron']
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
     nlp_opts['msnlp']['add_options'] = [
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         '$offecho \n'
     ]
 
-    minlps = ['antigone','baron','scip','lindoglobal','dicopt', 'sbb']
+    minlps = ['antigone','baron','scip','dicopt', 'sbb']
 
     minlps_opts = dict((minlp, {}) for minlp in minlps)
     minlps_opts['dicopt']['add_options'] = [
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     ]
     transformations = ['bigm', 'hull']
     ks = ['Infinity', '2']
-    strategies = ['LOA', 'LBB']
+    strategies = ['LOA']
 
     # Initializations
     dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -182,7 +182,7 @@ if __name__ == "__main__":
                 nlp_options=nlp_opts[solver],
                 timelimit=timelimit,
                 strategy=strategy,
-                tee=False,
+                tee=True,
                 )
             new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User time': 'NA'}
@@ -211,8 +211,8 @@ if __name__ == "__main__":
                 iter_timelimit=timelimit, 
                 timelimit=timelimit,
                 gams_output=False, 
-                tee=False, 
-                global_tee=False,
+                tee=True, 
+                global_tee=True,
                 )
             new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User time': m_solved.dsda_usertime}

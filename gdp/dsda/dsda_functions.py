@@ -246,7 +246,7 @@ def solve_subproblem(
     m: pe.ConcreteModel(),
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
-    timelimit: int = 10,
+    timelimit: float = 10,
     gams_output: bool = False,
     tee: bool = False,
     optimality_gap: float = 0.001,
@@ -321,7 +321,7 @@ def solve_with_minlp(
     transformation: str = 'bigm',
     minlp: str = 'baron',
     minlp_options: dict = {},
-    timelimit: int = 10,
+    timelimit: float = 10,
     gams_output: bool = False,
     tee: bool = False,
     optimality_gap: float = 0.001,
@@ -383,7 +383,7 @@ def solve_with_gdpopt(
     nlp_options: dict = {},
     minlp: str = 'baron',
     minlp_options: dict = {},
-    timelimit: int = 10,
+    timelimit: float = 10,
     strategy: str = 'LOA',
     mip_output: bool = False,
     nlp_output: bool = False,
@@ -633,9 +633,9 @@ def evaluate_neighbors(
     ext_dict, ext_logic,
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
-    iter_timelimit: int = 10,
+    iter_timelimit: float = 10,
     current_time: int = 0,
-    timelimit: int = 3600,
+    timelimit: float = 3600,
     gams_output: bool = False,
     tee: bool = False,
     global_tee: bool = True,
@@ -699,8 +699,15 @@ def evaluate_neighbors(
             m_fixed = external_ref(m_init, temp[i], ext_logic, ext_dict)
             t_remaining = min(iter_timelimit, timelimit -
                               (time.perf_counter() - current_time))
-            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, subproblem_solver_options=subproblem_solver_options,
-                                        timelimit=t_remaining, gams_output=gams_output, tee=tee)
+            if t_remaining < 0:  # No time reamining for optimization
+                break
+            m_solved = solve_subproblem(
+                m = m_fixed, 
+                subproblem_solver=subproblem_solver, 
+                subproblem_solver_options=subproblem_solver_options,
+                timelimit=t_remaining, 
+                gams_output=gams_output, 
+                tee=tee)
             evaluation_time += m_solved.dsda_usertime
             ns_evaluated.append(temp[i])
             t_end = time.perf_counter()
@@ -744,8 +751,8 @@ def do_line_search(
     subproblem_solver_options: dict = {},
     min_allowed: dict = {},
     max_allowed: dict = {},
-    iter_timelimit: int = 10,
-    timelimit: int = 3600,
+    iter_timelimit: float = 10,
+    timelimit: float = 3600,
     current_time: int = 0,
     gams_output: bool = False,
     tee: bool = False,
@@ -842,8 +849,8 @@ def solve_with_dsda(
     feasible_model: str = '',
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
-    iter_timelimit: int = 10,
-    timelimit: int = 3600,
+    iter_timelimit: float = 10,
+    timelimit: float = 3600,
     gams_output: bool = False,
     tee: bool = False,
     global_tee: bool = True,

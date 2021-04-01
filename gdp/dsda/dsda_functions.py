@@ -19,9 +19,9 @@ from pyomo.opt.base.solvers import SolverFactory
 
 
 def get_external_information(
-    m, 
+    m: pe.ConcreteModel(),
     ext_ref, 
-    tee: bool = False
+    tee: bool = False,
 ):
     """
     Function that obtains information from the model to perform the reformulation with external variables.
@@ -168,7 +168,7 @@ def get_external_information(
 
 
 def external_ref(
-    m, 
+    m: pe.ConcreteModel(),
     x, 
     other_function, 
     dict_extvar={}, 
@@ -320,6 +320,7 @@ def solve_with_minlp(
     m: pe.ConcreteModel(),
     transformation: str = 'bigm',
     minlp: str = 'baron',
+    minlp_options: dict = {},
     timelimit: int = 10,
     gams_output: bool = False,
     tee: bool = False,
@@ -332,6 +333,7 @@ def solve_with_minlp(
         m: Pyomo GDP model that is to be solved using MINLP
         transformation: GDP to MINLP transformation to be used
         minlp: MINLP solver algorithm
+        minlp_options: MINLP solver algorithm options
         timelimit: time limit in seconds for the solve statement
         gams_output: Determine keeping or not GAMS files
         tee: Dsiplay iterations
@@ -357,15 +359,18 @@ def solve_with_minlp(
         output_options = {'keepfiles': True,
                           'tmpdir': gams_path,
                           'symbolic_solver_labels': True}
+
+    minlp_options['add_options'] = minlp_options.get('add_options', [])
+    minlp_options['add_options'].append('option reslim=%s;' % timelimit)
+    minlp_options['add_options'].append('option optcr=%s;' % optimality_gap)
+
     # Solve
     solvername = 'gams'
     opt = SolverFactory(solvername, solver=minlp)
     m.results = opt.solve(m, tee=tee,
                           **output_options,
-                          add_options=[
-                              'option reslim = ' + str(timelimit) + ';'
-                              'option optcr = ' + str(optimality_gap) + ';'
-                          ])
+                          **minlp_options,
+                          )
     # update_boolean_vars_from_binary(m)
     return m
 
@@ -823,7 +828,8 @@ def solve_with_dsda(
     model_function,
     model_args: dict,
     starting_point: list,
-    ext_dict, ext_logic,
+    ext_dict, 
+    ext_logic,
     k: str = 'Infinity',
     provide_starting_initialization: bool = True,
     feasible_model: str = '',

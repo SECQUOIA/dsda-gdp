@@ -2,6 +2,7 @@
 *.gdx
 *.lst
 *.pyc
+*.log
 gamsfiles/*
 util/jsonfiles
 .vscode/*

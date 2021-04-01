@@ -20,7 +20,7 @@ from pyomo.opt.base.solvers import SolverFactory
 
 def get_external_information(
     m: pe.ConcreteModel(),
-    ext_ref, 
+    ext_ref,
     tee: bool = False,
 ):
     """
@@ -169,9 +169,9 @@ def get_external_information(
 
 def external_ref(
     m: pe.ConcreteModel(),
-    x, 
-    other_function, 
-    dict_extvar={}, 
+    x,
+    other_function,  # TODO rename this parameter to something more informative
+    dict_extvar: dict = {},
     tee: bool = False
 ):
     """
@@ -249,7 +249,7 @@ def solve_subproblem(
     timelimit: float = 10,
     gams_output: bool = False,
     tee: bool = False,
-    optimality_gap: float = 0.001,
+    rel_tol: float = 1e-3,
 ) -> pe.ConcreteModel():
     """
     Function that checks feasibility and subproblem model. 
@@ -260,7 +260,7 @@ def solve_subproblem(
         timelimit: time limit in seconds for the solve statement
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
-        optimality_gap: Relative optimality gap
+        rel_tol: Relative optimality tolerance
     Returns:
         m: Solved subproblem model
     """
@@ -290,7 +290,7 @@ def solve_subproblem(
         subproblem_solver_options['add_options'].append(
             'option reslim=%s;' % timelimit)
         subproblem_solver_options['add_options'].append(
-            'option optcr=%s;' % optimality_gap)
+            'option optcr=%s;' % rel_tol)
 
         # Solve
         solvername = 'gams'
@@ -324,7 +324,7 @@ def solve_with_minlp(
     timelimit: float = 10,
     gams_output: bool = False,
     tee: bool = False,
-    optimality_gap: float = 0.001,
+    rel_tol: float = 0.001,
 ) -> pe.ConcreteModel():
     """
     Function that transforms a GDP model and solves it as a mixed-integer nonlinear
@@ -337,7 +337,7 @@ def solve_with_minlp(
         timelimit: time limit in seconds for the solve statement
         gams_output: Determine keeping or not GAMS files
         tee: Dsiplay iterations
-        optimality_gap: Relative optimality gap
+        rel_tol: Relative optimality tolerance
     Returns:
         m: Solved MINLP model
     """
@@ -362,7 +362,7 @@ def solve_with_minlp(
 
     minlp_options['add_options'] = minlp_options.get('add_options', [])
     minlp_options['add_options'].append('option reslim=%s;' % timelimit)
-    minlp_options['add_options'].append('option optcr=%s;' % optimality_gap)
+    minlp_options['add_options'].append('option optcr=%s;' % rel_tol)
 
     # Solve
     solvername = 'gams'
@@ -389,7 +389,7 @@ def solve_with_gdpopt(
     nlp_output: bool = False,
     minlp_output: bool = False,
     tee: bool = False,
-    optimality_gap: float = 0.001,
+    rel_tol: float = 1e-3,
 ) -> pe.ConcreteModel():
     """
     Function that solves GDP model using GDPopt
@@ -402,7 +402,7 @@ def solve_with_gdpopt(
         mip_output: Determine keeping or not GAMS files of the MIP model
         nlp_output: Determine keeping or not GAMS files of the NLP model
         tee: Display iterations
-        optimality_gap: Relative optimality gap for subproblems and GDPOpt itself
+        rel_tol: Relative optimality tolerance for subproblems and GDPOpt itself
     Returns:
         m: Solved GDP model
     """
@@ -416,10 +416,10 @@ def solve_with_gdpopt(
     mip_options['add_options'].append('option optcr=0.0;')
 
     nlp_options['add_options'] = nlp_options.get('add_options', [])
-    nlp_options['add_options'].append('option optcr=%s;' % optimality_gap)
+    nlp_options['add_options'].append('option optcr=%s;' % rel_tol)
 
     minlp_options['add_options'] = minlp_options.get('add_options', [])
-    minlp_options['add_options'].append('option optcr=%s;' % optimality_gap)
+    minlp_options['add_options'].append('option optcr=%s;' % rel_tol)
 
     if mip_output:
         dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -475,7 +475,7 @@ def solve_with_gdpopt(
                           iterlim=1000,
                           force_subproblem_nlp=True,
                           subproblem_presolve=False
-                          #   bound_tolerance=optimality_gap
+                          #   bound_tolerance=rel_tol
                           #   calc_disjunctive_bounds=True
                           )
     # update_boolean_vars_from_binary(m)
@@ -523,9 +523,9 @@ def neighborhood_k_eq_inf(dimension: str = 2) -> dict:
 
 
 def initialize_model(
-    m: pe.ConcreteModel(), 
-    json_path=None, 
-    from_feasible: bool = False, 
+    m: pe.ConcreteModel(),
+    json_path=None,
+    from_feasible: bool = False,
     feasible_model: str = '',
 ) -> pe.ConcreteModel():
     """
@@ -557,8 +557,8 @@ def initialize_model(
 
 
 def generate_initialization(
-    m: pe.ConcreteModel(), 
-    starting_initialization: bool = False, 
+    m: pe.ConcreteModel(),
+    starting_initialization: bool = False,
     model_name: str = ''
 ):
     """
@@ -592,9 +592,9 @@ def generate_initialization(
 
 
 def find_actual_neighbors(
-    start: list, 
-    neighborhood: dict, 
-    min_allowed: dict = {}, 
+    start: list,
+    neighborhood: dict,
+    min_allowed: dict = {},
     max_allowed: dict = {}
 ) -> dict:
     """
@@ -627,19 +627,19 @@ def find_actual_neighbors(
 
 def evaluate_neighbors(
     ext_vars: dict,
-    fmin: int,
+    fmin: float,
     model_function,
     model_args: dict,
     ext_dict, ext_logic,
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
     iter_timelimit: float = 10,
-    current_time: int = 0,
+    current_time: float = 0,
     timelimit: float = 3600,
     gams_output: bool = False,
     tee: bool = False,
     global_tee: bool = True,
-    tol: float = 0.001,
+    rel_tol: float = 1e-3,
     global_evaluated: list = [],
     init_path=None,
 ):
@@ -660,7 +660,7 @@ def evaluate_neighbors(
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
         global_tee: display D-SDA iteration output
-        tol: Numerical tolerance
+        rel_tol: Relative optimality tolerance
         global_evaluated: list with points already evaluated
         init_path: path to initialization file
     Returns:
@@ -702,11 +702,11 @@ def evaluate_neighbors(
             if t_remaining < 0:  # No time reamining for optimization
                 break
             m_solved = solve_subproblem(
-                m = m_fixed, 
-                subproblem_solver=subproblem_solver, 
+                m=m_fixed,
+                subproblem_solver=subproblem_solver,
                 subproblem_solver_options=subproblem_solver_options,
-                timelimit=t_remaining, 
-                gams_output=gams_output, 
+                timelimit=t_remaining,
+                gams_output=gams_output,
                 tee=tee)
             evaluation_time += m_solved.dsda_usertime
             ns_evaluated.append(temp[i])
@@ -721,7 +721,7 @@ def evaluate_neighbors(
                 dist = sum((x-y)**2 for x, y in zip(temp[i], here))
                 # Assuming minimization problem
                 # Implmements heuristic of largest move
-                if (pe.value(m_solved.obj) - fmin < abs_tol or abs(fmin - pe.value(m_solved.obj))/(abs(fmin)+epsilon) < tol) and dist >= best_dist:
+                if (pe.value(m_solved.obj) - fmin < abs_tol or abs(fmin - pe.value(m_solved.obj))/(abs(fmin)+epsilon) < rel_tol) and dist >= best_dist:
                     fmin = pe.value(m_solved.obj)
                     best_var = temp[i]
                     best_dir = i
@@ -741,7 +741,7 @@ def evaluate_neighbors(
 
 def do_line_search(
     start: list,
-    fmin: int,
+    fmin: float,
     direction: list,
     model_function,
     model_args: dict,
@@ -753,11 +753,11 @@ def do_line_search(
     max_allowed: dict = {},
     iter_timelimit: float = 10,
     timelimit: float = 3600,
-    current_time: int = 0,
+    current_time: float = 0,
     gams_output: bool = False,
     tee: bool = False,
     global_tee: bool = False,
-    tol: float = 0.001,
+    rel_tol: float = 1e-3,
     global_evaluated: list = [],
     init_path=None
 ):
@@ -780,7 +780,7 @@ def do_line_search(
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
         global_tee: display D-SDA iteration output
-        tol: Numerical tolerance
+        rel_tol: Relative optimality tolerance
         global_evaluated: list with points already evaluated
         init_path: path to initialization file
     Returns:
@@ -817,8 +817,16 @@ def do_line_search(
                 m_init, moved_point, ext_logic, ext_dict)
             t_remaining = min(iter_timelimit, timelimit -
                               (time.perf_counter() - current_time))
-            m_solved = solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, subproblem_solver_options=subproblem_solver_options,
-                                        timelimit=t_remaining, gams_output=gams_output, tee=tee)
+            if t_remaining < 0:
+                return fmin, best_var, moved, ls_time, ls_evaluated, new_path
+            m_solved = solve_subproblem(
+                m=m_fixed,
+                subproblem_solver=subproblem_solver,
+                subproblem_solver_options=subproblem_solver_options,
+                timelimit=t_remaining,
+                gams_output=gams_output,
+                tee=tee,
+            )
             ls_time += m_solved.dsda_usertime
             ls_evaluated.append(moved_point)
 
@@ -828,7 +836,7 @@ def do_line_search(
                         m_solved.obj), 5), '   |   Global Time:', round(time.perf_counter() - current_time, 2))
                 act_obj = pe.value(m_solved.obj)
                 # Return moved point
-                if (act_obj - fmin < abs_tol) or (abs(fmin - act_obj)/(abs(fmin)+epsilon) < tol):
+                if (act_obj - fmin < abs_tol) or (abs(fmin - act_obj)/(abs(fmin)+epsilon) < rel_tol):
                     fmin = act_obj
                     best_var = moved_point
                     moved = True
@@ -842,7 +850,7 @@ def solve_with_dsda(
     model_function,
     model_args: dict,
     starting_point: list,
-    ext_dict, 
+    ext_dict,
     ext_logic,
     k: str = 'Infinity',
     provide_starting_initialization: bool = True,
@@ -854,7 +862,7 @@ def solve_with_dsda(
     gams_output: bool = False,
     tee: bool = False,
     global_tee: bool = True,
-    tol: float = 0.001
+    rel_tol: float = 1e-3,
 ):
     """
     Function that computes Discrete-Steepest Descend Algorithm
@@ -873,7 +881,7 @@ def solve_with_dsda(
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
         global_tee: Display D-SDA output
-        tol: Numerical tolerance
+        rel_tol: Relative optimality tolerance
     Returns:
         m2_solved: Solved Pyomo Model
         route: List containing points evaluated in throughout iteration
@@ -945,11 +953,24 @@ def solve_with_dsda(
             break
 
         fmin, best_var, best_dir, improve, eval_time, ns_evaluated, best_path = evaluate_neighbors(
-            neighbors, fmin, model_function=model_function, model_args=model_args,
-            ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver,
+            ext_vars=neighbors,
+            fmin=fmin,
+            model_function=model_function,
+            model_args=model_args,
+            ext_dict=dict_extvar,
+            ext_logic=ext_logic,
+            subproblem_solver=subproblem_solver,
             subproblem_solver_options=subproblem_solver_options,
-            iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=t_start,
-            gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol, global_evaluated=global_evaluated, init_path=best_path)
+            iter_timelimit=iter_timelimit,
+            timelimit=timelimit,
+            current_time=t_start,
+            gams_output=gams_output,
+            tee=tee,
+            global_tee=global_tee,
+            rel_tol=rel_tol,
+            global_evaluated=global_evaluated,
+            init_path=best_path,
+        )
 
         dsda_usertime += eval_time
         global_evaluated = global_evaluated + ns_evaluated
@@ -968,10 +989,27 @@ def solve_with_dsda(
                 if time.perf_counter() - t_start > timelimit:
                     break
 
-                fmin, best_var, moved, ls_time, ls_evaluated, best_path = do_line_search(best_var, fmin, neighborhood[best_dir], model_function=model_function, model_args=model_args,
-                                                                                         ext_dict=dict_extvar, ext_logic=ext_logic, subproblem_solver=subproblem_solver, min_allowed=min_allowed, max_allowed=max_allowed,
-                                                                                         iter_timelimit=iter_timelimit, timelimit=timelimit, current_time=time.perf_counter(),
-                                                                                         gams_output=gams_output, tee=tee, global_tee=global_tee, tol=tol, global_evaluated=global_evaluated, init_path=best_path)
+                fmin, best_var, moved, ls_time, ls_evaluated, best_path = do_line_search(
+                    start=best_var,
+                    fmin=fmin,
+                    direction=neighborhood[best_dir],
+                    model_function=model_function,
+                    model_args=model_args,
+                    ext_dict=dict_extvar,
+                    ext_logic=ext_logic,
+                    subproblem_solver=subproblem_solver,
+                    min_allowed=min_allowed,
+                    max_allowed=max_allowed,
+                    iter_timelimit=iter_timelimit,
+                    timelimit=timelimit,
+                    current_time=time.perf_counter(),
+                    gams_output=gams_output,
+                    tee=tee,
+                    global_tee=global_tee,
+                    rel_tol=rel_tol,
+                    global_evaluated=global_evaluated,
+                    init_path=best_path,
+                )
                 global_evaluated = global_evaluated + ls_evaluated
                 dsda_usertime += ls_time
 

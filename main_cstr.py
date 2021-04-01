@@ -192,8 +192,8 @@ if __name__ == "__main__":
 
     # Results
 
-    NTs = range(13, 25, 7)
-    timelimit = 10
+    NTs = range(5, 26, 1)
+    timelimit = 900
     starting_point = [1, 1]
 
     csv_columns = ['Method', 'Approach', 'Solver',
@@ -212,7 +212,7 @@ if __name__ == "__main__":
         '$offecho \n'
     ]
 
-    minlps = ['dicopt', 'sbb']
+    minlps = ['antigone','baron','scip','lindoglobal','dicopt', 'sbb']
 
     minlps_opts = dict((minlp, {}) for minlp in minlps)
     minlps_opts['dicopt']['add_options'] = [
@@ -258,24 +258,24 @@ if __name__ == "__main__":
                 m=m_solved, starting_initialization=True, model_name='cstr_'+str(NT))
 
         # MINLP
-        # for solver in minlps:
-        #     for transformation in transformations:
-        #         new_result = {}
-        #         m = build_cstrs(NT)
-        #         m_init = initialize_model(m, json_path=init_path)
-        #         m_solved = solve_with_minlp(
-        #             m_init,
-        #             transformation=transformation,
-        #             minlp=solver,
-        #             minlp_options=minlps_opts[solver],
-        #             timelimit=timelimit,
-        #             gams_output=False,
-        #             tee=True,
-        #             )
-        #         new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
-        #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User time': 'NA', 'NT': NT}
-        #         dict_data.append(new_result)
-        #         print(new_result)
+        for solver in minlps:
+            for transformation in transformations:
+                new_result = {}
+                m = build_cstrs(NT)
+                m_init = initialize_model(m, json_path=init_path)
+                m_solved = solve_with_minlp(
+                    m_init,
+                    transformation=transformation,
+                    minlp=solver,
+                    minlp_options=minlps_opts[solver],
+                    timelimit=timelimit,
+                    gams_output=False,
+                    tee=True,
+                    )
+                new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
+                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User time': 'NA', 'NT': NT}
+                dict_data.append(new_result)
+                print(new_result)
 
         # GDPopt
         for solver in nlps:
@@ -290,7 +290,7 @@ if __name__ == "__main__":
                     nlp_options=nlp_opts[solver],
                     timelimit=timelimit,
                     strategy=strategy,
-                    tee=False,
+                    tee=True,
                     )
                 new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
                     m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
@@ -298,34 +298,34 @@ if __name__ == "__main__":
                 print(new_result)
 
         # # D-SDA
-        # m = build_cstrs(NT)
-        # ext_ref = {m.YF: m.N, m.YR: m.N}
-        # get_external_information(m, ext_ref, tee=False)
+        m = build_cstrs(NT)
+        ext_ref = {m.YF: m.N, m.YR: m.N}
+        get_external_information(m, ext_ref, tee=False)
 
-        # for solver in nlps:
-        #     for k in ks:
-        #         new_result = {}
-        #         m_solved, _ = solve_with_dsda(
-        #             model_function=build_cstrs, 
-        #             model_args={'NT': NT}, 
-        #             starting_point=starting_point, 
-        #             ext_dict=ext_ref, 
-        #             ext_logic=problem_logic_cstr,
-        #             k=k, 
-        #             provide_starting_initialization=True, 
-        #             feasible_model='cstr_' + str(NT), 
-        #             subproblem_solver=solver, 
-        #             subproblem_solver_options=nlp_opts[solver], 
-        #             iter_timelimit=timelimit, 
-        #             timelimit=timelimit,
-        #             gams_output=False, 
-        #             tee=False, 
-        #             global_tee=True,
-        #             )
-        #         new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-        #             m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User time': m_solved.dsda_usertime, 'NT': NT}
-        #         dict_data.append(new_result)
-        #         print(new_result)
+        for solver in nlps:
+            for k in ks:
+                new_result = {}
+                m_solved, _ = solve_with_dsda(
+                    model_function=build_cstrs, 
+                    model_args={'NT': NT}, 
+                    starting_point=starting_point, 
+                    ext_dict=ext_ref, 
+                    ext_logic=problem_logic_cstr,
+                    k=k, 
+                    provide_starting_initialization=True, 
+                    feasible_model='cstr_' + str(NT), 
+                    subproblem_solver=solver, 
+                    subproblem_solver_options=nlp_opts[solver], 
+                    iter_timelimit=timelimit, 
+                    timelimit=timelimit,
+                    gams_output=False, 
+                    tee=False, 
+                    global_tee=True,
+                    )
+                new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
+                    m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User time': m_solved.dsda_usertime, 'NT': NT}
+                dict_data.append(new_result)
+                print(new_result)
 
         try:
             with open(csv_file, 'w') as csvfile:

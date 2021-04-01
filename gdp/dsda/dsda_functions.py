@@ -378,8 +378,11 @@ def solve_with_minlp(
 def solve_with_gdpopt(
     m: pe.ConcreteModel(),
     mip: str = 'cplex',
+    mip_options: dict = {},
     nlp: str = 'knitro',
+    nlp_options: dict = {},
     minlp: str = 'baron',
+    minlp_options: dict = {},
     timelimit: int = 10,
     strategy: str = 'LOA',
     mip_output: bool = False,
@@ -408,12 +411,16 @@ def solve_with_gdpopt(
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
 
     # Output report
-    mip_options = {'add_options': [
-        'option optcr = ' + str(optimality_gap) + ';']}
-    nlp_options = {'add_options': [
-        'option optcr = ' + str(optimality_gap) + ';']}
-    minlp_options = {'add_options': [
-        'option optcr = ' + str(optimality_gap) + ';']}
+
+    mip_options['add_options'] = mip_options.get('add_options', [])
+    mip_options['add_options'].append('option optcr=0.0;')
+
+    nlp_options['add_options'] = nlp_options.get('add_options', [])
+    nlp_options['add_options'].append('option optcr=%s;' % optimality_gap)
+
+    minlp_options['add_options'] = minlp_options.get('add_options', [])
+    minlp_options['add_options'].append('option optcr=%s;' % optimality_gap)
+
     if mip_output:
         dir_path = os.path.dirname(os.path.abspath(__file__))
         gams_path = os.path.join(dir_path, "gamsfiles/")

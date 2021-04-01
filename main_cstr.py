@@ -192,12 +192,12 @@ if __name__ == "__main__":
 
     # Results
 
-    NTs = range(5, 26, 1)
+    NTs = range(5, 26, 5)
     timelimit = 900
     starting_point = [1, 1]
 
     csv_columns = ['Method', 'Approach', 'Solver',
-                   'Objective', 'Time', 'Status', 'User time', 'NT']
+                   'Objective', 'Time', 'Status', 'User_time', 'NT']
     dict_data = []
     csv_file = "cstr_results.csv"
 
@@ -212,7 +212,7 @@ if __name__ == "__main__":
         '$offecho \n'
     ]
 
-    minlps = ['antigone','baron','scip','lindoglobal','dicopt', 'sbb']
+    minlps = ['antigone','baron','scip','dicopt', 'sbb']
 
     minlps_opts = dict((minlp, {}) for minlp in minlps)
     minlps_opts['dicopt']['add_options'] = [
@@ -249,11 +249,11 @@ if __name__ == "__main__":
             m = build_cstrs(NT)
             ext_ref = {m.YF: m.N, m.YR: m.N}
             reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
-                m, ext_ref, tee=False)
+                m, ext_ref, tee=True)
             m_fixed = external_ref(m=m, x=[
-                                1, 1], other_function=problem_logic_cstr, dict_extvar=reformulation_dict, tee=False)
+                                1, 1], other_function=problem_logic_cstr, dict_extvar=reformulation_dict, tee=True)
             m_solved = solve_subproblem(
-                m=m_fixed, subproblem_solver='baron', timelimit=100, tee=False)
+                m=m_fixed, subproblem_solver='baron', timelimit=100, tee=True)
             init_path = generate_initialization(
                 m=m_solved, starting_initialization=True, model_name='cstr_'+str(NT))
 
@@ -273,7 +273,7 @@ if __name__ == "__main__":
                     tee=True,
                     )
                 new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
-                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User time': 'NA', 'NT': NT}
+                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
                 dict_data.append(new_result)
                 print(new_result)
 
@@ -300,7 +300,7 @@ if __name__ == "__main__":
         # # D-SDA
         m = build_cstrs(NT)
         ext_ref = {m.YF: m.N, m.YR: m.N}
-        get_external_information(m, ext_ref, tee=False)
+        get_external_information(m, ext_ref, tee=True)
 
         for solver in nlps:
             for k in ks:
@@ -319,11 +319,11 @@ if __name__ == "__main__":
                     iter_timelimit=timelimit, 
                     timelimit=timelimit,
                     gams_output=False, 
-                    tee=False, 
+                    tee=True, 
                     global_tee=True,
                     )
                 new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-                    m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User time': m_solved.dsda_usertime, 'NT': NT}
+                    m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime, 'NT': NT}
                 dict_data.append(new_result)
                 print(new_result)
 

@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # Inputs
     NT = 17
 
-    timelimit = 10
+    timelimit = 2
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
     # Initializing at column with all trays, reboil in bottom tray and reflux in top-most tray
     starting_point = [NT-2, 1]
@@ -116,11 +116,14 @@ if __name__ == "__main__":
         '\n'
         '$onecho > dicopt.opt \n'
         'stop 0 \n'
-        '*relaxed 2 \n'
+        'relaxed 2 \n'
         'maxcycles 10000 \n'
         'nlpsolver knitro \n'
         '$offecho \n'
     ]
+
+    # NOTE DICOPT with Hull reformulation will fail in reporting the right results. See lst file (it tends to be the initialization point)
+
     minlps_opts['sbb']['add_options'] = [
         'GAMS_MODEL.optfile = 1;'
         '\n'

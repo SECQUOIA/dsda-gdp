@@ -18,14 +18,18 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt.base.solvers import SolverFactory
 
 
-def get_external_information(m, Ext_Ref, tee: bool = False):
+def get_external_information(
+    m, 
+    ext_ref, 
+    tee: bool = False
+):
     """
     Function that obtains information from the model to perform the reformulation with external variables.
     The model must be a GDP problem with exactly one "Exactly(k_j, [Y_j1,Y_j2,Y_j3,...])" constraint for each list of variables 
     [Y_j1,Y_j2,Y_j3,...] that is going to be reformualted over set j.  
     Args:
         m: GDP model that is going to be reformulated
-        Ext_Ref: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts. 
+        ext_ref: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts. 
         tee: Display reformulation
     Returns:
         reformulation_dict: A dictionary of dictionaries that looks as follows:
@@ -46,11 +50,11 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
         ref_index = {}
         # index of the sets where the reformulation cannot be applied for a given boolean variable
         no_ref_index = {}
-        for i in Ext_Ref:
+        for i in ext_ref:
             ref_index[i] = []
             no_ref_index[i] = []
             for index_set in range(len(i.index_set()._sets)):
-                if i.index_set()._sets[index_set].name == Ext_Ref[i].name:
+                if i.index_set()._sets[index_set].name == ext_ref[i].name:
                     ref_index[i].append(index_set)
                 else:
                     no_ref_index[i].append(index_set)
@@ -60,10 +64,10 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
         ref_index = {}
         # index of the sets where the reformulation cannot be applied for a given boolean variable
         no_ref_index = {}
-        for i in Ext_Ref:
+        for i in ext_ref:
             ref_index[i] = []
             no_ref_index[i] = []
-            if i.index_set().name == Ext_Ref[i].name:
+            if i.index_set().name == ext_ref[i].name:
                 ref_index[i].append(0)
             else:
                 no_ref_index[i].append(0)
@@ -75,7 +79,7 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
     for c in m.component_data_objects(pe.LogicalConstraint, descend_into=True):
         if c.body.getname() == 'exactly':
             exactly_number = c.body.args[0]
-            for possible_Boolean in Ext_Ref:
+            for possible_Boolean in ext_ref:
 
                 # expected boolean variable where the reformualtion is going to be applied
                 expected_Boolean = possible_Boolean.name
@@ -163,7 +167,13 @@ def get_external_information(m, Ext_Ref, tee: bool = False):
     return reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds
 
 
-def external_ref(m, x, other_function, dict_extvar={}, tee: bool = False):
+def external_ref(
+    m, 
+    x, 
+    other_function, 
+    dict_extvar={}, 
+    tee: bool = False
+):
     """
     Function that  
     Args:
@@ -500,7 +510,12 @@ def neighborhood_k_eq_inf(dimension: str = 2) -> dict:
     return temp
 
 
-def initialize_model(m: pe.ConcreteModel(), json_path=None, from_feasible: bool = False, feasible_model: str = '') -> pe.ConcreteModel():
+def initialize_model(
+    m: pe.ConcreteModel(), 
+    json_path=None, 
+    from_feasible: bool = False, 
+    feasible_model: str = '',
+) -> pe.ConcreteModel():
     """
     Function that return an initialized model from an existing json file
     Args:
@@ -529,7 +544,11 @@ def initialize_model(m: pe.ConcreteModel(), json_path=None, from_feasible: bool 
     return m
 
 
-def generate_initialization(m: pe.ConcreteModel(), starting_initialization: bool = False, model_name: str = ''):
+def generate_initialization(
+    m: pe.ConcreteModel(), 
+    starting_initialization: bool = False, 
+    model_name: str = ''
+):
     """
     Function that creates a json file for initialization based on a model m 
     Args:
@@ -560,7 +579,12 @@ def generate_initialization(m: pe.ConcreteModel(), starting_initialization: bool
     return json_path
 
 
-def find_actual_neighbors(start: list, neighborhood: dict, min_allowed: dict = {}, max_allowed: dict = {}) -> dict:
+def find_actual_neighbors(
+    start: list, 
+    neighborhood: dict, 
+    min_allowed: dict = {}, 
+    max_allowed: dict = {}
+) -> dict:
     """
     Function that creates all neighbors of a given point. Neighbor 0 is the starting point
     Args:
@@ -605,7 +629,7 @@ def evaluate_neighbors(
     global_tee: bool = True,
     tol: float = 0.001,
     global_evaluated: list = [],
-    init_path=None
+    init_path=None,
 ):
     """
     Function that evaluates a group of given points and returns the best
@@ -955,9 +979,9 @@ def solve_with_dsda(
     m2_solved.dsda_time = t_end
     m2_solved.dsda_usertime = dsda_usertime
     if t_end > timelimit:
-        m2_solved.dsda_status = 'Time Limit'
+        m2_solved.dsda_status = 'maxTimeLimit'
     else:
-        m2_solved.dsda_status = 'Optimal'
+        m2_solved.dsda_status = 'optimal'
 
     # Print results
     if global_tee:

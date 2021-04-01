@@ -18,9 +18,9 @@ if __name__ == "__main__":
 
     # D-SDA
     m = build_small_batch()
-    Ext_Ref = {m.Y: m.k}
+    ext_ref = {m.Y: m.k}
 
-    get_external_information(m,Ext_Ref,tee=True)
+    get_external_information(m,ext_ref,tee=True)
 
     def problem_logic_batch(m): 
         logic_expr = []
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     for solver in nlps:
         for k in ks:
             new_result = {}
-            m_solved, route = solve_with_dsda(model_function=build_small_batch, model_args=model_args, starting_point=starting_point, ext_dict=Ext_Ref, ext_logic=problem_logic_batch, k=k,
+            m_solved, route = solve_with_dsda(model_function=build_small_batch, model_args=model_args, starting_point=starting_point, ext_dict=ext_ref, ext_logic=problem_logic_batch, k=k,
                                               provide_starting_initialization=True, feasible_model='small_batch', subproblem_solver=solver, iter_timelimit=timelimit, timelimit=timelimit)
             new_result = {'Method': 'D-SDA', 'Approach': str('k = '+k), 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status}

@@ -1,17 +1,19 @@
-import pyomo.environ as pe
-from pyomo.gdp import (Disjunct, Disjunction)
-import networkx as nx
-import matplotlib.pyplot as plt
-from pyomo.core.base.misc import display
-from pyomo.opt.base.solvers import SolverFactory
 import os
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import pyomo.environ as pe
+from pyomo.core.base.misc import display
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.opt.base.solvers import SolverFactory
+
 
 def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     """
     Function that builds CSTR superstructure model of size NT.
     The CSTRs have a single 1st order reaction A -> B and minimizes (TODO Check)
     total reactor volume. The optimal solution should yield NT reactors with a recycle before reactor NT.
-    Reference: Paper Linhan 1.
+    Reference: Paper Linhan 1. TODO Correct reference
 
     Args:
         NT: int. Positive Integer defining the maximum number of CSTRs
@@ -315,4 +317,3 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)
 
     return m
-

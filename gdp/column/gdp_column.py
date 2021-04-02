@@ -1,16 +1,20 @@
-from pyomo.environ import (
-    Block, ConcreteModel, Constraint, Param, log, minimize, NonNegativeReals, Objective, RangeSet, Set, Var, TransformationFactory, SolverFactory, value, BooleanVar, exactly, land, lor)
-from pyomo.gdp import (Disjunct, Disjunction)
 import math
-from pyomo.core.base.misc import display
-from pyomo.opt.base.solvers import SolverFactory
+import os
+
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
-from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
-from pyomo.opt import SolutionStatus
-from pyomo.opt import TerminationCondition as tc, SolverResults
-import os
+from pyomo.core.base.misc import display
+from pyomo.core.plugins.transform.logical_to_linear import \
+    update_boolean_vars_from_binary
+from pyomo.environ import (Block, BooleanVar, ConcreteModel, Constraint,
+                           NonNegativeReals, Objective, Param, RangeSet, Set,
+                           SolverFactory, TransformationFactory, Var, exactly,
+                           land, log, lor, minimize, value)
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.opt import SolutionStatus, SolverResults
+from pyomo.opt import TerminationCondition as tc
+from pyomo.opt.base.solvers import SolverFactory
 
 
 def build_column(min_trays, max_trays, xD, xB):
@@ -232,11 +236,11 @@ def build_column(min_trays, max_trays, xD, xB):
                       doc='Existence of boil-up flow in stage n')
     m.YR = BooleanVar(m.intTrays, initialize=False,
                       doc='Existence of reflux flow in stage n')
-    
+
     # Initialize at least one reflux and boilup trays to avoid errors in MINLP solvers
     m.YB[m.reboil_tray+1].set_value(True)
     m.YR[m.max_trays-1].set_value(True)
-    
+
     m.YP = BooleanVar(
         m.intTrays, doc='Boolean var associated with tray and no_tray')
     m.YB_is_up = BooleanVar(

@@ -87,10 +87,11 @@ if __name__ == "__main__":
     # Inputs
     NT = 17
 
-    timelimit = 2
+    timelimit = 900
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
     # Initializing at column with all trays, reboil in bottom tray and reflux in top-most tray
     starting_point = [NT-2, 1]
+    globaltee= True
 
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time']
@@ -146,11 +147,11 @@ if __name__ == "__main__":
         m = build_column(**model_args)
         ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
         reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
-            m, ext_ref, tee=False)
+            m, ext_ref, tee=globaltee)
         m_fixed = external_ref(m=m, x=starting_point, other_function=problem_logic_column,
-                               dict_extvar=reformulation_dict, tee=False)
+                               dict_extvar=reformulation_dict, tee=globaltee)
         m_solved = solve_subproblem(
-            m=m_fixed, subproblem_solver='baron', timelimit=100, tee=False)
+            m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee)
         init_path = generate_initialization(
             m=m_solved, starting_initialization=True, model_name='column_'+str(NT))
 
@@ -167,7 +168,7 @@ if __name__ == "__main__":
                 minlp_options=minlps_opts[solver],
                 timelimit=timelimit,
                 gams_output=False,
-                tee=False,
+                tee=globaltee,
             )
             new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
@@ -187,7 +188,7 @@ if __name__ == "__main__":
                 nlp_options=nlp_opts[solver],
                 timelimit=timelimit,
                 strategy=strategy,
-                tee=True,
+                tee=globaltee,
             )
             new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
@@ -197,7 +198,7 @@ if __name__ == "__main__":
     # D-SDA
     m = build_column(**model_args)
     ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
-    get_external_information(m, ext_ref, tee=False)
+    get_external_information(m, ext_ref, tee=globaltee)
 
     for solver in nlps:
         for k in ks:
@@ -216,8 +217,8 @@ if __name__ == "__main__":
                 iter_timelimit=timelimit,
                 timelimit=timelimit,
                 gams_output=False,
-                tee=True,
-                global_tee=True,
+                tee=globaltee,
+                global_tee=globaltee,
             )
             new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}

@@ -719,16 +719,31 @@ def evaluate_neighbors(
                 #objectives[i] = pe.value(m_solved.obj)
                 #feasibles[i] = temp[i]
                 dist = sum((x-y)**2 for x, y in zip(temp[i], here))
+                act_obj = pe.value(m_solved.obj)
                 # Assuming minimization problem
                 # Implmements heuristic of largest move
-                if (pe.value(m_solved.obj) - fmin < abs_tol or abs(fmin - pe.value(m_solved.obj))/(abs(fmin)+epsilon) < rel_tol) and dist >= best_dist:
-                    fmin = pe.value(m_solved.obj)
-                    best_var = temp[i]
-                    best_dir = i
-                    best_dist = dist
-                    improve = True
-                    best_path = generate_initialization(
-                        m_solved, starting_initialization=False, model_name='best')
+                # if (abs((pe.value(m_solved.obj) +abs_tol) < fmin or abs(fmin - pe.value(m_solved.obj))/(abs(fmin)+epsilon) < rel_tol)) and dist >= best_dist:
+                
+                # Selective penalize tolerance
+                
+                if best_dir == 0:
+                    if act_obj + abs_tol < fmin and dist >= best_dist:
+                        fmin = act_obj
+                        best_var = temp[i]
+                        best_dir = i
+                        best_dist = dist
+                        improve = True
+                        best_path = generate_initialization(
+                            m_solved, starting_initialization=False, model_name='best')
+                else:
+                    if ((act_obj - abs_tol < fmin) or (abs(fmin - act_obj)/(abs(fmin)+epsilon) < rel_tol))  and dist >= best_dist:
+                        fmin = act_obj
+                        best_var = temp[i]
+                        best_dir = i
+                        best_dist = dist
+                        improve = True
+                        best_path = generate_initialization(
+                            m_solved, starting_initialization=False, model_name='best')
 
             if time.perf_counter() - current_time > timelimit:  # current
                 break

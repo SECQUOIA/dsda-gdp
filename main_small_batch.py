@@ -25,7 +25,7 @@ def problem_logic_batch(m):
 
 if __name__ == "__main__":
     # Inputs
-    timelimit = 10
+    timelimit = 900
     model_args = {}
     starting_point = [3, 3, 3]
 

@@ -1,9 +1,10 @@
 """Initialization routine for distillation column"""
 from __future__ import division
 
-import pandas
 from math import fabs, floor
-from pyomo.environ import value, exp
+
+import pandas
+from pyomo.environ import exp, value
 
 
 def initialize(m):

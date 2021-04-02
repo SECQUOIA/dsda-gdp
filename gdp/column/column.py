@@ -2,19 +2,23 @@
 
 from __future__ import division
 
-from pyomo.environ import (
-    Block, ConcreteModel, Constraint, Param, log, minimize, NonNegativeReals, Objective, RangeSet, Set, Var, TransformationFactory, SolverFactory, value, BooleanVar, exactly, land, lor)
-from pyomo.gdp import Disjunct, Disjunction
 import math
+import os
 import time
-from pyomo.util.infeasible import log_infeasible_constraints
-from .initialize import initialize
+
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
-from pyomo.opt import SolutionStatus
-from pyomo.opt import TerminationCondition as tc, SolverResults
-import os
+from pyomo.environ import (Block, BooleanVar, ConcreteModel, Constraint,
+                           NonNegativeReals, Objective, Param, RangeSet, Set,
+                           SolverFactory, TransformationFactory, Var, exactly,
+                           land, log, lor, minimize, value)
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.opt import SolutionStatus, SolverResults
+from pyomo.opt import TerminationCondition as tc
+from pyomo.util.infeasible import log_infeasible_constraints
+
+from .initialize import initialize
 
 
 def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init=False, init={}, boolean_ref=False):
@@ -433,7 +437,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     # Transform the model
     TransformationFactory('core.logical_to_linear').apply_to(m)
     TransformationFactory('gdp.fix_disjuncts').apply_to(m)
-    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(m, tmp=False, ignore_infeasible=True)
+    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+        m, tmp=False, ignore_infeasible=True)
 
     m.dsda_status = 'Initialized'
     m.dsda_initialization = {}
@@ -457,29 +462,29 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         solvername = 'gams'
         opt = SolverFactory(solvername, solver=nlp_solver)
         m.results = opt.solve(m, tee=False,
-                            # Uncomment the following lines if you want to save GAMS models
-                            #keepfiles=True,
-                            #tmpdir=gams_path,
-                            #symbolic_solver_labels=True,
-                            skip_trivial_constraints=True,
-                            add_options=[
-                                'option reslim = 120;'
-                                'option optcr = 0.0;'
-                                'option iterLim = 20000;'
-                                # Uncomment the following lines to setup IIS computation of BARON through option file
-                                # 'GAMS_MODEL.optfile = 1;'
-                                # '\n'
-                                # '$onecho > baron.opt \n'
-                                # 'CompIIS 1 \n'
-                                # '$offecho'
-                                # 'display(execError);'
-                            ])
+                              # Uncomment the following lines if you want to save GAMS models
+                              # keepfiles=True,
+                              # tmpdir=gams_path,
+                              # symbolic_solver_labels=True,
+                              skip_trivial_constraints=True,
+                              add_options=[
+                                  'option reslim = 120;'
+                                  'option optcr = 0.0;'
+                                  'option iterLim = 20000;'
+                                  # Uncomment the following lines to setup IIS computation of BARON through option file
+                                  # 'GAMS_MODEL.optfile = 1;'
+                                  # '\n'
+                                  # '$onecho > baron.opt \n'
+                                  # 'CompIIS 1 \n'
+                                  # '$offecho'
+                                  # 'display(execError);'
+                              ])
 
         if m.results.solver.termination_condition == 'locallyOptimal' or m.results.solver.termination_condition == 'optimal':
             m.dsda_status = 'Optimal'
         elif m.results.solver.termination_condition == 'infeasible':
             m.dsda_status = 'Evaluated_Infeasible'
-        
+
         # Save results (for initialization)
         T_feed_init, feed_vap_frac_init, feed_init, x_init, y_init, L_init, V_init, liq_init, vap_init, B_init, D_init, bot_init, dis_init, reflux_ratio_init = {
         }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
@@ -526,11 +531,11 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                 H_V_init[i, n] = value(m.H_V[i, n])
 
         m.dsda_initialization = {'T_feed': T_feed_init, 'feed_vap_frac': feed_vap_frac_init, 'feed': feed_init, 'x': x_init, 'y': y_init, 'L': L_init, 'V': V_init, 'liq': liq_init, 'vap': vap_init, 'B': B_init, 'D': D_init, 'bot': bot_init, 'dis': dis_init, 'reflux_ratio': reflux_ratio_init, 'reboil_ratio': reboil_ratio_init,
-                          'reflux_frac': reflux_frac_init, 'boilup_frac': boilup_frac_init, 'Kc': Kc_init, 'T': T_init, 'P': P_init, 'gamma': gamma_init, 'Pvap': Pvap_init, 'Pvap_X': Pvap_X_init, 'H_L': H_L_init, 'H_V': H_V_init, 'H_L_spec_feed': H_L_spec_feed_init, 'H_V_spec_feed': H_V_spec_feed_init, 'Qb': Qb_init, 'Qc': Qc_init}
+                                 'reflux_frac': reflux_frac_init, 'boilup_frac': boilup_frac_init, 'Kc': Kc_init, 'T': T_init, 'P': P_init, 'gamma': gamma_init, 'Pvap': Pvap_init, 'Pvap_X': Pvap_X_init, 'H_L': H_L_init, 'H_V': H_V_init, 'H_L_spec_feed': H_L_spec_feed_init, 'H_V_spec_feed': H_V_spec_feed_init, 'Qb': Qb_init, 'Qc': Qc_init}
 
         # print('timer',time.process_time()-t_start)
-    
-        #print(m.results.solver.termination_condition)
+
+        # print(m.results.solver.termination_condition)
     except InfeasibleConstraintException:
         m.dsda_status = 'FBBT_Infeasible'
         #print('Try an infeasible')

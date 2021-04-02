@@ -6,19 +6,22 @@ import pyomo.environ as pe
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
-from gdp.dsda.dsda_functions import (generate_initialization, initialize_model,
-                                     solve_subproblem, solve_with_dsda,
-                                     solve_with_gdpopt, solve_with_minlp,
-                                     visualize_dsda,external_ref,get_external_information)
+from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
+                                     get_external_information,
+                                     initialize_model, solve_subproblem,
+                                     solve_with_dsda, solve_with_gdpopt,
+                                     solve_with_minlp, visualize_dsda)
 from gdp.small_batch.gdp_small_batch import build_small_batch
 
-def problem_logic_batch(m): 
-        logic_expr = []
-        for k in m.k:
-            for j in m.j:
-                logic_expr.append([m.Y[k, j], m.Y_exists[k, j].indicator_var])
-                logic_expr.append([~m.Y[k, j], m.Y_not_exists[k, j].indicator_var])
-        return logic_expr
+
+def problem_logic_batch(m):
+    logic_expr = []
+    for k in m.k:
+        for j in m.j:
+            logic_expr.append([m.Y[k, j], m.Y_exists[k, j].indicator_var])
+            logic_expr.append([~m.Y[k, j], m.Y_not_exists[k, j].indicator_var])
+    return logic_expr
+
 
 if __name__ == "__main__":
     # Inputs
@@ -26,6 +29,7 @@ if __name__ == "__main__":
     model_args = {}
     starting_point = [3, 3, 3]
 
+    globaltee = True
 
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time']
@@ -79,11 +83,11 @@ if __name__ == "__main__":
         m = build_small_batch()
         ext_ref = {m.Y: m.k}
         reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
-            m, ext_ref, tee=False)
+            m, ext_ref, tee=globaltee)
         m_fixed = external_ref(m=m, x=starting_point, other_function=problem_logic_batch,
-                               dict_extvar=reformulation_dict, tee=False)
+                               dict_extvar=reformulation_dict, tee=globaltee)
         m_solved = solve_subproblem(
-            m=m_fixed, subproblem_solver='baron', timelimit=100, tee=False)
+            m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee)
         init_path = generate_initialization(
             m=m_solved, starting_initialization=True, model_name='small_batch')
 
@@ -100,7 +104,7 @@ if __name__ == "__main__":
                 minlp_options=minlps_opts[solver],
                 timelimit=timelimit,
                 gams_output=False,
-                tee=False,
+                tee=globaltee,
             )
             new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
@@ -120,7 +124,7 @@ if __name__ == "__main__":
                 nlp_options=nlp_opts[solver],
                 timelimit=timelimit,
                 strategy=strategy,
-                tee=False,
+                tee=globaltee,
             )
             new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
@@ -130,7 +134,7 @@ if __name__ == "__main__":
     # D-SDA
     m = build_small_batch()
     ext_ref = {m.Y: m.k}
-    get_external_information(m, ext_ref, tee=False)
+    get_external_information(m, ext_ref, tee=globaltee)
 
     for solver in nlps:
         for k in ks:
@@ -149,8 +153,8 @@ if __name__ == "__main__":
                 iter_timelimit=timelimit,
                 timelimit=timelimit,
                 gams_output=False,
-                tee=False,
-                global_tee=False,
+                tee=globaltee,
+                global_tee=globaltee,
             )
             new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
                 m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}

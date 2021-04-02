@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     # Results
 
-    NTs = range(5, 26, 5)
+    NTs = range(6, 10, 1)
     timelimit = 900
     starting_point = [1, 1]
 

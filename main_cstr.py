@@ -192,9 +192,12 @@ if __name__ == "__main__":
 
     # Results
 
-    NTs = range(13, 25, 3)
+    NTs = range(5, 26, 1)
+    # NTs = [10]
     timelimit = 900
     starting_point = [1, 1]
+
+    globaltee = True
 
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time', 'NT']
@@ -249,7 +252,7 @@ if __name__ == "__main__":
             m = build_cstrs(NT)
             ext_ref = {m.YF: m.N, m.YR: m.N}
             reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
-                m, ext_ref, tee=True)
+                m, ext_ref, tee=globaltee)
             m_fixed = external_ref(m=m, x=[
                 1, 1], other_function=problem_logic_cstr, dict_extvar=reformulation_dict, tee=True)
             m_solved = solve_subproblem(
@@ -264,13 +267,13 @@ if __name__ == "__main__":
                 m = build_cstrs(NT)
                 m_init = initialize_model(m, json_path=init_path)
                 m_solved = solve_with_minlp(
-                    m_init,
+                    m=m_init,
                     transformation=transformation,
                     minlp=solver,
                     minlp_options=minlps_opts[solver],
                     timelimit=timelimit,
                     gams_output=False,
-                    tee=True,
+                    tee=globaltee,
                 )
                 new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
                     m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
@@ -284,23 +287,23 @@ if __name__ == "__main__":
                 m = build_cstrs(NT)
                 m_init = initialize_model(m, json_path=init_path)
                 m_solved = solve_with_gdpopt(
-                    m_init,
+                    m=m_init,
                     mip='cplex',
                     nlp=solver,
                     nlp_options=nlp_opts[solver],
                     timelimit=timelimit,
                     strategy=strategy,
-                    tee=True,
+                    tee=globaltee,
                 )
                 new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
                     m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
                 dict_data.append(new_result)
                 print(new_result)
 
-        # # D-SDA
+        # D-SDA
         m = build_cstrs(NT)
         ext_ref = {m.YF: m.N, m.YR: m.N}
-        get_external_information(m, ext_ref, tee=True)
+        get_external_information(m, ext_ref, tee=globaltee)
 
         for solver in nlps:
             for k in ks:
@@ -319,8 +322,8 @@ if __name__ == "__main__":
                     iter_timelimit=timelimit,
                     timelimit=timelimit,
                     gams_output=False,
-                    tee=True,
-                    global_tee=True,
+                    tee=globaltee,
+                    global_tee=globaltee,
                 )
                 new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
                     m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime, 'NT': NT}

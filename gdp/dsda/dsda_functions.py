@@ -1151,14 +1151,12 @@ def solve_complete_external_enumeration(
         global_tee: Display D-SDA output
         export_csv: Export answer to a csv file
     Returns:
-        results: Dict contaning all evaluated points with their corresponding status and objective
+        m2_solved: Solved Pyomo Model
 
     """
     results = {}
-    if global_tee:
-        print('\nStarting Complete Enumeration of External Variables')
-        print('-------------------------------------------------------------')
-
+    feasibles = {}
+    t_start = time.perf_counter()
     csv_columns = ['Point', 'x', 'y','Objective']
     dict_data = []
     csv_file = 'complete_enumeration_'+str(feasible_model)+'_results.csv'
@@ -1172,11 +1170,15 @@ def solve_complete_external_enumeration(
 
     mixes = list(it.product(*bounds))
 
+    if global_tee:
+        print('\nStarting Complete Enumeration of External Variables')
+        print('----------------------------------------------------------------------------------------------')
+
     for i in mixes:
         new_result = {}
         m=model_function(**model_args)
         m_init=initialize_model(m, from_feasible=True, feasible_model=feasible_model, json_path=None)
-        m_fixed=external_ref(m_init, list(i), ext_logic, dict_extvar)
+        m_fixed=external_ref(m_init, list(i), ext_logic, dict_extvar, tee=False)
         m_solved=solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, 
                                   subproblem_solver_options=subproblem_solver_options,
                                   timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
@@ -1184,14 +1186,15 @@ def solve_complete_external_enumeration(
         results[i] = (m_solved.dsda_status, pe.value(m_solved.obj))
         
         if global_tee:
-            print('Evaluated:', list(i), '   |   Objective:', round(pe.value(m_solved.obj), 5),
-              '   |   Status:', m_solved.dsda_status)
+            print('Evaluated:', list(i), ' |   Objective:', round(pe.value(m_solved.obj), 5), ' |   Global Time:', round(time.perf_counter()-t_start,2),
+              ' |   Status:', m_solved.dsda_status)
         
-        if export_csv:
-            if m_solved.dsda_status == 'Optimal':
+        if m_solved.dsda_status == 'Optimal':
+            feasibles[i] = pe.value(m_solved.obj)
+            if export_csv:
                 new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj)}
                 dict_data.append(new_result)
-
+    
     if export_csv:
         try:
             with open(csv_file, 'w') as csvfile:
@@ -1201,8 +1204,23 @@ def solve_complete_external_enumeration(
                     writer.writerow(data)
         except IOError:
             print("I/O error")
+    
+    minimum = min(feasibles, key=feasibles.get)
+    m2=model_function(**model_args)
+    m2_init=initialize_model(m2, from_feasible=True, feasible_model=feasible_model, json_path=None)
+    m2_fixed=external_ref(m2_init, list(minimum), ext_logic, dict_extvar, tee=False)
+    m2_solved=solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver, 
+                                subproblem_solver_options=subproblem_solver_options,
+                                timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
 
-    return results
+    if global_tee:
+        print('----------------------------------------------------------------------------------------------')
+        print('Objective:', round(pe.value(m2_solved.obj), 5))
+        print('External variables:', list(minimum))
+        print('Execution time [s]:', round(time.perf_counter()-t_start,2))
+
+
+    return m2_solved
 
         
 

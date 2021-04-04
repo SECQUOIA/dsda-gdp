@@ -173,7 +173,7 @@ if __name__ == "__main__":
     # Complete enumeration
     m = build_small_batch()
     ext_ref = {m.Y: m.k}
-    get_external_information(m, ext_ref, tee=True)
+    get_external_information(m, ext_ref, tee=False)
 
     solve_complete_external_enumeration(build_small_batch, 
                                         model_args={}, 

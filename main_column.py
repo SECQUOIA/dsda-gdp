@@ -191,7 +191,7 @@ if __name__ == "__main__":
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
     m = build_column(**model_args)
     ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
-    get_external_information(m, ext_ref, tee=True)
+    get_external_information(m, ext_ref, tee=False)
 
     solve_complete_external_enumeration(build_column, 
                                         model_args=model_args, 

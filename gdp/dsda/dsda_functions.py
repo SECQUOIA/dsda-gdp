@@ -1,7 +1,7 @@
 import itertools as it
 import os
 import time
-
+import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import pyomo.environ as pe
@@ -1120,3 +1120,89 @@ def visualize_dsda(
     plt.xlabel(ext1_name)
     plt.ylabel(ext2_name)
     plt.show()
+
+
+def solve_complete_external_enumeration(
+    model_function,
+    model_args: dict,
+    ext_dict,
+    ext_logic,
+    feasible_model: str='',
+    subproblem_solver: str='knitro',
+    subproblem_solver_options: dict={},
+    iter_timelimit: float=10,
+    gams_output: bool=False,
+    tee: bool=False,
+    global_tee: bool=True,
+    export_csv: bool=False
+):
+    """
+    Function that computes complete enumeration using the external variable reformulation
+    Args:
+        model_function: GDP model to be soved
+        model_args: Contains the argument values needed for model_function
+        ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
+        ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
+        subproblem_solver: MINLP or NLP solver algorithm
+        subproblem_solver_options: MINLP or NLP solver algorithm options
+        iter_timelimit: time limit in seconds for the solve statement for each iteration
+        gams_output: Determine keeping or not GAMS files
+        tee: Display iteration output
+        global_tee: Display D-SDA output
+        export_csv: Export answer to a csv file
+    Returns:
+        results: Dict contaning all evaluated points with their corresponding status and objective
+
+    """
+    results = {}
+    if global_tee:
+        print('\nStarting Complete Enumeration of External Variables')
+        print('-------------------------------------------------------------')
+
+    csv_columns = ['Point', 'x', 'y','Objective']
+    dict_data = []
+    csv_file = 'complete_enumeration_'+str(feasible_model)+'_results.csv'
+
+    m=model_function(**model_args)
+    dict_extvar, num_ext_var, min_allowed, max_allowed=get_external_information(m, ext_dict, tee=global_tee)
+
+    bounds = []
+    for i in range(1,num_ext_var+1):
+        bounds.append( list(range(min_allowed[i],max_allowed[i]+1)))
+
+    mixes = list(it.product(*bounds))
+
+    for i in mixes:
+        new_result = {}
+        m=model_function(**model_args)
+        m_init=initialize_model(m, from_feasible=True, feasible_model=feasible_model, json_path=None)
+        m_fixed=external_ref(m_init, list(i), ext_logic, dict_extvar)
+        m_solved=solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, 
+                                  subproblem_solver_options=subproblem_solver_options,
+                                  timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
+
+        results[i] = (m_solved.dsda_status, pe.value(m_solved.obj))
+        
+        if global_tee:
+            print('Evaluated:', list(i), '   |   Objective:', round(pe.value(m_solved.obj), 5),
+              '   |   Status:', m_solved.dsda_status)
+        
+        if export_csv:
+            if m_solved.dsda_status == 'Optimal':
+                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj)}
+                dict_data.append(new_result)
+
+    if export_csv:
+        try:
+            with open(csv_file, 'w') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+                writer.writeheader()
+                for data in dict_data:
+                    writer.writerow(data)
+        except IOError:
+            print("I/O error")
+
+    return results
+
+        
+

@@ -19,54 +19,7 @@ from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
                                      get_external_information,
                                      initialize_model, solve_subproblem,
                                      solve_with_dsda, solve_with_gdpopt,
-                                     solve_with_minlp, visualize_dsda)
-
-
-def complete_enumeration_external(model_function=build_column, model_args={'min_trays': 8, 'max_trays': 17, 'xD': 0.95, 'xB': 0.95}, reformulation_function=external_ref, subproblem_solver='knitro', timelimit=10):
-    NT = model_args['max_trays']
-    X1, X2, aux, aux2, x = [], [], [], 2, {}
-
-    for i in range(2, NT):
-        X1.append(i)
-        aux.append(i)
-        X2.append(aux2)
-
-    for i in range(NT-2):
-        aux.pop(0)
-        aux2 += 1
-        for j in aux:
-            X1.append(j)
-            X2.append(aux2)
-
-    print()
-    feas_x, feas_y, objs = [], [], []
-
-    print('=============================')
-    print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
-    print('-----------------------------')
-
-    # Loop over all external variables and then loop over its values
-    for i in range(len(X1)):
-        x = [X1[i], X2[i]]
-        m = model_function(**model_args)
-        m_init = initialize_model(
-            m, from_feasible=True, feasible_model='column')
-        m_fixed = reformulation_function(m_init, x)
-        m_solved = solve_subproblem(
-            m_fixed, subproblem_solver=subproblem_solver, timelimit=timelimit)
-
-        if m_solved.dsda_status == 'Optimal':
-            print('%6s %6s %12s' %
-                  (X1[i], X2[i], round(pe.value(m_solved.obj), 2)))
-            feas_x.append(X1[i])
-            feas_y.append(X2[i])
-            objs.append(round(pe.value(m_solved.obj), 2))
-        else:
-            print('%6s %6s %12s' % (X1[i], X2[i], 'Infeasible'))
-
-    print('=============================')
-    return feas_x, feas_y, objs
-
+                                     solve_with_minlp, visualize_dsda, solve_complete_external_enumeration)
 
 def problem_logic_column(m):
     logic_expr = []
@@ -86,7 +39,6 @@ def problem_logic_column(m):
 if __name__ == "__main__":
     # Inputs
     NT = 17
-
     timelimit = 900
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
     # Initializing at column with all trays, reboil in bottom tray and reflux in top-most tray
@@ -233,3 +185,21 @@ if __name__ == "__main__":
                 writer.writerow(data)
     except IOError:
         print("I/O error")
+
+    # Complete enumeration
+    NT = 17
+    model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
+    m = build_column(**model_args)
+    ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
+    get_external_information(m, ext_ref, tee=True)
+
+    solve_complete_external_enumeration(build_column, 
+                                        model_args=model_args, 
+                                        ext_dict=ext_ref, 
+                                        ext_logic=problem_logic_column, 
+                                        feasible_model='column_'+str(NT),
+                                        subproblem_solver='knitro',
+                                        iter_timelimit=30,
+                                        tee=False,
+                                        global_tee=True,
+                                        export_csv=True)

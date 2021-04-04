@@ -17,43 +17,7 @@ from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
                                      get_external_information,
                                      initialize_model, solve_subproblem,
                                      solve_with_dsda, solve_with_gdpopt,
-                                     solve_with_minlp, visualize_dsda)
-
-
-def complete_enumeration_external(model_function=build_cstrs, model_args={'NT': 5}, reformulation_function=external_ref, subproblem_solver='msnlp', timelimit=10):
-    X1 = list(range(1, NT+1))
-    # TODO how to generalize for N external variables?
-    X2 = list(range(1, NT+1))
-    # Input variable should be dictionary of the external variables with lower and upper bounds
-    print()
-    feas_x, feas_y, objs = [], [], []
-
-    print('=============================')
-    print('%6s %6s %12s' % ('x1', 'x2', 'Objective'))
-    print('-----------------------------')
-
-    # Loop over all external variables and then loop over its values
-    for Xi in X1:
-        for Xj in X2:
-            m = model_function(**model_args)
-            x = [Xi, Xj]
-            m_init = initialize_model(
-                m, from_feasible=True,  feasible_model='cstr')
-            m_fixed = reformulation_function(m_init, x)
-            m_solved = solve_subproblem(
-                m_fixed, subproblem_solver=subproblem_solver, timelimit=timelimit)
-
-            if m_solved.dsda_status == 'Optimal':
-                print('%6s %6s %12s' %
-                      (Xi, Xj, round(pe.value(m_solved.obj), 5)))
-                feas_x.append(Xi)
-                feas_y.append(Xj)
-                objs.append(round(pe.value(m_solved.obj), 5))
-            else:
-                print('%6s %6s %12s' % (Xi, Xj, 'Infeasible'))
-
-    print('=============================')
-    return feas_x, feas_y, objs
+                                     solve_with_minlp, visualize_dsda, solve_complete_external_enumeration)
 
 
 def visualize_cstr_superstructure(m, NT):
@@ -153,45 +117,8 @@ def problem_logic_cstr(m):
 
 
 if __name__ == "__main__":
-    # # Inputs
-    # NT = 5
-    # timelimit = 10
-
-    # # Complete enumeration
-    # x, y, objs = complete_enumeration_external(
-    #     model_function=build_cstrs, model_args={'NT': NT}, subproblem_solver='msnlp', timelimit=10)
-
-    # # MINLP solution
-    # m = build_cstrs(NT)
-    # m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-    # m_solved = solve_with_minlp(
-    #     m_init, transformation='bigm', minlp='baron', timelimit=timelimit, gams_output=False)
-    # print(m_solved.results)
-    # visualize_cstr_superstructure(m_solved, NT)
-
-    # # GDPopt method
-    # m = build_cstrs(NT)
-    # m_init = initialize_model(m, from_feasible=True, feasible_model='cstr')
-    # m_solved = solve_with_gdpopt(m_init, mip='cplex', nlp='knitro',
-    #                              timelimit=timelimit, strategy='LOA', mip_output=False, nlp_output=False)
-    # print(m_solved.results)
-    #visualize_cstr_superstructure(m_solved, NT)
-
-    # # D-SDA
-    # k = 'Infinity'
-    # starting_point = [1, 1]
-    # min_allowed = {i: 1 for i in range(1, len(starting_point)+1)}
-    # max_allowed = {i: NT for i in range(1, len(starting_point)+1)}
-
-    # m_solved, route = solve_with_dsda(model_function=build_cstrs, model_args={'NT': NT}, starting_point=starting_point, reformulation_function=external_ref, k=k,
-    #                                   provide_starting_initialization=True, feasible_model='cstr', subproblem_solver='msnlp', min_allowed=min_allowed, max_allowed=max_allowed, iter_timelimit=10)
-    # visualize_dsda(route=route, feas_x=x, feas_y=y, objs=objs, k=k,
-    #               ext1_name='YF (Number of reactors)', ext2_name='YR (Reflux position)')
-    # print(m_solved.results)
-    # visualize_cstr_superstructure(m_solved, NT)
-
+    
     # Results
-
     NTs = range(5, 26, 1)
     # NTs = [10]
     timelimit = 900
@@ -338,3 +265,22 @@ if __name__ == "__main__":
                     writer.writerow(data)
         except IOError:
             print("I/O error")
+
+    # Complete enumeration
+    NT = 25
+    m = build_cstrs(NT)
+    ext_ref = {m.YF: m.N, m.YR: m.N}
+    get_external_information(m, ext_ref, tee=True)
+
+    solve_complete_external_enumeration(build_cstrs, 
+                                        model_args={'NT': NT}, 
+                                        ext_dict=ext_ref, 
+                                        ext_logic=problem_logic_cstr, 
+                                        feasible_model='cstr_' + str(NT),
+                                        subproblem_solver='knitro',
+                                        iter_timelimit=30,
+                                        tee=False,
+                                        global_tee=True,
+                                        export_csv=True)
+
+

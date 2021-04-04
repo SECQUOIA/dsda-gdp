@@ -10,7 +10,7 @@ from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
                                      get_external_information,
                                      initialize_model, solve_subproblem,
                                      solve_with_dsda, solve_with_gdpopt,
-                                     solve_with_minlp, visualize_dsda)
+                                     solve_with_minlp, visualize_dsda, solve_complete_external_enumeration)
 from gdp.small_batch.gdp_small_batch import build_small_batch
 
 
@@ -169,3 +169,19 @@ if __name__ == "__main__":
                 writer.writerow(data)
     except IOError:
         print("I/O error")
+
+    # Complete enumeration
+    m = build_small_batch()
+    ext_ref = {m.Y: m.k}
+    get_external_information(m, ext_ref, tee=True)
+
+    solve_complete_external_enumeration(build_small_batch, 
+                                        model_args={}, 
+                                        ext_dict=ext_ref, 
+                                        ext_logic=problem_logic_batch, 
+                                        feasible_model='small_batch',
+                                        subproblem_solver='knitro',
+                                        iter_timelimit=30,
+                                        tee=False,
+                                        global_tee=True,
+                                        export_csv=True)

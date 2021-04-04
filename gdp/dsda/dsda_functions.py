@@ -1157,7 +1157,7 @@ def solve_complete_external_enumeration(
     results = {}
     feasibles = {}
     t_start = time.perf_counter()
-    csv_columns = ['Point', 'x', 'y','Objective']
+    csv_columns = ['Point', 'x', 'y','Objective','Status']
     dict_data = []
     csv_file = 'complete_enumeration_'+str(feasible_model)+'_results.csv'
 
@@ -1191,8 +1191,10 @@ def solve_complete_external_enumeration(
         
         if m_solved.dsda_status == 'Optimal':
             feasibles[i] = pe.value(m_solved.obj)
-            if export_csv:
-                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj)}
+
+        if export_csv:
+            if m_solved.dsda_status != 'FBBT_Infeasible':
+                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status}
                 dict_data.append(new_result)
     
     if export_csv:

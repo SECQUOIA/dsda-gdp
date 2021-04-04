@@ -139,7 +139,7 @@ if __name__ == "__main__":
     for solver in nlps:
         for k in ks:
             new_result = {}
-            m_solved, _ = solve_with_dsda(
+            m_solved, _, _ = solve_with_dsda(
                 model_function=build_small_batch,
                 model_args={},
                 starting_point=starting_point,

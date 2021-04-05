@@ -1201,7 +1201,7 @@ def solve_complete_external_enumeration(
             
         if export_csv:
             if m_solved.dsda_status != 'FBBT_Infeasible':
-                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status, 'Time':m_solved.results.solver.user_time, 'Global_Time':round(time.perf_counter()-t_start,2)}
+                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status, 'Time':m_solved.results.solver.user_time, 'Global_Time':time.perf_counter()-t_start}
                 dict_data.append(new_result)
         
         if time.perf_counter() - t_start > timelimit:

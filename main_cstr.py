@@ -15,9 +15,11 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from gdp.cstr.gdp_reactor import build_cstrs
 from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
                                      get_external_information,
-                                     initialize_model, solve_subproblem,
-                                     solve_with_dsda, solve_with_gdpopt,
-                                     solve_with_minlp, visualize_dsda, solve_complete_external_enumeration)
+                                     initialize_model,
+                                     solve_complete_external_enumeration,
+                                     solve_subproblem, solve_with_dsda,
+                                     solve_with_gdpopt, solve_with_minlp,
+                                     visualize_dsda)
 
 
 def visualize_cstr_superstructure(m, NT):
@@ -273,19 +275,18 @@ if __name__ == "__main__":
         ext_ref = {m.YF: m.N, m.YR: m.N}
         get_external_information(m, ext_ref, tee=False)
         print(solver)
-        m_solved = solve_complete_external_enumeration(build_cstrs, 
-                                            model_args={'NT': NT}, 
-                                            ext_dict=ext_ref, 
-                                            ext_logic=problem_logic_cstr, 
-                                            feasible_model='cstr_' + str(NT),
-                                            subproblem_solver=solver,
-                                            subproblem_solver_options=nlp_opts[solver],
-                                            iter_timelimit=900,
-                                            timelimit=10000,
-                                            gams_output=False,
-                                            tee=False,
-                                            global_tee=True,
-                                            export_csv=True)
-
-
-
+        m_solved = solve_complete_external_enumeration(
+            model_function=build_cstrs,
+            model_args={'NT': NT},
+            ext_dict=ext_ref,
+            ext_logic=problem_logic_cstr,
+            feasible_model='cstr_' +
+            str(NT),
+            subproblem_solver=solver,
+            subproblem_solver_options=nlp_opts[solver],
+            iter_timelimit=900,
+            timelimit=10000,
+            gams_output=False,
+            tee=False,
+            global_tee=True,
+            export_csv=True)

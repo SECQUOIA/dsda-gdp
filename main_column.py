@@ -17,9 +17,12 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from gdp.column.gdp_column import build_column
 from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
                                      get_external_information,
-                                     initialize_model, solve_subproblem,
-                                     solve_with_dsda, solve_with_gdpopt,
-                                     solve_with_minlp, visualize_dsda, solve_complete_external_enumeration)
+                                     initialize_model,
+                                     solve_complete_external_enumeration,
+                                     solve_subproblem, solve_with_dsda,
+                                     solve_with_gdpopt, solve_with_minlp,
+                                     visualize_dsda)
+
 
 def problem_logic_column(m):
     logic_expr = []
@@ -43,7 +46,7 @@ if __name__ == "__main__":
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
     # Initializing at column with all trays, reboil in bottom tray and reflux in top-most tray
     starting_point = [NT-2, 1]
-    globaltee= True
+    globaltee = True
 
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time']
@@ -107,102 +110,102 @@ if __name__ == "__main__":
         init_path = generate_initialization(
             m=m_solved, starting_initialization=True, model_name='column_'+str(NT))
 
-    # MINLP
-    for solver in minlps:
-        for transformation in transformations:
-            new_result = {}
-            m = build_column(**model_args)
-            m_init = initialize_model(m, json_path=init_path)
-            m_solved = solve_with_minlp(
-                m_init,
-                transformation=transformation,
-                minlp=solver,
-                minlp_options=minlps_opts[solver],
-                timelimit=timelimit,
-                gams_output=False,
-                tee=globaltee,
-            )
-            new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
-                m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
-            dict_data.append(new_result)
-            print(new_result)
+    # # MINLP
+    # for solver in minlps:
+    #     for transformation in transformations:
+    #         new_result = {}
+    #         m = build_column(**model_args)
+    #         m_init = initialize_model(m, json_path=init_path)
+    #         m_solved = solve_with_minlp(
+    #             m_init,
+    #             transformation=transformation,
+    #             minlp=solver,
+    #             minlp_options=minlps_opts[solver],
+    #             timelimit=timelimit,
+    #             gams_output=False,
+    #             tee=globaltee,
+    #         )
+    #         new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
+    #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
+    #         dict_data.append(new_result)
+    #         print(new_result)
 
-    # GDPopt
-    for solver in nlps:
-        for strategy in strategies:
-            new_result = {}
-            m = build_column(**model_args)
-            m_init = initialize_model(m, json_path=init_path)
-            m_solved = solve_with_gdpopt(
-                m_init,
-                mip='cplex',
-                nlp=solver,
-                nlp_options=nlp_opts[solver],
-                timelimit=timelimit,
-                strategy=strategy,
-                tee=globaltee,
-            )
-            new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
-                m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
-            dict_data.append(new_result)
-            print(new_result)
+    # # GDPopt
+    # for solver in nlps:
+    #     for strategy in strategies:
+    #         new_result = {}
+    #         m = build_column(**model_args)
+    #         m_init = initialize_model(m, json_path=init_path)
+    #         m_solved = solve_with_gdpopt(
+    #             m_init,
+    #             mip='cplex',
+    #             nlp=solver,
+    #             nlp_options=nlp_opts[solver],
+    #             timelimit=timelimit,
+    #             strategy=strategy,
+    #             tee=globaltee,
+    #         )
+    #         new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
+    #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
+    #         dict_data.append(new_result)
+    #         print(new_result)
 
-    # D-SDA
-    m = build_column(**model_args)
-    ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
-    get_external_information(m, ext_ref, tee=globaltee)
+    # # D-SDA
+    # m = build_column(**model_args)
+    # ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
+    # get_external_information(m, ext_ref, tee=globaltee)
 
-    for solver in nlps:
-        for k in ks:
-            new_result = {}
-            m_solved, _, _ = solve_with_dsda(
-                model_function=build_column,
-                model_args=model_args,
-                starting_point=starting_point,
-                ext_dict=ext_ref,
-                ext_logic=problem_logic_column,
-                k=k,
-                provide_starting_initialization=True,
-                feasible_model='column_' + str(NT),
-                subproblem_solver=solver,
-                subproblem_solver_options=nlp_opts[solver],
-                iter_timelimit=timelimit,
-                timelimit=timelimit,
-                gams_output=False,
-                tee=globaltee,
-                global_tee=globaltee,
-            )
-            new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-                m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}
-            dict_data.append(new_result)
-            print(new_result)
+    # for solver in nlps:
+    #     for k in ks:
+    #         new_result = {}
+    #         m_solved, _, _ = solve_with_dsda(
+    #             model_function=build_column,
+    #             model_args=model_args,
+    #             starting_point=starting_point,
+    #             ext_dict=ext_ref,
+    #             ext_logic=problem_logic_column,
+    #             k=k,
+    #             provide_starting_initialization=True,
+    #             feasible_model='column_' + str(NT),
+    #             subproblem_solver=solver,
+    #             subproblem_solver_options=nlp_opts[solver],
+    #             iter_timelimit=timelimit,
+    #             timelimit=timelimit,
+    #             gams_output=False,
+    #             tee=globaltee,
+    #             global_tee=globaltee,
+    #         )
+    #         new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
+    #             m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}
+    #         dict_data.append(new_result)
+    #         print(new_result)
 
-    try:
-        with open(csv_file, 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-            writer.writeheader()
-            for data in dict_data:
-                writer.writerow(data)
-    except IOError:
-        print("I/O error")
+    # try:
+    #     with open(csv_file, 'w') as csvfile:
+    #         writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+    #         writer.writeheader()
+    #         for data in dict_data:
+    #             writer.writerow(data)
+    # except IOError:
+    #     print("I/O error")
 
     # Complete enumeration
-    NT = 17
-    model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
-    m = build_column(**model_args)
-    ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
-    get_external_information(m, ext_ref, tee=False)
-
-    m_solved = solve_complete_external_enumeration(build_column, 
-                                        model_args=model_args, 
-                                        ext_dict=ext_ref, 
-                                        ext_logic=problem_logic_column, 
-                                        feasible_model='column_'+str(NT),
-                                        subproblem_solver='knitro',
-                                        subproblem_solver_options=nlp_opts['knitro'],
-                                        iter_timelimit=30,
-                                        timelimit=900,
-                                        gams_output=False,
-                                        tee=False,
-                                        global_tee=True,
-                                        export_csv=True)
+    for solver in nlps:
+        m = build_column(**model_args)
+        ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
+        get_external_information(m, ext_ref, tee=False)
+        m_solved = solve_complete_external_enumeration(
+            model_function=build_column,
+            model_args=model_args,
+            ext_dict=ext_ref,
+            ext_logic=problem_logic_column,
+            feasible_model='column_'+str(NT),
+            subproblem_solver=solver,
+            subproblem_solver_options=nlp_opts[solver],
+            iter_timelimit=900,
+            timelimit=10000,
+            gams_output=False,
+            tee=globaltee,
+            global_tee=globaltee,
+            export_csv=True,
+        )

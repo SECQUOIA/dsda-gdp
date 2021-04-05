@@ -1,11 +1,12 @@
+import csv
 import itertools as it
 import os
 import time
-import csv
+from math import isnan
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pyomo.environ as pe
-from math import isnan
 from gdp.dsda.model_serializer import StoreSpec, from_json, to_json
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
@@ -734,22 +735,22 @@ def evaluate_neighbors(
                 if not improve:
                     # We want a minimum improvement in the first found solution
                     if (fmin - act_obj) > min_improve or (fmin - act_obj)/(abs(fmin)+epsilon) > min_improve_rel:
-                        fmin=act_obj
-                        best_var=temp[i]
-                        best_dir=i
-                        best_dist=dist
-                        improve=True
-                        best_path=generate_initialization(
-                            m_solved, starting_initialization = False, model_name = 'best')
+                        fmin = act_obj
+                        best_var = temp[i]
+                        best_dir = i
+                        best_dist = dist
+                        improve = True
+                        best_path = generate_initialization(
+                            m_solved, starting_initialization=False, model_name='best')
                 else:
                     # We want slightly worse solutions if the distance is larger
-                    if (((act_obj - fmin) < abs_tol) or ((act_obj - fmin)/(abs(fmin)+epsilon) < rel_tol) ) and dist >= best_dist:  #or 
-                        fmin=act_obj
-                        best_var=temp[i]
-                        best_dir=i
-                        best_dist=dist
-                        improve=True
-                        best_path=generate_initialization(
+                    if (((act_obj - fmin) < abs_tol) or ((act_obj - fmin)/(abs(fmin)+epsilon) < rel_tol)) and dist >= best_dist:  # or
+                        fmin = act_obj
+                        best_var = temp[i]
+                        best_dir = i
+                        best_dist = dist
+                        improve = True
+                        best_path = generate_initialization(
                             m_solved, starting_initialization=False, model_name='best')
 
             if time.perf_counter() - current_time > timelimit:  # current
@@ -769,18 +770,18 @@ def do_line_search(
     model_args: dict,
     ext_dict,
     ext_logic,
-    subproblem_solver: str='knitro',
-    subproblem_solver_options: dict={},
-    min_allowed: dict={},
-    max_allowed: dict={},
-    iter_timelimit: float=10,
-    timelimit: float=3600,
-    current_time: float=0,
-    gams_output: bool=False,
-    tee: bool=False,
-    global_tee: bool=False,
-    rel_tol: float=1e-3,
-    global_evaluated: list=[],
+    subproblem_solver: str = 'knitro',
+    subproblem_solver_options: dict = {},
+    min_allowed: dict = {},
+    max_allowed: dict = {},
+    iter_timelimit: float = 10,
+    timelimit: float = 3600,
+    current_time: float = 0,
+    gams_output: bool = False,
+    tee: bool = False,
+    global_tee: bool = False,
+    rel_tol: float = 1e-3,
+    global_evaluated: list = [],
     init_path=None
 ):
     """
@@ -814,35 +815,35 @@ def do_line_search(
         new_path: path of best json file
     """
     # Global Tolerance parameters
-    epsilon=1e-10
+    epsilon = 1e-10
     min_improve = 1e-5
     min_improve_rel = 1e-3
 
     # Initialize
-    ls_evaluated=[]
-    ls_time=0
-    best_var=start
-    moved=False
-    new_path=init_path
+    ls_evaluated = []
+    ls_time = 0
+    best_var = start
+    moved = False
+    new_path = init_path
 
     # Line search in given direction
-    moved_point=list(map(sum, zip(list(start), list(direction))))
-    checked=0
+    moved_point = list(map(sum, zip(list(start), list(direction))))
+    checked = 0
     for j in range(len(moved_point)):   # Check if within bounds
         if moved_point[j] >= min_allowed[j+1] and moved_point[j] <= max_allowed[j+1]:
             checked += 1
 
     if checked == len(moved_point):     # Solve model
         if moved_point not in global_evaluated:
-            m=model_function(**model_args)
-            m_init=initialize_model(m, json_path=init_path)
-            m_fixed=external_ref(
+            m = model_function(**model_args)
+            m_init = initialize_model(m, json_path=init_path)
+            m_fixed = external_ref(
                 m_init, moved_point, ext_logic, ext_dict)
-            t_remaining=min(iter_timelimit, timelimit -
+            t_remaining = min(iter_timelimit, timelimit -
                               (time.perf_counter() - current_time))
             if t_remaining < 0:
                 return fmin, best_var, moved, ls_time, ls_evaluated, new_path
-            m_solved=solve_subproblem(
+            m_solved = solve_subproblem(
                 m=m_fixed,
                 subproblem_solver=subproblem_solver,
                 subproblem_solver_options=subproblem_solver_options,
@@ -857,13 +858,13 @@ def do_line_search(
                 if global_tee:
                     print('Evaluated:', moved_point, '   |   Objective:', round(pe.value(
                         m_solved.obj), 5), '   |   Global Time:', round(time.perf_counter() - current_time, 2))
-                act_obj=pe.value(m_solved.obj)
+                act_obj = pe.value(m_solved.obj)
                 # Return moved point
                 if (fmin - act_obj) > min_improve or (fmin - act_obj)/(abs(fmin)+epsilon) > min_improve_rel:
-                    fmin=act_obj
-                    best_var=moved_point
-                    moved=True
-                    new_path=generate_initialization(
+                    fmin = act_obj
+                    best_var = moved_point
+                    moved = True
+                    new_path = generate_initialization(
                         m_solved, starting_initialization=False, model_name='best')
 
     return fmin, best_var, moved, ls_time, ls_evaluated, new_path
@@ -875,17 +876,17 @@ def solve_with_dsda(
     starting_point: list,
     ext_dict,
     ext_logic,
-    k: str='Infinity',
-    provide_starting_initialization: bool=True,
-    feasible_model: str='',
-    subproblem_solver: str='knitro',
-    subproblem_solver_options: dict={},
-    iter_timelimit: float=10,
-    timelimit: float=3600,
-    gams_output: bool=False,
-    tee: bool=False,
-    global_tee: bool=True,
-    rel_tol: float=1e-3,
+    k: str = 'Infinity',
+    provide_starting_initialization: bool = True,
+    feasible_model: str = '',
+    subproblem_solver: str = 'knitro',
+    subproblem_solver_options: dict = {},
+    iter_timelimit: float = 10,
+    timelimit: float = 3600,
+    gams_output: bool = False,
+    tee: bool = False,
+    global_tee: bool = True,
+    rel_tol: float = 1e-3,
 ):
     """
     Function that computes Discrete-Steepest Descend Algorithm
@@ -917,39 +918,39 @@ def solve_with_dsda(
         print('--------------------------------------------------------------------------')
 
     # Initialize
-    route=[]
+    route = []
     obj_route = []
-    global_evaluated=[]
-    ext_var=starting_point
+    global_evaluated = []
+    ext_var = starting_point
 
     # Check if  feasible initialization is provided
-    m=model_function(**model_args)
-    dict_extvar, num_ext_var, min_allowed, max_allowed=get_external_information(
+    m = model_function(**model_args)
+    dict_extvar, num_ext_var, min_allowed, max_allowed = get_external_information(
         m, ext_dict)
     if len(starting_point) != num_ext_var:
         print("The size of the initialization vector must be equal to"+str(num_ext_var))
 
-    t_start=time.perf_counter()
-    dsda_usertime=0
+    t_start = time.perf_counter()
+    dsda_usertime = 0
     if provide_starting_initialization:
-        m_init=initialize_model(
+        m_init = initialize_model(
             m, from_feasible=True, feasible_model=feasible_model, json_path=None)
-        m_fixed=external_ref(
+        m_fixed = external_ref(
             m_init, ext_var, ext_logic, dict_extvar)
     else:
-        m_fixed=external_ref(m, ext_var, ext_logic, dict_extvar)
+        m_fixed = external_ref(m, ext_var, ext_logic, dict_extvar)
 
     # Solve for initialization
-    m_solved=solve_subproblem(
+    m_solved = solve_subproblem(
         m_fixed, subproblem_solver=subproblem_solver, subproblem_solver_options=subproblem_solver_options,
         timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
     dsda_usertime += m_solved.dsda_usertime
-    fmin=pe.value(m_solved.obj)
+    fmin = pe.value(m_solved.obj)
     if global_tee:
         print('Initializing...')
         print('Evaluated:', ext_var, '   |   Objective:', round(fmin, 5),
               '   |   Global Time:', round(time.perf_counter() - t_start, 2))
-    best_path=generate_initialization(m_solved)
+    best_path = generate_initialization(m_solved)
 
     route.append(ext_var)
     obj_route.append(fmin)
@@ -957,13 +958,13 @@ def solve_with_dsda(
 
     # Define neighborhood
     if k == '2':
-        neighborhood=neighborhood_k_eq_2(len(ext_var))
+        neighborhood = neighborhood_k_eq_2(len(ext_var))
     elif k == 'Infinity':
-        neighborhood=neighborhood_k_eq_inf(len(ext_var))
+        neighborhood = neighborhood_k_eq_inf(len(ext_var))
     else:
         return "Enter a valid neighborhood ('Infinity' or '2')"
 
-    looking_in_neighbors=True
+    looking_in_neighbors = True
 
     # Look in neighbors (outer cycle)
     while looking_in_neighbors:
@@ -972,13 +973,13 @@ def solve_with_dsda(
             break
 
         # Find neighbors of the actual point
-        neighbors=find_actual_neighbors(ext_var, neighborhood,
+        neighbors = find_actual_neighbors(ext_var, neighborhood,
                                           min_allowed=min_allowed, max_allowed=max_allowed)
 
         if time.perf_counter() - t_start > timelimit:
             break
 
-        fmin, best_var, best_dir, improve, eval_time, ns_evaluated, best_path=evaluate_neighbors(
+        fmin, best_var, best_dir, improve, eval_time, ns_evaluated, best_path = evaluate_neighbors(
             ext_vars=neighbors,
             fmin=fmin,
             model_function=model_function,
@@ -999,11 +1000,11 @@ def solve_with_dsda(
         )
 
         dsda_usertime += eval_time
-        global_evaluated=global_evaluated + ns_evaluated
+        global_evaluated = global_evaluated + ns_evaluated
 
         # Stopping condition in case there is no improvement amongst neighbors
         if improve:
-            line_searching=True
+            line_searching = True
             route.append(best_var)
             obj_route.append(fmin)
             if global_tee and time.perf_counter() - t_start < timelimit:
@@ -1016,7 +1017,7 @@ def solve_with_dsda(
                 if time.perf_counter() - t_start > timelimit:
                     break
 
-                fmin, best_var, moved, ls_time, ls_evaluated, best_path=do_line_search(
+                fmin, best_var, moved, ls_time, ls_evaluated, best_path = do_line_search(
                     start=best_var,
                     fmin=fmin,
                     direction=neighborhood[best_dir],
@@ -1037,7 +1038,7 @@ def solve_with_dsda(
                     global_evaluated=global_evaluated,
                     init_path=best_path,
                 )
-                global_evaluated=global_evaluated + ls_evaluated
+                global_evaluated = global_evaluated + ls_evaluated
                 dsda_usertime += ls_time
 
                 if time.perf_counter() - t_start > timelimit:
@@ -1048,26 +1049,26 @@ def solve_with_dsda(
                     route.append(best_var)
                     obj_route.append(fmin)
                 else:
-                    ext_var=best_var
-                    line_searching=False
+                    ext_var = best_var
+                    line_searching = False
                     if global_tee:
                         print()
                         print('New best point:', best_var)
 
         else:
-            looking_in_neighbors=False
+            looking_in_neighbors = False
 
-    t_end=round(time.perf_counter() - t_start, 2)
+    t_end = round(time.perf_counter() - t_start, 2)
 
     # Generate final solved model
-    m2=model_function(**model_args)
-    m2_solved=initialize_model(m2, json_path=best_path)
-    m2_solved.dsda_time=t_end
-    m2_solved.dsda_usertime=dsda_usertime
+    m2 = model_function(**model_args)
+    m2_solved = initialize_model(m2, json_path=best_path)
+    m2_solved.dsda_time = t_end
+    m2_solved.dsda_usertime = dsda_usertime
     if t_end > timelimit:
-        m2_solved.dsda_status='maxTimeLimit'
+        m2_solved.dsda_status = 'maxTimeLimit'
     else:
-        m2_solved.dsda_status='optimal'
+        m2_solved.dsda_status = 'optimal'
 
     # Print results
     if global_tee:
@@ -1081,13 +1082,13 @@ def solve_with_dsda(
 
 
 def visualize_dsda(
-    route: list=[],
-    feas_x: list=[],
-    feas_y: list=[],
-    objs: list=[],
-    k: str='?',
-    ext1_name: str='External variable 1',
-    ext2_name: str='External variable 2'
+    route: list = [],
+    feas_x: list = [],
+    feas_y: list = [],
+    objs: list = [],
+    k: str = '?',
+    ext1_name: str = 'External variable 1',
+    ext2_name: str = 'External variable 2'
 ):
     """
     Function that plots Discrete-Steepest Descend Algorithm for two external variables
@@ -1104,8 +1105,8 @@ def visualize_dsda(
 
     """
 
-    X1, X2=feas_x, feas_y
-    cm=plt.cm.get_cmap('viridis_r')
+    X1, X2 = feas_x, feas_y
+    cm = plt.cm.get_cmap('viridis_r')
 
     def drawArrow(A, B):
         plt.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1], width=0.00005,
@@ -1114,10 +1115,10 @@ def visualize_dsda(
     for i in range(len(route)-1):
         drawArrow(route[i], route[i+1])
 
-    sc=plt.scatter(X1, X2, s=80, c=objs, cmap=cm)
-    cbar=plt.colorbar(sc)
+    sc = plt.scatter(X1, X2, s=80, c=objs, cmap=cm)
+    cbar = plt.colorbar(sc)
     cbar.set_label('Objective function', rotation=90)
-    title_string='D-SDA with k = '+k
+    title_string = 'D-SDA with k = '+k
     plt.title(title_string)
     plt.xlabel(ext1_name)
     plt.ylabel(ext2_name)
@@ -1129,15 +1130,15 @@ def solve_complete_external_enumeration(
     model_args: dict,
     ext_dict,
     ext_logic,
-    feasible_model: str='',
-    subproblem_solver: str='knitro',
-    subproblem_solver_options: dict={},
-    iter_timelimit: float=10,
-    timelimit: int=3600,
-    gams_output: bool=False,
-    tee: bool=False,
-    global_tee: bool=True,
-    export_csv: bool=False
+    feasible_model: str = '',
+    subproblem_solver: str = 'knitro',
+    subproblem_solver_options: dict = {},
+    iter_timelimit: float = 10,
+    timelimit: float = 3600,
+    gams_output: bool = False,
+    tee: bool = False,
+    global_tee: bool = True,
+    export_csv: bool = False
 ):
     """
     Function that computes complete enumeration using the external variable reformulation
@@ -1161,16 +1162,19 @@ def solve_complete_external_enumeration(
     results = {}
     feasibles = {}
     t_start = time.perf_counter()
-    csv_columns = ['Point', 'x', 'y','Objective','Status','Time','Global_Time']
+    csv_columns = ['Point', 'x', 'y', 'Objective',
+                   'Status', 'Time', 'Global_Time']
     dict_data = []
-    csv_file = 'compl_enum_'+str(feasible_model)+'_'+str(subproblem_solver)+'_.csv'
+    csv_file = 'compl_enum_'+str(feasible_model) + \
+        '_'+str(subproblem_solver)+'_.csv'
 
-    m=model_function(**model_args)
-    dict_extvar, num_ext_var, min_allowed, max_allowed=get_external_information(m, ext_dict, tee=global_tee)
+    m = model_function(**model_args)
+    dict_extvar, num_ext_var, min_allowed, max_allowed = get_external_information(
+        m, ext_dict, tee=global_tee)
 
     bounds = []
-    for i in range(1,num_ext_var+1):
-        bounds.append( list(range(min_allowed[i],max_allowed[i]+1)))
+    for i in range(1, num_ext_var+1):
+        bounds.append(list(range(min_allowed[i], max_allowed[i]+1)))
 
     mixes = list(it.product(*bounds))
 
@@ -1180,30 +1184,34 @@ def solve_complete_external_enumeration(
 
     for i in mixes:
         new_result = {}
-        m=model_function(**model_args)
-        m_init=initialize_model(m, from_feasible=True, feasible_model=feasible_model, json_path=None)
-        m_fixed=external_ref(m_init, list(i), ext_logic, dict_extvar, tee=False)
-        t_remaining = min(iter_timelimit, timelimit -(time.perf_counter() - t_start))
+        m = model_function(**model_args)
+        m_init = initialize_model(
+            m, from_feasible=True, feasible_model=feasible_model, json_path=None)
+        m_fixed = external_ref(m_init, list(
+            i), ext_logic, dict_extvar, tee=False)
+        t_remaining = min(iter_timelimit, timelimit -
+                          (time.perf_counter() - t_start))
         if t_remaining < 0:  # No time reamining for optimization
             break
-        m_solved=solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, 
-                                  subproblem_solver_options=subproblem_solver_options,
-                                  timelimit=t_remaining, gams_output=gams_output, tee=tee)
+        m_solved = solve_subproblem(m=m_fixed, subproblem_solver=subproblem_solver,
+                                    subproblem_solver_options=subproblem_solver_options,
+                                    timelimit=t_remaining, gams_output=gams_output, tee=tee)
 
         results[i] = (m_solved.dsda_status, pe.value(m_solved.obj))
-        
+
         if global_tee:
-            print('Evaluated:', list(i), ' |   Objective:', round(pe.value(m_solved.obj), 5), ' |   Global Time:', round(time.perf_counter()-t_start,2),
-              ' |   Status:', m_solved.dsda_status)
-        
+            print('Evaluated:', list(i), ' |   Objective:', round(pe.value(m_solved.obj), 5), ' |   Global Time:', round(time.perf_counter()-t_start, 2),
+                  ' |   Status:', m_solved.dsda_status)
+
         if m_solved.dsda_status == 'Optimal':
             feasibles[i] = float(pe.value(m_solved.obj))
-            
+
         if export_csv:
             if m_solved.dsda_status != 'FBBT_Infeasible':
-                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status, 'Time':m_solved.results.solver.user_time, 'Global_Time':time.perf_counter()-t_start}
+                new_result = {'Point': list(i), 'x': i[0], 'y': i[1], 'Objective': pe.value(
+                    m_solved.obj), 'Status': m_solved.dsda_status, 'Time': m_solved.results.solver.user_time, 'Global_Time': time.perf_counter()-t_start}
                 dict_data.append(new_result)
-        
+
         if time.perf_counter() - t_start > timelimit:
             break
 
@@ -1213,18 +1221,21 @@ def solve_complete_external_enumeration(
             int_feasibles[i] = feasibles[i]
 
     minimum = min(int_feasibles, key=int_feasibles.get)
-    m2=model_function(**model_args)
-    m2_init=initialize_model(m2, from_feasible=True, feasible_model=feasible_model, json_path=None)
-    m2_fixed=external_ref(m2_init, list(minimum), ext_logic, dict_extvar, tee=False)
-    m2_solved=solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver, 
-                                subproblem_solver_options=subproblem_solver_options,
-                                timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
+    m2 = model_function(**model_args)
+    m2_init = initialize_model(
+        m2, from_feasible=True, feasible_model=feasible_model, json_path=None)
+    m2_fixed = external_ref(m2_init, list(
+        minimum), ext_logic, dict_extvar, tee=False)
+    m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver,
+                                 subproblem_solver_options=subproblem_solver_options,
+                                 timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
 
     t_end = time.perf_counter()-t_start
     m2_solved.total_time = t_end
-    
+
     if export_csv:
-        final = {'Point':list(minimum), 'x':minimum[0], 'y':minimum[1],'Objective':pe.value(m2_solved.obj),'Status':'Final', 'Time':m2_solved.results.solver.user_time, 'Global_Time':t_end}
+        final = {'Point': list(minimum), 'x': minimum[0], 'y': minimum[1], 'Objective': pe.value(
+            m2_solved.obj), 'Status': 'Final', 'Time': m2_solved.results.solver.user_time, 'Global_Time': t_end}
         dict_data.append(final)
         try:
             with open(csv_file, 'w') as csvfile:
@@ -1239,10 +1250,6 @@ def solve_complete_external_enumeration(
         print('----------------------------------------------------------------------------------------------')
         print('Objective:', round(pe.value(m2_solved.obj), 5))
         print('External variables:', list(minimum))
-        print('Execution time [s]:', round(t_end,2))
-
+        print('Execution time [s]:', round(t_end, 2))
 
     return m2_solved
-
-        
-

@@ -1161,7 +1161,7 @@ def solve_complete_external_enumeration(
     results = {}
     feasibles = {}
     t_start = time.perf_counter()
-    csv_columns = ['Point', 'x', 'y','Objective','Status','Time']
+    csv_columns = ['Point', 'x', 'y','Objective','Status','Time','Global_Time']
     dict_data = []
     csv_file = 'compl_enum_'+str(feasible_model)+'_'+str(subproblem_solver)+'_.csv'
 
@@ -1201,22 +1201,12 @@ def solve_complete_external_enumeration(
             
         if export_csv:
             if m_solved.dsda_status != 'FBBT_Infeasible':
-                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status, 'Time':m_solved.results.solver.user_time}
+                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status, 'Time':m_solved.results.solver.user_time, 'Global_Time':round(time.perf_counter()-t_start,2)}
                 dict_data.append(new_result)
         
         if time.perf_counter() - t_start > timelimit:
             break
-    
-    if export_csv:
-        try:
-            with open(csv_file, 'w') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-                writer.writeheader()
-                for data in dict_data:
-                    writer.writerow(data)
-        except IOError:
-            print("I/O error")
-    
+
     int_feasibles = {}
     for i in feasibles:
         if not isnan(feasibles[i]):
@@ -1232,6 +1222,18 @@ def solve_complete_external_enumeration(
 
     t_end = time.perf_counter()-t_start
     m2_solved.total_time = t_end
+    
+    if export_csv:
+        final = {'Point':list(minimum), 'x':minimum[0], 'y':minimum[1],'Objective':pe.value(m2_solved.obj),'Status':'Final', 'Time':m2_solved.results.solver.user_time, 'Global_Time':t_end}
+        dict_data.append(final)
+        try:
+            with open(csv_file, 'w') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+                writer.writeheader()
+                for data in dict_data:
+                    writer.writerow(data)
+        except IOError:
+            print("I/O error")
 
     if global_tee:
         print('----------------------------------------------------------------------------------------------')

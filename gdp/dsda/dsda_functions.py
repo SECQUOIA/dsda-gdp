@@ -634,7 +634,8 @@ def evaluate_neighbors(
     fmin: float,
     model_function,
     model_args: dict,
-    ext_dict, ext_logic,
+    ext_dict: dict,
+    ext_logic,
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
     iter_timelimit: float = 10,
@@ -768,7 +769,7 @@ def do_line_search(
     direction: list,
     model_function,
     model_args: dict,
-    ext_dict,
+    ext_dict: dict,
     ext_logic,
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
@@ -1128,7 +1129,7 @@ def visualize_dsda(
 def solve_complete_external_enumeration(
     model_function,
     model_args: dict,
-    ext_dict,
+    ext_dict: dict,
     ext_logic,
     feasible_model: str = '',
     subproblem_solver: str = 'knitro',
@@ -1186,16 +1187,30 @@ def solve_complete_external_enumeration(
         new_result = {}
         m = model_function(**model_args)
         m_init = initialize_model(
-            m, from_feasible=True, feasible_model=feasible_model, json_path=None)
-        m_fixed = external_ref(m_init, list(
-            i), ext_logic, dict_extvar, tee=False)
+            m=m,
+            from_feasible=True,
+            feasible_model=feasible_model,
+            json_path=None,
+        )
+        m_fixed = external_ref(
+            m=m_init,
+            x=list(i),
+            other_function=ext_logic,
+            dict_extvar=dict_extvar,
+            tee=False,
+        )
         t_remaining = min(iter_timelimit, timelimit -
                           (time.perf_counter() - t_start))
         if t_remaining < 0:  # No time reamining for optimization
             break
-        m_solved = solve_subproblem(m=m_fixed, subproblem_solver=subproblem_solver,
-                                    subproblem_solver_options=subproblem_solver_options,
-                                    timelimit=t_remaining, gams_output=gams_output, tee=tee)
+        m_solved = solve_subproblem(
+            m=m_fixed,
+            subproblem_solver=subproblem_solver,
+            subproblem_solver_options=subproblem_solver_options,
+            timelimit=t_remaining,
+            gams_output=gams_output,
+            tee=tee,
+        )
 
         results[i] = (m_solved.dsda_status, pe.value(m_solved.obj))
 
@@ -1223,12 +1238,26 @@ def solve_complete_external_enumeration(
     minimum = min(int_feasibles, key=int_feasibles.get)
     m2 = model_function(**model_args)
     m2_init = initialize_model(
-        m2, from_feasible=True, feasible_model=feasible_model, json_path=None)
-    m2_fixed = external_ref(m2_init, list(
-        minimum), ext_logic, dict_extvar, tee=False)
-    m2_solved = solve_subproblem(m2_fixed, subproblem_solver=subproblem_solver,
-                                 subproblem_solver_options=subproblem_solver_options,
-                                 timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
+        m=m2,
+        from_feasible=True,
+        feasible_model=feasible_model,
+        json_path=None,
+    )
+    m2_fixed = external_ref(
+        m=m2_init,
+        x=list(minimum),
+        other_function=ext_logic,
+        dict_extvar=dict_extvar,
+        tee=False,
+    )
+    m2_solved = solve_subproblem(
+        m=m2_fixed,
+        subproblem_solver=subproblem_solver,
+        subproblem_solver_options=subproblem_solver_options,
+        timelimit=iter_timelimit,
+        gams_output=gams_output,
+        tee=tee,
+    )
 
     t_end = time.perf_counter()-t_start
     m2_solved.total_time = t_end

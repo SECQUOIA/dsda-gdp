@@ -175,13 +175,15 @@ if __name__ == "__main__":
     ext_ref = {m.Y: m.k}
     get_external_information(m, ext_ref, tee=False)
 
-    solve_complete_external_enumeration(build_small_batch, 
+    m_solved = solve_complete_external_enumeration(build_small_batch, 
                                         model_args={}, 
                                         ext_dict=ext_ref, 
                                         ext_logic=problem_logic_batch, 
                                         feasible_model='small_batch',
                                         subproblem_solver='knitro',
                                         iter_timelimit=30,
+                                        timelimit=100,
+                                        gams_output=False,
                                         tee=False,
                                         global_tee=True,
                                         export_csv=True)

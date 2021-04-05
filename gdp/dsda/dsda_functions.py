@@ -5,6 +5,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import pyomo.environ as pe
+from math import isnan
 from gdp.dsda.model_serializer import StoreSpec, from_json, to_json
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
@@ -302,6 +303,7 @@ def solve_subproblem(
                               )
 
         m.dsda_usertime = m.results.solver.user_time
+
         # Assign D-SDA status
         if m.results.solver.termination_condition == 'infeasible':
             m.dsda_status = 'Evaluated_Infeasible'
@@ -1131,6 +1133,7 @@ def solve_complete_external_enumeration(
     subproblem_solver: str='knitro',
     subproblem_solver_options: dict={},
     iter_timelimit: float=10,
+    timelimit: int=3600,
     gams_output: bool=False,
     tee: bool=False,
     global_tee: bool=True,
@@ -1146,6 +1149,7 @@ def solve_complete_external_enumeration(
         subproblem_solver: MINLP or NLP solver algorithm
         subproblem_solver_options: MINLP or NLP solver algorithm options
         iter_timelimit: time limit in seconds for the solve statement for each iteration
+        timelimit: time limit in seconds for the algorithm
         gams_output: Determine keeping or not GAMS files
         tee: Display iteration output
         global_tee: Display D-SDA output
@@ -1179,9 +1183,12 @@ def solve_complete_external_enumeration(
         m=model_function(**model_args)
         m_init=initialize_model(m, from_feasible=True, feasible_model=feasible_model, json_path=None)
         m_fixed=external_ref(m_init, list(i), ext_logic, dict_extvar, tee=False)
+        t_remaining = min(iter_timelimit, timelimit -(time.perf_counter() - t_start))
+        if t_remaining < 0:  # No time reamining for optimization
+            break
         m_solved=solve_subproblem(m_fixed, subproblem_solver=subproblem_solver, 
                                   subproblem_solver_options=subproblem_solver_options,
-                                  timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
+                                  timelimit=t_remaining, gams_output=gams_output, tee=tee)
 
         results[i] = (m_solved.dsda_status, pe.value(m_solved.obj))
         
@@ -1190,12 +1197,15 @@ def solve_complete_external_enumeration(
               ' |   Status:', m_solved.dsda_status)
         
         if m_solved.dsda_status == 'Optimal':
-            feasibles[i] = pe.value(m_solved.obj)
-
+            feasibles[i] = float(pe.value(m_solved.obj))
+            
         if export_csv:
             if m_solved.dsda_status != 'FBBT_Infeasible':
                 new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status}
                 dict_data.append(new_result)
+        
+        if time.perf_counter() - t_start > timelimit:
+            break
     
     if export_csv:
         try:
@@ -1207,7 +1217,12 @@ def solve_complete_external_enumeration(
         except IOError:
             print("I/O error")
     
-    minimum = min(feasibles, key=feasibles.get)
+    int_feasibles = {}
+    for i in feasibles:
+        if not isnan(feasibles[i]):
+            int_feasibles[i] = feasibles[i]
+
+    minimum = min(int_feasibles, key=int_feasibles.get)
     m2=model_function(**model_args)
     m2_init=initialize_model(m2, from_feasible=True, feasible_model=feasible_model, json_path=None)
     m2_fixed=external_ref(m2_init, list(minimum), ext_logic, dict_extvar, tee=False)
@@ -1215,11 +1230,14 @@ def solve_complete_external_enumeration(
                                 subproblem_solver_options=subproblem_solver_options,
                                 timelimit=iter_timelimit, gams_output=gams_output, tee=tee)
 
+    t_end = time.perf_counter()-t_start
+    m2_solved.total_time = t_end
+
     if global_tee:
         print('----------------------------------------------------------------------------------------------')
         print('Objective:', round(pe.value(m2_solved.obj), 5))
         print('External variables:', list(minimum))
-        print('Execution time [s]:', round(time.perf_counter()-t_start,2))
+        print('Execution time [s]:', round(t_end,2))
 
 
     return m2_solved

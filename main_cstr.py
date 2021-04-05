@@ -272,15 +272,18 @@ if __name__ == "__main__":
     ext_ref = {m.YF: m.N, m.YR: m.N}
     get_external_information(m, ext_ref, tee=False)
 
-    solve_complete_external_enumeration(build_cstrs, 
+    m_solved = solve_complete_external_enumeration(build_cstrs, 
                                         model_args={'NT': NT}, 
                                         ext_dict=ext_ref, 
                                         ext_logic=problem_logic_cstr, 
                                         feasible_model='cstr_' + str(NT),
-                                        subproblem_solver='knitro',
-                                        iter_timelimit=30,
+                                        subproblem_solver='baron',
+                                        iter_timelimit=10,
+                                        timelimit=900,
+                                        gams_output=False,
                                         tee=False,
                                         global_tee=True,
                                         export_csv=True)
+
 
 

@@ -193,13 +193,15 @@ if __name__ == "__main__":
     ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
     get_external_information(m, ext_ref, tee=False)
 
-    solve_complete_external_enumeration(build_column, 
+    m_solved = solve_complete_external_enumeration(build_column, 
                                         model_args=model_args, 
                                         ext_dict=ext_ref, 
                                         ext_logic=problem_logic_column, 
                                         feasible_model='column_'+str(NT),
                                         subproblem_solver='knitro',
                                         iter_timelimit=30,
+                                        timelimit=900,
+                                        gams_output=False,
                                         tee=False,
                                         global_tee=True,
                                         export_csv=True)

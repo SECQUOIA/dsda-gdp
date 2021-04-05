@@ -199,6 +199,7 @@ if __name__ == "__main__":
                                         ext_logic=problem_logic_column, 
                                         feasible_model='column_'+str(NT),
                                         subproblem_solver='knitro',
+                                        subproblem_solver_options=nlp_opts['knitro'],
                                         iter_timelimit=30,
                                         timelimit=900,
                                         gams_output=False,

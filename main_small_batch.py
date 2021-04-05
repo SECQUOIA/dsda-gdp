@@ -181,6 +181,7 @@ if __name__ == "__main__":
                                         ext_logic=problem_logic_batch, 
                                         feasible_model='small_batch',
                                         subproblem_solver='knitro',
+                                        subproblem_solver_options=nlp_opts['knitro'],
                                         iter_timelimit=30,
                                         timelimit=100,
                                         gams_output=False,

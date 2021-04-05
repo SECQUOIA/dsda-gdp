@@ -1161,9 +1161,9 @@ def solve_complete_external_enumeration(
     results = {}
     feasibles = {}
     t_start = time.perf_counter()
-    csv_columns = ['Point', 'x', 'y','Objective','Status']
+    csv_columns = ['Point', 'x', 'y','Objective','Status','Time']
     dict_data = []
-    csv_file = 'complete_enumeration_'+str(feasible_model)+'_results.csv'
+    csv_file = 'compl_enum_'+str(feasible_model)+'_'+str(subproblem_solver)+'_.csv'
 
     m=model_function(**model_args)
     dict_extvar, num_ext_var, min_allowed, max_allowed=get_external_information(m, ext_dict, tee=global_tee)
@@ -1201,7 +1201,7 @@ def solve_complete_external_enumeration(
             
         if export_csv:
             if m_solved.dsda_status != 'FBBT_Infeasible':
-                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status}
+                new_result = {'Point':list(i), 'x':i[0], 'y':i[1],'Objective':pe.value(m_solved.obj),'Status':m_solved.dsda_status, 'Time':m_solved.results.solver.user_time}
                 dict_data.append(new_result)
         
         if time.perf_counter() - t_start > timelimit:

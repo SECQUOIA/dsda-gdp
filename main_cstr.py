@@ -118,54 +118,54 @@ def problem_logic_cstr(m):
 
 if __name__ == "__main__":
 
-    # # Results
-    # NTs = range(5, 26, 1)
-    # # NTs = [10]
-    # timelimit = 900
-    # starting_point = [1, 1]
+    # Results
+    NTs = range(5, 26, 1)
+    # NTs = [10]
+    timelimit = 900
+    starting_point = [1, 1]
 
-    # globaltee = True
+    globaltee = True
 
-    # csv_columns = ['Method', 'Approach', 'Solver',
-    #                'Objective', 'Time', 'Status', 'User_time', 'NT']
-    # dict_data = []
-    # csv_file = "cstr_results.csv"
+    csv_columns = ['Method', 'Approach', 'Solver',
+                   'Objective', 'Time', 'Status', 'User_time', 'NT']
+    dict_data = []
+    csv_file = "cstr_results.csv"
 
-    # nlps = ['msnlp', 'knitro', 'baron']
+    nlps = ['msnlp', 'knitro', 'baron']
 
-    # nlp_opts = dict((nlp, {}) for nlp in nlps)
-    # nlp_opts['msnlp']['add_options'] = [
-    #     'GAMS_MODEL.optfile = 1;'
-    #     '\n'
-    #     '$onecho > msnlp.opt \n'
-    #     'nlpsolver knitro \n'
-    #     '$offecho \n'
-    # ]
+    nlp_opts = dict((nlp, {}) for nlp in nlps)
+    nlp_opts['msnlp']['add_options'] = [
+        'GAMS_MODEL.optfile = 1;'
+        '\n'
+        '$onecho > msnlp.opt \n'
+        'nlpsolver knitro \n'
+        '$offecho \n'
+    ]
 
-    # minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb']
+    minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb']
 
-    # minlps_opts = dict((minlp, {}) for minlp in minlps)
-    # minlps_opts['dicopt']['add_options'] = [
-    #     'GAMS_MODEL.optfile = 1;'
-    #     '\n'
-    #     '$onecho > dicopt.opt \n'
-    #     'stop 0 \n'
-    #     '*relaxed 2 \n'
-    #     'maxcycles 10000 \n'
-    #     'nlpsolver knitro \n'
-    #     '$offecho \n'
-    # ]
-    # minlps_opts['sbb']['add_options'] = [
-    #     'GAMS_MODEL.optfile = 1;'
-    #     '\n'
-    #     '$onecho > sbb.opt \n'
-    #     'rootsolver knitro \n'
-    #     'subsolver knitro \n'
-    #     '$offecho \n'
-    # ]
-    # transformations = ['bigm', 'hull']
-    # ks = ['Infinity', '2']
-    # strategies = ['LOA', 'GLOA', 'LBB']
+    minlps_opts = dict((minlp, {}) for minlp in minlps)
+    minlps_opts['dicopt']['add_options'] = [
+        'GAMS_MODEL.optfile = 1;'
+        '\n'
+        '$onecho > dicopt.opt \n'
+        'stop 0 \n'
+        '*relaxed 2 \n'
+        'maxcycles 10000 \n'
+        'nlpsolver knitro \n'
+        '$offecho \n'
+    ]
+    minlps_opts['sbb']['add_options'] = [
+        'GAMS_MODEL.optfile = 1;'
+        '\n'
+        '$onecho > sbb.opt \n'
+        'rootsolver knitro \n'
+        'subsolver knitro \n'
+        '$offecho \n'
+    ]
+    transformations = ['bigm', 'hull']
+    ks = ['Infinity', '2']
+    strategies = ['LOA', 'GLOA', 'LBB']
 
     # for NT in NTs:
     #     # Create initialization for all methods starting with a single reactor
@@ -267,23 +267,25 @@ if __name__ == "__main__":
     #         print("I/O error")
 
     # Complete enumeration
-    NT = 8
-    m = build_cstrs(NT)
-    ext_ref = {m.YF: m.N, m.YR: m.N}
-    get_external_information(m, ext_ref, tee=False)
-
-    m_solved = solve_complete_external_enumeration(build_cstrs, 
-                                        model_args={'NT': NT}, 
-                                        ext_dict=ext_ref, 
-                                        ext_logic=problem_logic_cstr, 
-                                        feasible_model='cstr_' + str(NT),
-                                        subproblem_solver='baron',
-                                        iter_timelimit=10,
-                                        timelimit=900,
-                                        gams_output=False,
-                                        tee=False,
-                                        global_tee=True,
-                                        export_csv=True)
+    for solver in nlps:
+        NT = 25
+        m = build_cstrs(NT)
+        ext_ref = {m.YF: m.N, m.YR: m.N}
+        get_external_information(m, ext_ref, tee=False)
+        print(solver)
+        m_solved = solve_complete_external_enumeration(build_cstrs, 
+                                            model_args={'NT': NT}, 
+                                            ext_dict=ext_ref, 
+                                            ext_logic=problem_logic_cstr, 
+                                            feasible_model='cstr_' + str(NT),
+                                            subproblem_solver=solver,
+                                            subproblem_solver_options=nlp_opts[solver],
+                                            iter_timelimit=900,
+                                            timelimit=10000,
+                                            gams_output=False,
+                                            tee=False,
+                                            global_tee=True,
+                                            export_csv=True)
 
 
 

@@ -27,3 +27,5 @@ D-SDA,k=2,baron,22271.54853627558,900.72,maxTimeLimit,900.1329998485744
 Enumeration,total,baron,19346.124560227123,26100,maxTimeLimit,NA
 Enumeration,total,knitro,19346.124801206708,67.388715100009,optimal,NA
 Enumeration,total,msnlp,19346.124560227123,317.8746708999388,optimal,NA
+MINLP,bigm,knitro,19449.851410352938,65.66399959847331,optimal,NA
+MINLP,hull,knitro,nan,116.26700037159026,infeasible,NA

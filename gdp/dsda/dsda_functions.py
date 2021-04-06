@@ -1132,6 +1132,7 @@ def solve_complete_external_enumeration(
     ext_dict: dict,
     ext_logic,
     feasible_model: str = '',
+    points: list = [],
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
     iter_timelimit: float = 10,
@@ -1148,6 +1149,8 @@ def solve_complete_external_enumeration(
         model_args: Contains the argument values needed for model_function
         ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
+        feasible_model: TODO complete
+        points: list of points to carry on enumeration
         subproblem_solver: MINLP or NLP solver algorithm
         subproblem_solver_options: MINLP or NLP solver algorithm options
         iter_timelimit: time limit in seconds for the solve statement for each iteration
@@ -1177,13 +1180,14 @@ def solve_complete_external_enumeration(
     for i in range(1, num_ext_var+1):
         bounds.append(list(range(min_allowed[i], max_allowed[i]+1)))
 
-    mixes = list(it.product(*bounds))
+    if len(points) == 0:
+        points = list(it.product(*bounds))
 
     if global_tee:
         print('\nStarting Complete Enumeration of External Variables')
         print('----------------------------------------------------------------------------------------------')
 
-    for i in mixes:
+    for i in points:
         new_result = {}
         m = model_function(**model_args)
         m_init = initialize_model(

@@ -51,7 +51,9 @@ if __name__ == "__main__":
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time']
     dict_data = []
-    csv_file = "column_results.csv"
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    csv_file = os.path.join(
+        dir_path, "results", "column_results.csv")
 
     nlps = ['msnlp', 'knitro', 'baron']
 
@@ -64,7 +66,7 @@ if __name__ == "__main__":
         '$offecho \n'
     ]
 
-    minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb']
+    minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
     minlps_opts = dict((minlp, {}) for minlp in minlps)
     minlps_opts['dicopt']['add_options'] = [
@@ -93,7 +95,6 @@ if __name__ == "__main__":
     strategies = ['LOA', 'GLOA', 'LBB']
 
     # Initializations
-    dir_path = os.path.dirname(os.path.abspath(__file__))
     json_file = os.path.join(
         dir_path, 'gdp/dsda/', 'column_' + str(NT) + '_initialization.json')
     if os.path.exists(json_file):
@@ -110,102 +111,102 @@ if __name__ == "__main__":
         init_path = generate_initialization(
             m=m_solved, starting_initialization=True, model_name='column_'+str(NT))
 
-    # # MINLP
-    # for solver in minlps:
-    #     for transformation in transformations:
-    #         new_result = {}
-    #         m = build_column(**model_args)
-    #         m_init = initialize_model(m, json_path=init_path)
-    #         m_solved = solve_with_minlp(
-    #             m_init,
-    #             transformation=transformation,
-    #             minlp=solver,
-    #             minlp_options=minlps_opts[solver],
-    #             timelimit=timelimit,
-    #             gams_output=False,
-    #             tee=globaltee,
-    #         )
-    #         new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
-    #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
-    #         dict_data.append(new_result)
-    #         print(new_result)
+    # MINLP
+    for solver in minlps:
+        for transformation in transformations:
+            new_result = {}
+            m = build_column(**model_args)
+            m_init = initialize_model(m, json_path=init_path)
+            m_solved = solve_with_minlp(
+                m_init,
+                transformation=transformation,
+                minlp=solver,
+                minlp_options=minlps_opts[solver],
+                timelimit=timelimit,
+                gams_output=False,
+                tee=globaltee,
+            )
+            new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
+                m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
+            dict_data.append(new_result)
+            print(new_result)
 
-    # # GDPopt
-    # for solver in nlps:
-    #     for strategy in strategies:
-    #         new_result = {}
-    #         m = build_column(**model_args)
-    #         m_init = initialize_model(m, json_path=init_path)
-    #         m_solved = solve_with_gdpopt(
-    #             m_init,
-    #             mip='cplex',
-    #             nlp=solver,
-    #             nlp_options=nlp_opts[solver],
-    #             timelimit=timelimit,
-    #             strategy=strategy,
-    #             tee=globaltee,
-    #         )
-    #         new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
-    #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
-    #         dict_data.append(new_result)
-    #         print(new_result)
+    # GDPopt
+    for solver in nlps:
+        for strategy in strategies:
+            new_result = {}
+            m = build_column(**model_args)
+            m_init = initialize_model(m, json_path=init_path)
+            m_solved = solve_with_gdpopt(
+                m_init,
+                mip='cplex',
+                nlp=solver,
+                nlp_options=nlp_opts[solver],
+                timelimit=timelimit,
+                strategy=strategy,
+                tee=globaltee,
+            )
+            new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
+                m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
+            dict_data.append(new_result)
+            print(new_result)
 
-    # # D-SDA
+    # D-SDA
+    m = build_column(**model_args)
+    ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
+    get_external_information(m, ext_ref, tee=globaltee)
+
+    for solver in nlps:
+        for k in ks:
+            new_result = {}
+            m_solved, _, _ = solve_with_dsda(
+                model_function=build_column,
+                model_args=model_args,
+                starting_point=starting_point,
+                ext_dict=ext_ref,
+                ext_logic=problem_logic_column,
+                k=k,
+                provide_starting_initialization=True,
+                feasible_model='column_' + str(NT),
+                subproblem_solver=solver,
+                subproblem_solver_options=nlp_opts[solver],
+                iter_timelimit=timelimit,
+                timelimit=timelimit,
+                gams_output=False,
+                tee=globaltee,
+                global_tee=globaltee,
+            )
+            new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
+                m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}
+            dict_data.append(new_result)
+            print(new_result)
+
+    try:
+        with open(csv_file, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in dict_data:
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")
+
     # m = build_column(**model_args)
     # ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
-    # get_external_information(m, ext_ref, tee=globaltee)
-
-    # for solver in nlps:
-    #     for k in ks:
-    #         new_result = {}
-    #         m_solved, _, _ = solve_with_dsda(
-    #             model_function=build_column,
-    #             model_args=model_args,
-    #             starting_point=starting_point,
-    #             ext_dict=ext_ref,
-    #             ext_logic=problem_logic_column,
-    #             k=k,
-    #             provide_starting_initialization=True,
-    #             feasible_model='column_' + str(NT),
-    #             subproblem_solver=solver,
-    #             subproblem_solver_options=nlp_opts[solver],
-    #             iter_timelimit=timelimit,
-    #             timelimit=timelimit,
-    #             gams_output=False,
-    #             tee=globaltee,
-    #             global_tee=globaltee,
-    #         )
-    #         new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-    #             m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}
-    #         dict_data.append(new_result)
-    #         print(new_result)
-
-    # try:
-    #     with open(csv_file, 'w') as csvfile:
-    #         writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-    #         writer.writeheader()
-    #         for data in dict_data:
-    #             writer.writerow(data)
-    # except IOError:
-    #     print("I/O error")
-
-    # Complete enumeration
-    for solver in nlps:
-        m = build_column(**model_args)
-        ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
-        get_external_information(m, ext_ref, tee=False)
-        m_solved = solve_complete_external_enumeration(
-            model_function=build_column,
-            model_args=model_args,
-            ext_dict=ext_ref,
-            ext_logic=problem_logic_column,
-            feasible_model='column_'+str(NT),
-            subproblem_solver=solver,
-            subproblem_solver_options=nlp_opts[solver],
-            iter_timelimit=900,
-            timelimit=10000,
-            gams_output=False,
-            tee=globaltee,
-            global_tee=globaltee,
-            export_csv=True,
-        )
+    # get_external_information(m, ext_ref, tee=False)
+    # m_solved = solve_complete_external_enumeration(
+    #     model_function=build_column,
+    #     model_args=model_args,
+    #     ext_dict=ext_ref,
+    #     ext_logic=problem_logic_column,
+    #     feasible_model='column_'+str(NT),
+    #     points=[(7, 1), (8, 1), (9, 1), (9, 2), (10, 3),
+    #             (14, 7), (15, 7), (15, 8), (15, 9)],
+    #     subproblem_solver='baron',
+    #     subproblem_solver_options=nlp_opts['baron'],
+    #     iter_timelimit=3600,
+    #     timelimit=36000,
+    #     gams_output=False,
+    #     tee=globaltee,
+    #     global_tee=globaltee,
+    #     export_csv=True,
+    # )

@@ -28,14 +28,14 @@ def get_external_information(
     """
     Function that obtains information from the model to perform the reformulation with external variables.
     The model must be a GDP problem with exactly one "Exactly(k_j, [Y_j1,Y_j2,Y_j3,...])" constraint for each list of variables
-    [Y_j1,Y_j2,Y_j3,...] that is going to be reformualted over set j.
+    [Y_j1,Y_j2,Y_j3,...] that is going to be reformulated over set j.
     Args:
         m: GDP model that is going to be reformulated
-        ext_ref: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
+        ext_ref: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
         tee: Display reformulation
     Returns:
         reformulation_dict: A dictionary of dictionaries that looks as follows:
-            {1:{'exactly_number':Number of external variables for this type,'Boolean_vars_names':list with names of the ordered Boolean variables to be reformualted,'Boolean_vars_ordered_index': Indexes where the external reformualtion is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
+            {1:{'exactly_number':Number of external variables for this type,'Boolean_vars_names':list with names of the ordered Boolean variables to be reformulated,'Boolean_vars_ordered_index': Indexes where the external reformualtion is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
              2:{...},...}
 
             The first key (positive integer) represent a type of external variable identified in the model. For this type of external variable
@@ -46,7 +46,7 @@ def get_external_information(
 
     """
 
-    # If Boolean variables that are going to be reformualted are defined over multiple sets try:
+    # If Boolean variables that are going to be reformulated are defined over multiple sets try:
     try:
         # index of the set where reformultion can be applied for a given boolean variable
         ref_index = {}
@@ -74,9 +74,9 @@ def get_external_information(
             else:
                 no_ref_index[i].append(0)
 
-    # Identify the variables that can be reformualted by performing a loop over logical constraints
+    # Identify the variables that can be reformulated by performing a loop over logical constraints
     count = 1
-    # dict of dicts: it contains information from the exactly variables that can be reformualted into external variables.
+    # dict of dicts: it contains information from the exactly variables that can be reformulated into external variables.
     reformulation_dict = {}
     for c in m.component_data_objects(pe.LogicalConstraint, descend_into=True):
         if c.body.getname() == 'exactly':
@@ -183,7 +183,7 @@ def external_ref(
         x: List with current value of the external variables
         other_function: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         dict_extvar: A dictionary of dictionaries that looks as follows:
-            {1:{'exactly_number':Number of external variables for this type,'Boolean_vars_names':list with names of the ordered Boolean variables to be reformualted,'Boolean_vars_ordered_index': Indexes where the external reformualtion is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
+            {1:{'exactly_number':Number of external variables for this type,'Boolean_vars_names':list with names of the ordered Boolean variables to be reformulated,'Boolean_vars_ordered_index': Indexes where the external reformualtion is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
              2:{...},...}
 
             The first key (positive integer) represent a type of external variable identified in the model. For this type of external variable
@@ -655,7 +655,7 @@ def evaluate_neighbors(
         fmin: Objective at actual point
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
-        ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values)
+        ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values)
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         subproblem_solver: MINLP or NLP solver algorithm
         subproblem_solver_options: MINLP or NLP solver algorithm options
@@ -793,7 +793,7 @@ def do_line_search(
         direction: moving direction
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
-        ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values)
+        ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values)
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         subproblem_solver: MINLP or NLP solver algorithm
         subproblem_solver_options: MINLP or NLP solver algorithm options
@@ -896,7 +896,7 @@ def solve_with_dsda(
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
         starting_point: Feasible external variable initial point
-        ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
+        ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
         provide_intialization: If an existing json file is provided with a feasible initialization of starting_point
         subproblem_solver: MINLP or NLP solver algorithm
@@ -1147,7 +1147,7 @@ def solve_complete_external_enumeration(
     Args:
         model_function: GDP model to be soved
         model_args: Contains the argument values needed for model_function
-        ext_dict: Dictionary with Boolean variables to be reformualted (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
+        ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values).Both keys and values are pyomo objeccts.
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
         feasible_model: TODO complete
         points: list of points to carry on enumeration
@@ -1205,7 +1205,7 @@ def solve_complete_external_enumeration(
         )
         t_remaining = min(iter_timelimit, timelimit -
                           (time.perf_counter() - t_start))
-        if t_remaining < 0:  # No time reamining for optimization
+        if t_remaining < 0:  # No time remaining for optimization
             break
         m_solved = solve_subproblem(
             m=m_fixed,
@@ -1230,6 +1230,14 @@ def solve_complete_external_enumeration(
                 new_result = {'Point': list(i), 'x': i[0], 'y': i[1], 'Objective': pe.value(
                     m_solved.obj), 'Status': m_solved.dsda_status, 'Time': m_solved.results.solver.user_time, 'Global_Time': time.perf_counter()-t_start}
                 dict_data.append(new_result)
+            try:
+                with open(csv_file, 'w') as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+                    writer.writeheader()
+                    for data in dict_data:
+                        writer.writerow(data)
+            except IOError:
+                print("I/O error")
 
         if time.perf_counter() - t_start > timelimit:
             break
@@ -1239,50 +1247,54 @@ def solve_complete_external_enumeration(
         if not isnan(feasibles[i]):
             int_feasibles[i] = feasibles[i]
 
-    minimum = min(int_feasibles, key=int_feasibles.get)
-    m2 = model_function(**model_args)
-    m2_init = initialize_model(
-        m=m2,
-        from_feasible=True,
-        feasible_model=feasible_model,
-        json_path=None,
-    )
-    m2_fixed = external_ref(
-        m=m2_init,
-        x=list(minimum),
-        other_function=ext_logic,
-        dict_extvar=dict_extvar,
-        tee=False,
-    )
-    m2_solved = solve_subproblem(
-        m=m2_fixed,
-        subproblem_solver=subproblem_solver,
-        subproblem_solver_options=subproblem_solver_options,
-        timelimit=iter_timelimit,
-        gams_output=gams_output,
-        tee=tee,
-    )
+    if int_feasibles:
+        minimum = min(int_feasibles, key=int_feasibles.get)
+        m2 = model_function(**model_args)
+        m2_init = initialize_model(
+            m=m2,
+            from_feasible=True,
+            feasible_model=feasible_model,
+            json_path=None,
+        )
+        m2_fixed = external_ref(
+            m=m2_init,
+            x=list(minimum),
+            other_function=ext_logic,
+            dict_extvar=dict_extvar,
+            tee=False,
+        )
+        m2_solved = solve_subproblem(
+            m=m2_fixed,
+            subproblem_solver=subproblem_solver,
+            subproblem_solver_options=subproblem_solver_options,
+            timelimit=iter_timelimit,
+            gams_output=gams_output,
+            tee=tee,
+        )
+        _ = generate_initialization(m_solved)
 
-    t_end = time.perf_counter()-t_start
-    m2_solved.total_time = t_end
+        t_end = time.perf_counter()-t_start
+        m2_solved.total_time = t_end
 
-    if export_csv:
-        final = {'Point': list(minimum), 'x': minimum[0], 'y': minimum[1], 'Objective': pe.value(
-            m2_solved.obj), 'Status': 'Final', 'Time': m2_solved.results.solver.user_time, 'Global_Time': t_end}
-        dict_data.append(final)
-        try:
-            with open(csv_file, 'w') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-                writer.writeheader()
-                for data in dict_data:
-                    writer.writerow(data)
-        except IOError:
-            print("I/O error")
+        if export_csv:
+            final = {'Point': list(minimum), 'x': minimum[0], 'y': minimum[1], 'Objective': pe.value(
+                m2_solved.obj), 'Status': 'Final', 'Time': m2_solved.results.solver.user_time, 'Global_Time': t_end}
+            dict_data.append(final)
+            try:
+                with open(csv_file, 'w') as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+                    writer.writeheader()
+                    for data in dict_data:
+                        writer.writerow(data)
+            except IOError:
+                print("I/O error")
 
-    if global_tee:
-        print('----------------------------------------------------------------------------------------------')
-        print('Objective:', round(pe.value(m2_solved.obj), 5))
-        print('External variables:', list(minimum))
-        print('Execution time [s]:', round(t_end, 2))
+        if global_tee:
+            print('----------------------------------------------------------------------------------------------')
+            print('Objective:', round(pe.value(m2_solved.obj), 5))
+            print('External variables:', list(minimum))
+            print('Execution time [s]:', round(t_end, 2))
 
-    return m2_solved
+        return m2_solved
+
+    return None

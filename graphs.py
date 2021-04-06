@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     
     # colors={'bigm':'blue','hull':'turquoise','LOA':'purple','GLOA':'red','LBB':'green','k=2':'slategrey','k=Infinity':'black','total':'gold'}
-    # shapes={'antigone':'2','baron':'o','scip':'+','dicopt':'*','sbb':'+','msnlp':'D','knitro':'^'}
+    # shapes={'antigone':'2','baron':'o','scip':'s','dicopt':'*','sbb':'+','msnlp':'D','knitro':'^'}
 
     # absolutes = {}
     # sumb, sumk, summ = {}, {}, {}

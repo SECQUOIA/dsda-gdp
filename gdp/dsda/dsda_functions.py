@@ -1167,7 +1167,7 @@ def solve_complete_external_enumeration(
                    'Status', 'Time', 'Global_Time']
     dict_data = []
     csv_file = 'compl_enum_'+str(feasible_model) + \
-        '_'+str(subproblem_solver)+'_.csv'
+        '_'+str(subproblem_solver)+'.csv'
 
     m = model_function(**model_args)
     dict_extvar, num_ext_var, min_allowed, max_allowed = get_external_information(

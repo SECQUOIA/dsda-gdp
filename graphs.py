@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import matplotlib
+import ast
 from math import ceil, fabs, log10
 
 import pandas as pd
@@ -12,7 +13,9 @@ import pyomo.environ as pe
 from pyomo.environ import SolverFactory, Suffix, value
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
-
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d.proj3d import proj_transform
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 from gdp.cstr.gdp_reactor import build_cstrs
 from gdp.column.gdp_column import build_column
 from gdp.small_batch.gdp_small_batch import build_small_batch
@@ -20,9 +23,71 @@ from gdp.dsda.dsda_functions import solve_with_dsda, visualize_dsda, get_externa
 from main_cstr import problem_logic_cstr
 from main_column import problem_logic_column
 
+class Arrow3D(FancyArrowPatch):
+    def __init__(self, x, y, z, dx, dy, dz, *args, **kwargs):
+        super().__init__((0,0), (0,0), *args, **kwargs)
+        self._xyz = (x,y,z)
+        self._dxdydz = (dx,dy,dz)
+
+    def draw(self, renderer):
+        x1,y1,z1 = self._xyz
+        dx,dy,dz = self._dxdydz
+        x2,y2,z2 = (x1+dx,y1+dy,z1+dz)
+
+        xs, ys, zs = proj_transform((x1,x2),(y1,y2),(z1,z2), renderer.M)
+        self.set_positions((xs[0],ys[0]),(xs[1],ys[1]))
+        super().draw(renderer)
+
+    def _arrow3D(ax, x, y, z, dx, dy, dz, *args, **kwargs):
+        '''Add an 3d arrow to an `Axes3D` instance.'''
+
+        arrow = Arrow3D(x, y, z, dx, dy, dz, *args, **kwargs)
+        ax.add_artist(arrow)
+
+    setattr(Axes3D,'arrow3D',_arrow3D)
+
 
 if __name__ == "__main__":
 
+    batch = pd.read_csv("results/compl_enum_small_batch_baron.csv") 
+    batch.head()
+
+    batch["Scaled_Objective"] = ((batch["Objective"])) 
+
+    fig = plt.figure(figsize = (10, 9))
+    cm = plt.cm.get_cmap('viridis_r')
+    ax = plt.axes(projection ="3d")
+
+    sctt = ax.scatter3D(batch.x, batch.y, batch.z, s=80, c = batch['Objective'], cmap=cm, alpha=1)
+
+    # k = Infinity
+    ax.arrow3D(3,3,3,-1,-1,-1,mutation_scale=20,arrowstyle="-|>",ec ='black',fc='black')
+    ax.arrow3D(2,2,2,0,0,-1,mutation_scale=20,arrowstyle="-|>",ec ='black',fc='black')
+
+    # k = 2
+    ax.arrow3D(3,3,3,0,0,-1,mutation_scale=20,arrowstyle="-|>",ec ='orangered',fc='orangered')
+    ax.arrow3D(3,3,2,0,0,-1,mutation_scale=20,arrowstyle="-|>",ec ='orangered',fc='orangered')
+    ax.arrow3D(3,3,1,-1,0,0,mutation_scale=20,arrowstyle="-|>",ec ='orangered',fc='orangered')
+    ax.arrow3D(2,3,1,0,-1,0,mutation_scale=20,arrowstyle="-|>",ec ='orangered',fc='orangered')
+
+    cbar = plt.colorbar(sctt, shrink = 0.5, aspect = 3)
+    cbar.set_label('Objective', rotation=90)
+
+
+    ax.grid(b = True, color ='grey',
+        linestyle ='-.', linewidth = 0.3,
+        alpha = 0.2)
+
+    #fig.colorbar(sctt, ax = ax, shrink = 0.5, aspect = 3, title='JAJA')
+
+    plt.title('D-SDA for Batch Scheduling', fontsize=18)
+    ax.set_xlabel('X Mixers', fontsize=12)
+    ax.set_ylabel('X Reactors', fontsize=12)
+    ax.set_zlabel('X Centrifuges', fontsize=12)
+
+    plt.show()
+
+    # # _______________________________________________________________________________
     # # CSTR Gap vs NT Graph
     # cstr = pd.read_csv("results/cstr_results.csv") 
     # cstr.head()

@@ -10,12 +10,15 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pyomo.environ as pe
+import mpl_toolkits.mplot3d
 from pyomo.environ import SolverFactory, Suffix, value
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d.proj3d import proj_transform
 from mpl_toolkits.mplot3d.axes3d import Axes3D
+from mpl_toolkits.axes_grid1 import Divider, Size
+from matplotlib.ticker import MaxNLocator
 from gdp.cstr.gdp_reactor import build_cstrs
 from gdp.column.gdp_column import build_column
 from gdp.small_batch.gdp_small_batch import build_small_batch
@@ -46,46 +49,71 @@ class Arrow3D(FancyArrowPatch):
 
     setattr(Axes3D,'arrow3D',_arrow3D)
 
+def set_axes_equal(ax: plt.Axes):
+    """Set 3D plot axes to equal scale.
+
+    Make axes of 3D plot have equal scale so that spheres appear as
+    spheres and cubes as cubes.  Required since `ax.axis('equal')`
+    and `ax.set_aspect('equal')` don't work on 3D.
+    """
+    limits = np.array([
+        ax.get_xlim3d(),
+        ax.get_ylim3d(),
+        ax.get_zlim3d(),
+    ])
+    origin = np.mean(limits, axis=1)
+    radius = 0.5 * np.max(np.abs(limits[:, 1] - limits[:, 0]))
+    _set_axes_radius(ax, origin, radius)
+
+def _set_axes_radius(ax, origin, radius):
+    x, y, z = origin
+    ax.set_xlim3d([x - radius, x + radius])
+    ax.set_ylim3d([y - radius, y + radius])
+    ax.set_zlim3d([z - radius, z + radius])
+
 
 if __name__ == "__main__":
 
-    batch = pd.read_csv("results/compl_enum_small_batch_baron.csv") 
-    batch.head()
-
-    batch["Scaled_Objective"] = ((batch["Objective"])) 
-
-    fig = plt.figure(figsize = (10, 9))
-    cm = plt.cm.get_cmap('viridis_r')
-    ax = plt.axes(projection ="3d")
-
-    sctt = ax.scatter3D(batch.x, batch.y, batch.z, s=80, c = batch['Objective'], cmap=cm, alpha=1)
-
-    # k = Infinity
-    ax.arrow3D(3,3,3,-1,-1,-1,mutation_scale=20,arrowstyle="-|>",ec ='black',fc='black')
-    ax.arrow3D(2,2,2,0,0,-1,mutation_scale=20,arrowstyle="-|>",ec ='black',fc='black')
-
-    # k = 2
-    ax.arrow3D(3,3,3,0,0,-1,mutation_scale=20,arrowstyle="-|>",ec ='orangered',fc='orangered')
-    ax.arrow3D(3,3,2,0,0,-1,mutation_scale=20,arrowstyle="-|>",ec ='orangered',fc='orangered')
-    ax.arrow3D(3,3,1,-1,0,0,mutation_scale=20,arrowstyle="-|>",ec ='orangered',fc='orangered')
-    ax.arrow3D(2,3,1,0,-1,0,mutation_scale=20,arrowstyle="-|>",ec ='orangered',fc='orangered')
-
-    cbar = plt.colorbar(sctt, shrink = 0.5, aspect = 3)
-    cbar.set_label('Objective', rotation=90)
+    # # Small Batch Graph
+    # batch = pd.read_csv("results/compl_enum_small_batch_baron.csv") 
+    # batch.head()
 
 
-    ax.grid(b = True, color ='grey',
-        linestyle ='-.', linewidth = 0.3,
-        alpha = 0.2)
+    # fig = plt.figure(figsize = (9, 7))
+    # cm = plt.cm.get_cmap('viridis_r')
+    # ax = plt.axes(projection ="3d")
 
-    #fig.colorbar(sctt, ax = ax, shrink = 0.5, aspect = 3, title='JAJA')
+    # sctt = ax.scatter3D(batch.x, batch.y, batch.z, s=120, c = batch['Objective'], cmap=cm, alpha=1)
 
-    plt.title('D-SDA for Batch Scheduling', fontsize=18)
-    ax.set_xlabel('X Mixers', fontsize=12)
-    ax.set_ylabel('X Reactors', fontsize=12)
-    ax.set_zlabel('X Centrifuges', fontsize=12)
+    # # k = Infinity
+    # ax.arrow3D(3,3,3,-1,-1,-1,mutation_scale=25,arrowstyle="-|>",ec ='black',fc='black')
+    # ax.arrow3D(2,2,2,0,0,-1,mutation_scale=25,arrowstyle="-|>",ec ='black',fc='black')
 
-    plt.show()
+    # # k = 2
+    # ax.arrow3D(3,3,3,0,0,-1,mutation_scale=25,arrowstyle="-|>",ec ='orangered',fc='orangered')
+    # ax.arrow3D(3,3,2,0,0,-1,mutation_scale=25,arrowstyle="-|>",ec ='orangered',fc='orangered')
+    # ax.arrow3D(3,3,1,-1,0,0,mutation_scale=25,arrowstyle="-|>",ec ='orangered',fc='orangered')
+    # ax.arrow3D(2,3,1,0,-1,0,mutation_scale=25,arrowstyle="-|>",ec ='orangered',fc='orangered')
+
+    # cbar = plt.colorbar(sctt, shrink=0.8, aspect = 20)
+    # cbar.set_label('Objective', rotation=90)
+
+    # ax.invert_xaxis()
+
+    # ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    # ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    # ax.zaxis.set_major_locator(MaxNLocator(integer=True))
+
+    # ax.grid(b = True, color ='grey',
+    #     linestyle ='-.', linewidth = 0.3,
+    #     alpha = 0.2)
+
+    # ax.set_box_aspect([1,1,2]) 
+    # ax.set_xlabel('Number of Mixers '+ r'$X_{mixer}$' , fontsize=10)
+    # ax.set_ylabel('Number of Reactors '+ r'$X_{reactor}$', fontsize=10)
+    # ax.set_zlabel('Number of Centrifuges '+ r'$X_{centrifuge}$', fontsize=10)
+
+    # plt.show()
 
     # # _______________________________________________________________________________
     # # CSTR Gap vs NT Graph

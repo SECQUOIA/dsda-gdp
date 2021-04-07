@@ -183,8 +183,13 @@ if __name__ == "__main__":
             ext_ref = {m.YF: m.N, m.YR: m.N}
             reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
                 m, ext_ref, tee=globaltee)
-            m_fixed = external_ref(m=m, x=[
-                1, 1], other_function=problem_logic_cstr, dict_extvar=reformulation_dict, tee=True)
+            m_fixed = external_ref(
+                m=m,
+                x=[1, 1],
+                extra_logic_function=problem_logic_cstr,
+                dict_extvar=reformulation_dict,
+                tee=True,
+                )
             m_solved = solve_subproblem(
                 m=m_fixed, subproblem_solver='baron', timelimit=100, tee=True)
             init_path = generate_initialization(

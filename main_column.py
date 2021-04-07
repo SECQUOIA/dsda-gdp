@@ -104,7 +104,7 @@ if __name__ == "__main__":
         ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
         reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
             m, ext_ref, tee=globaltee)
-        m_fixed = external_ref(m=m, x=starting_point, other_function=problem_logic_column,
+        m_fixed = external_ref(m=m, x=starting_point, extra_logic_function=problem_logic_column,
                                dict_extvar=reformulation_dict, tee=globaltee)
         m_solved = solve_subproblem(
             m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee)

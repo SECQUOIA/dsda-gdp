@@ -1,4 +1,5 @@
 import csv
+import copy
 import itertools as it
 import os
 import time
@@ -35,7 +36,11 @@ def get_external_information(
         tee: Display reformulation
     Returns:
         reformulation_dict: A dictionary of dictionaries that looks as follows:
-            {1:{'exactly_number':Number of external variables for this type,'Boolean_vars_names':list with names of the ordered Boolean variables to be reformulated,'Boolean_vars_ordered_index': Indexes where the external reformulation is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
+            {1:{'exactly_number':Number of external variables for this type,
+                'Boolean_vars_names':list with names of the ordered Boolean variables to be reformulated,
+                'Boolean_vars_ordered_index': Indexes where the external reformulation is applied,
+                'Ext_var_lower_bound': Lower bound for this type of external variable,
+                'Ext_var_upper_bound': Upper bound for this type of external variable },
              2:{...},...}
 
             The first key (positive integer) represent a type of external variable identified in the model. For this type of external variable
@@ -183,7 +188,11 @@ def external_ref(
         x: List with current value of the external variables
         extra_logic_function: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         dict_extvar: A dictionary of dictionaries that looks as follows:
-            {1:{'exactly_number':Number of external variables for this type,'Boolean_vars_names':list with names of the ordered Boolean variables to be reformulated,'Boolean_vars_ordered_index': Indexes where the external reformulation is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
+            {1:{'exactly_number':Number of external variables for this type,
+                'Boolean_vars_names':list with names of the ordered Boolean variables to be reformulated,
+                'Boolean_vars_ordered_index': Indexes where the external reformulation is applied,
+                'Ext_var_lower_bound': Lower bound for this type of external variable,
+                'Ext_var_upper_bound': Upper bound for this type of external variable },
              2:{...},...}
 
             The first key (positive integer) represent a type of external variable identified in the model. For this type of external variable
@@ -249,15 +258,34 @@ def extvars_gdp_to_mip(
     transformation: str = 'bigm',
 ):
     """
+    Function that
+    Args:
+        m: GDP model that is going to be reformulated
+        gdp_dict_extvar: A dictionary of dictionaries that looks as follows:
+            {1:{'exactly_number':Number of external variables for this type,
+                'Boolean_vars_names':list with names of the ordered Boolean variables to be reformulated,
+                'Boolean_vars_ordered_index': Indexes where the external reformulation is applied,
+                'Ext_var_lower_bound': Lower bound for this type of external variable,
+                'Ext_var_upper_bound': Upper bound for this type of external variable },
+             2:{...},...}
+        transformation: GDP to MINLP transformation to be used
+
+            The first key (positive integer) represent a type of external variable identified in the model. For this type of external variable
+            a dictionary is created.
+        tee: Display reformulation
+    Returns:
+        m: A MIP model transformed from the original GDP m model via the 'transformation' argument
+        mip_dict_extvar: A dictionary of dictionaries that looks as follows:
+            {1:{'exactly_number':Number of external variables for this type,
+                'Boolean_vars_names':list with names of the ordered Boolean variables to be reformulated,
+                'Boolean_vars_ordered_index': Indexes where the external reformulation is applied,
+                'Binary_vars_names':list with names of the ordered Binary variables to be reformulated,
+                'Binary_vars_ordered_index': Indexes where the external reformulation is applied,
+                'Ext_var_lower_bound': Lower bound for this type of external variable,
+                'Ext_var_upper_bound': Upper bound for this type of external variable },
+             2:{...},...}
 
     """
-    # This part of code is required due to the deep copy issue: we have to compare Boolean variables by name
-    for i in gdp_dict_extvar:
-        gdp_dict_extvar[i]['Boolean_vars'] = []
-        for j in gdp_dict_extvar[i]['Boolean_vars_names']:
-            for boolean in m.component_data_objects(pe.BooleanVar, descend_into=True):
-                if(boolean.name == j):
-                    gdp_dict_extvar[i]['Boolean_vars'] = gdp_dict_extvar[i]['Boolean_vars']+[boolean]
 
     
     # Transformation step
@@ -265,19 +293,22 @@ def extvars_gdp_to_mip(
     transformation_string = 'gdp.' + transformation
     pe.TransformationFactory(transformation_string).apply_to(m)
 
-    mip_dict_extvar = {}
+    mip_dict_extvar = copy.deepcopy(gdp_dict_extvar)
 
-    for key, value in gdp_dict_extvar.items():
-        mip_dict_extvar[key] = {}
-        mip_dict_extvar[key]['exactly_number'] = gdp_dict_extvar[key]['exactly_number']
-        mip_dict_extvar[key]['Binary_vars_names'] = [
-            boolean.get_associated_binary().name for boolean in gdp_dict_extvar[key]['Boolean_vars']]
+    # This part of code is required due to the deep copy issue: we have to compare Boolean variables by name
+    for i in mip_dict_extvar.keys():
+        mip_dict_extvar[i]['Boolean_vars'] = []
+        for j in mip_dict_extvar[i]['Boolean_vars_names']:
+            for boolean in m.component_data_objects(pe.BooleanVar, descend_into=True):
+                if(boolean.name == j):
+                    mip_dict_extvar[i]['Boolean_vars'] = mip_dict_extvar[i]['Boolean_vars']+[boolean]
+        # Add extra terms to the dictionary to be relevant for binary variables
+        mip_dict_extvar[i]['Binary_vars_names'] = [
+            boolean.get_associated_binary().name for boolean in mip_dict_extvar[i]['Boolean_vars']]
         # Uncomment the next line in case that deepcopy works
         # mip_dict_extvar[key]['Binary_vars'] = [
         #     boolean.get_associated_binary() for boolean in gdp_dict_extvar[key]['Boolean_vars']]
-        mip_dict_extvar[key]['Binary_vars_ordered_index'] = gdp_dict_extvar[key]['Boolean_vars_ordered_index']
-        mip_dict_extvar[key]['Ext_var_lower_bound'] = gdp_dict_extvar[key]['Ext_var_lower_bound']
-        mip_dict_extvar[key]['Ext_var_upper_bound'] = gdp_dict_extvar[key]['Ext_var_upper_bound']
+        mip_dict_extvar[i]['Binary_vars_ordered_index'] = mip_dict_extvar[i]['Boolean_vars_ordered_index']
     
     return m, mip_dict_extvar
 
@@ -293,7 +324,11 @@ def external_ref_mip(
         m: MI(N)LP model that is going to be reformulated
         x: List with current value of the external variables
         dict_extvar: A dictionary of dictionaries that looks as follows:
-            {1:{'exactly_number':Number of external variables for this type,'Binary_vars_names':list with names of the ordered binary variables to be reformulated,'Binary_vars_ordered_index': Indexes where the external reformulation is applied,'Ext_var_lower_bound': Lower bound for this type of external variable,'Ext_var_upper_bound': Upper bound for this type of external variable },
+            {1:{'exactly_number':Number of external variables for this type,
+            'Binary_vars_names':list with names of the ordered Binary variables to be reformulated,
+            'Binary_vars_ordered_index': Indexes where the external reformulation is applied,
+            'Ext_var_lower_bound': Lower bound for this type of external variable,
+            'Ext_var_upper_bound': Upper bound for this type of external variable },
              2:{...},...}
 
             The first key (positive integer) represent a type of external variable identified in the model. For this type of external variable
@@ -305,10 +340,11 @@ def external_ref_mip(
     """
 
     # This part of code is required due to the deep copy issue: we have to compare binary variables by name
+    # By uncommenting in previous function extvars_gdp_to_mip we would pass directly dict_extvar[i]['Binary_vars']
     for i in dict_extvar:
         dict_extvar[i]['Binary_vars'] = []
         for j in dict_extvar[i]['Binary_vars_names']:
-            for binary in m.component_data_objects(pe.BinaryVar, descend_into=True):
+            for binary in m.component_data_objects(pe.Var, descend_into=True):
                 if(binary.name == j):
                     dict_extvar[i]['Binary_vars'] = dict_extvar[i]['Binary_vars']+[binary]
 
@@ -661,7 +697,9 @@ def initialize_model(
 def generate_initialization(
     m: pe.ConcreteModel(),
     starting_initialization: bool = False,
-    model_name: str = ''
+    model_name: str = '',
+    human_read: bool = True,
+    wts = StoreSpec.value(),
 ):
     """
     Function that creates a json file for initialization based on a model m
@@ -669,11 +707,11 @@ def generate_initialization(
         m: Base Pyomo model for initializtion
         starting_intialization: Use to create "dsda_starting_initialization.json" file with a known feasible initialized model m
         model_name: Name of the model for the initialization
+        human_read: Make the json file readable by a human
+        wts: What to save, initially the values, but we might want something different. Check model_serializer tests for examples
     Returns:
         json_path: Path where json file is stored
     """
-
-    wts = StoreSpec.value()
 
     dir_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -688,7 +726,7 @@ def generate_initialization(
             json_path = os.path.join(
                 dir_path, 'dsda_initialization.json')
 
-    to_json(m, fname=json_path, human_read=True, wts=wts)
+    to_json(m, fname=json_path, human_read=human_read, wts=wts)
 
     return json_path
 
@@ -751,7 +789,7 @@ def evaluate_neighbors(
     Args:
         ext_vars: dict with neighbors where neighbor 0 is actual point
         fmin: Objective at actual point
-        model_function: GDP model to be solved
+        model_function: function that returns GDP model to be solved
         model_args: Contains the argument values needed for model_function
         ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values)
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
@@ -889,7 +927,7 @@ def do_line_search(
         start: Point of that is to be moved
         fmin: Objective at actual point
         direction: moving direction
-        model_function: GDP model to be solved
+        model_function: function that returns GDP model to be solved
         model_args: Contains the argument values needed for model_function
         ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values)
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
@@ -1234,6 +1272,8 @@ def solve_complete_external_enumeration(
     model_args: dict,
     ext_dict: dict,
     ext_logic,
+    mip_transformation: bool = False,
+    transformation: str = 'bigm',
     feasible_model: str = '',
     points: list = [],
     subproblem_solver: str = 'knitro',
@@ -1248,10 +1288,12 @@ def solve_complete_external_enumeration(
     """
     Function that computes complete enumeration using the external variable reformulation
     Args:
-        model_function: GDP model to be solved
+        model_function: function that returns GDP model to be solved
         model_args: Contains the argument values needed for model_function
         ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values). Both keys and values are pyomo objects.
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
+        mip_transformation: Whether to solve the enumeration using the external variables applied to the MIP problem insed of the GDP
+        transformation: Which transformation to apply to the GDP 
         feasible_model: TODO complete
         points: list of points to carry on enumeration
         subproblem_solver: MINLP or NLP solver algorithm
@@ -1299,13 +1341,23 @@ def solve_complete_external_enumeration(
             feasible_model=feasible_model,
             json_path=None,
         )
-        m_fixed = external_ref(
-            m=m_init,
-            x=list(i),
-            extra_logic_function=ext_logic,
-            dict_extvar=dict_extvar,
-            tee=False,
-        )
+        if mip_transformation:
+            m_mip, mip_extvars = extvars_gdp_to_mip(m, gdp_dict_extvar=dict_extvar, transformation=transformation)
+            m_fixed = external_ref_mip(
+                m=m_init,
+                x=list(i),
+                dict_extvar=mip_extvars,
+            )
+            csv_file = 'compl_enum_'+str(feasible_model) + \
+                '_'+str(subproblem_solver)+'_' + transformation +'.csv'
+        else:
+            m_fixed = external_ref(
+                m=m_init,
+                x=list(i),
+                extra_logic_function=ext_logic,
+                dict_extvar=dict_extvar,
+                tee=False,
+            )
         t_remaining = min(iter_timelimit, timelimit -
                           (time.perf_counter() - t_start))
         if t_remaining < 0:  # No time remaining for optimization
@@ -1329,6 +1381,8 @@ def solve_complete_external_enumeration(
             feasibles[i] = float(pe.value(m_solved.obj))
 
         if export_csv:
+            dir_path = os.path.dirname(os.path.abspath(__file__))
+            csv_file = os.path.join(dir_path, "results", csv_file)
             if m_solved.dsda_status != 'FBBT_Infeasible':
                 new_result = {'Point': list(i), 'x': i[0], 'y': i[1], 'Objective': pe.value(
                     m_solved.obj), 'Status': m_solved.dsda_status, 'Time': m_solved.results.solver.user_time, 'Global_Time': time.perf_counter()-t_start}
@@ -1350,6 +1404,7 @@ def solve_complete_external_enumeration(
         if not isnan(feasibles[i]):
             int_feasibles[i] = feasibles[i]
 
+    # If there are feasible integer combinations resolve with the best found
     if int_feasibles:
         minimum = min(int_feasibles, key=int_feasibles.get)
         m2 = model_function(**model_args)
@@ -1374,7 +1429,8 @@ def solve_complete_external_enumeration(
             gams_output=gams_output,
             tee=tee,
         )
-        _ = generate_initialization(m_solved)
+        if not mip_transformation:
+            _ = generate_initialization(m_solved)
 
         t_end = time.perf_counter()-t_start
         m2_solved.total_time = t_end

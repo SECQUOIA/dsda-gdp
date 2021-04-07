@@ -13,7 +13,9 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from gdp.cstr.gdp_reactor import build_cstrs
-from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
+from gdp.dsda.dsda_functions import (external_ref, external_ref_mip,
+                                     extvars_gdp_to_mip,
+                                     generate_initialization,
                                      get_external_information,
                                      initialize_model,
                                      solve_complete_external_enumeration,
@@ -121,7 +123,7 @@ def problem_logic_cstr(m):
 if __name__ == "__main__":
 
     # Results
-    NTs = range(5, 26, 1)
+    NTs = range(4, 26, 1)
     # NTs = [10]
     timelimit = 900
     starting_point = [1, 1]
@@ -136,16 +138,16 @@ if __name__ == "__main__":
     csv_file = os.path.join(
         dir_path, "results", "cstr_results.csv")
 
-    nlps = ['msnlp', 'knitro', 'baron']
+    nlps = ['knitro']
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
-    nlp_opts['msnlp']['add_options'] = [
-        'GAMS_MODEL.optfile = 1;'
-        '\n'
-        '$onecho > msnlp.opt \n'
-        'nlpsolver knitro \n'
-        '$offecho \n'
-    ]
+    # nlp_opts['msnlp']['add_options'] = [
+    #     'GAMS_MODEL.optfile = 1;'
+    #     '\n'
+    #     '$onecho > msnlp.opt \n'
+    #     'nlpsolver knitro \n'
+    #     '$offecho \n'
+    # ]
 
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
@@ -195,104 +197,110 @@ if __name__ == "__main__":
             init_path = generate_initialization(
                 m=m_solved, starting_initialization=True, model_name='cstr_'+str(NT))
 
-        # MINLP
-        for solver in minlps:
-            for transformation in transformations:
-                new_result = {}
-                m = build_cstrs(NT)
-                m_init = initialize_model(m, json_path=init_path)
-                m_solved = solve_with_minlp(
-                    m=m_init,
-                    transformation=transformation,
-                    minlp=solver,
-                    minlp_options=minlps_opts[solver],
-                    timelimit=timelimit,
-                    gams_output=False,
-                    tee=globaltee,
-                )
-                new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
-                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
-                dict_data.append(new_result)
-                print(new_result)
+        # # MINLP
+        # for solver in minlps:
+        #     for transformation in transformations:
+        #         new_result = {}
+        #         m = build_cstrs(NT)
+        #         m_init = initialize_model(m, json_path=init_path)
+        #         m_solved = solve_with_minlp(
+        #             m=m_init,
+        #             transformation=transformation,
+        #             minlp=solver,
+        #             minlp_options=minlps_opts[solver],
+        #             timelimit=timelimit,
+        #             gams_output=False,
+        #             tee=globaltee,
+        #         )
+        #         new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
+        #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
+        #         dict_data.append(new_result)
+        #         print(new_result)
 
-        # GDPopt
+        # # GDPopt
+        # for solver in nlps:
+        #     for strategy in strategies:
+        #         new_result = {}
+        #         m = build_cstrs(NT)
+        #         m_init = initialize_model(m, json_path=init_path)
+        #         m_solved = solve_with_gdpopt(
+        #             m=m_init,
+        #             mip='cplex',
+        #             nlp=solver,
+        #             nlp_options=nlp_opts[solver],
+        #             timelimit=timelimit,
+        #             strategy=strategy,
+        #             tee=globaltee,
+        #         )
+        #         new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
+        #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
+        #         dict_data.append(new_result)
+        #         print(new_result)
+
+        # # D-SDA
+        # m = build_cstrs(NT)
+        # ext_ref = {m.YF: m.N, m.YR: m.N}
+        # get_external_information(m, ext_ref, tee=globaltee)
+
+        # for solver in nlps:
+        #     for k in ks:
+        #         new_result = {}
+        #         m_solved, _, _ = solve_with_dsda(
+        #             model_function=build_cstrs,
+        #             model_args={'NT': NT},
+        #             starting_point=starting_point,
+        #             ext_dict=ext_ref,
+        #             ext_logic=problem_logic_cstr,
+        #             k=k,
+        #             provide_starting_initialization=True,
+        #             feasible_model='cstr_' + str(NT),
+        #             subproblem_solver=solver,
+        #             subproblem_solver_options=nlp_opts[solver],
+        #             iter_timelimit=timelimit,
+        #             timelimit=timelimit,
+        #             gams_output=False,
+        #             tee=globaltee,
+        #             global_tee=globaltee,
+        #         )
+        #         new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
+        #             m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime, 'NT': NT}
+        #         dict_data.append(new_result)
+        #         print(new_result)
+
+        # try:
+        #     with open(csv_file, 'w') as csvfile:
+        #         writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+        #         writer.writeheader()
+        #         for data in dict_data:
+        #             writer.writerow(data)
+        # except IOError:
+        #     print("I/O error")
+
+    # Complete enumeration
+    for transformation in transformations:
         for solver in nlps:
-            for strategy in strategies:
-                new_result = {}
-                m = build_cstrs(NT)
-                m_init = initialize_model(m, json_path=init_path)
-                m_solved = solve_with_gdpopt(
-                    m=m_init,
-                    mip='cplex',
-                    nlp=solver,
-                    nlp_options=nlp_opts[solver],
-                    timelimit=timelimit,
-                    strategy=strategy,
-                    tee=globaltee,
+            NT = 5
+            m = build_cstrs(NT)
+            ext_ref = {m.YF: m.N, m.YR: m.N}
+            reformulation_dict, _, _, _ = get_external_information(
+                m, ext_ref, tee=True)
+            mip_m, mip_extvars = extvars_gdp_to_mip(m, reformulation_dict)
+            print(mip_extvars)
+            m_solved = solve_complete_external_enumeration(
+                model_function=build_cstrs,
+                model_args={'NT': NT},
+                ext_dict=ext_ref,
+                ext_logic=problem_logic_cstr,
+                mip_transformation=True,
+                transformation=transformation,
+                feasible_model='cstr_' +
+                str(NT),
+                subproblem_solver=solver,
+                subproblem_solver_options=nlp_opts[solver],
+                iter_timelimit=900,
+                timelimit=10000,
+                gams_output=False,
+                tee=False,
+                global_tee=True,
+                export_csv=True,
                 )
-                new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
-                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
-                dict_data.append(new_result)
-                print(new_result)
-
-        # D-SDA
-        m = build_cstrs(NT)
-        ext_ref = {m.YF: m.N, m.YR: m.N}
-        get_external_information(m, ext_ref, tee=globaltee)
-
-        for solver in nlps:
-            for k in ks:
-                new_result = {}
-                m_solved, _, _ = solve_with_dsda(
-                    model_function=build_cstrs,
-                    model_args={'NT': NT},
-                    starting_point=starting_point,
-                    ext_dict=ext_ref,
-                    ext_logic=problem_logic_cstr,
-                    k=k,
-                    provide_starting_initialization=True,
-                    feasible_model='cstr_' + str(NT),
-                    subproblem_solver=solver,
-                    subproblem_solver_options=nlp_opts[solver],
-                    iter_timelimit=timelimit,
-                    timelimit=timelimit,
-                    gams_output=False,
-                    tee=globaltee,
-                    global_tee=globaltee,
-                )
-                new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-                    m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime, 'NT': NT}
-                dict_data.append(new_result)
-                print(new_result)
-
-        try:
-            with open(csv_file, 'w') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-                writer.writeheader()
-                for data in dict_data:
-                    writer.writerow(data)
-        except IOError:
-            print("I/O error")
-
-    # # Complete enumeration
-    # for solver in nlps:
-    #     NT = 25
-    #     m = build_cstrs(NT)
-    #     ext_ref = {m.YF: m.N, m.YR: m.N}
-    #     get_external_information(m, ext_ref, tee=False)
-    #     print(solver)
-    #     m_solved = solve_complete_external_enumeration(
-    #         model_function=build_cstrs,
-    #         model_args={'NT': NT},
-    #         ext_dict=ext_ref,
-    #         ext_logic=problem_logic_cstr,
-    #         feasible_model='cstr_' +
-    #         str(NT),
-    #         subproblem_solver=solver,
-    #         subproblem_solver_options=nlp_opts[solver],
-    #         iter_timelimit=900,
-    #         timelimit=10000,
-    #         gams_output=False,
-    #         tee=False,
-    #         global_tee=True,
-    #         export_csv=True)

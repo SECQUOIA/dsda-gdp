@@ -234,16 +234,22 @@ def external_ref(
                         # fix True variables: depending on the current value of the external variables, some Independent Boolean variables can be fixed
                         dict_extvar[i]['Boolean_vars'][k-1].fix(True)
                     else:
+                        # fix 0 variables: depending on the current value of the external variables, some Independent Binary variables can be fixed
                         dict_extvar[i]['Binary_vars'][k-1].fix(1)
                         dict_extvar[i]['Boolean_vars'][k-1].set_value(True)
-                else:
+            ext_var_position = ext_var_position+1
+        # Double loop required from fact that exactly_number >= 1. TODO Is there a better way to do this?
+        for j in range(dict_extvar[i]['exactly_number']):
+            for k in range(1, len(dict_extvar[i]['Boolean_vars'])+1):
                     if not mip_ref:
                         # fix False variables: If the independent Boolean variable is not fixed at "True", then it is fixed at "False".
-                        dict_extvar[i]['Boolean_vars'][k-1].fix(False)
+                        if not dict_extvar[i]['Boolean_vars'][k-1].is_fixed():
+                            dict_extvar[i]['Boolean_vars'][k-1].fix(False)
                     else:
-                        dict_extvar[i]['Binary_vars'][k-1].fix(0)
-                        dict_extvar[i]['Boolean_vars'][k-1].set_value(False)
-            ext_var_position = ext_var_position+1
+                        # fix 0 variables: If the independent Boolean variable is not fixed at "1", then it is fixed at "0".
+                        if not dict_extvar[i]['Binary_vars'][k-1].is_fixed():
+                            dict_extvar[i]['Binary_vars'][k-1].fix(0)
+                            dict_extvar[i]['Boolean_vars'][k-1].set_value(False)
 
     # Other Boolean and Indicator variables are fixed depending on the information provided by the user
     logic_expr = extra_logic_function(m)
@@ -640,6 +646,7 @@ def neighborhood_k_eq_inf(dimension: int = 2) -> dict:
         dimension: Dimension of the neighborhood
     Returns:
         temp: Dictionary contaning in each item a list with a direction within the neighborhood
+        TODO change temp name here to something more useful
     """
 
     neighbors = list(it.product([-1, 0, 1], repeat=dimension))
@@ -822,7 +829,7 @@ def evaluate_neighbors(
     best_dir = 0  # Position in dictionary
     best_dist = 0
     best_path = init_path
-    temp = ext_vars
+    temp = ext_vars # TODO change name to something more saying. Points? Combinations?
     temp.pop(0, None)
     if global_tee:
         print()

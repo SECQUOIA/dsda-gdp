@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 from math import ceil, fabs
 import time
@@ -33,6 +34,8 @@ if __name__ == "__main__":
     starting_point = [3, 3, 3]
 
     globaltee = True
+    # Setting logging level to ERROR to avoid printing FBBT warning of some constraints not implemented
+    logging.basicConfig(level=logging.ERROR)
 
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time']

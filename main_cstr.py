@@ -8,12 +8,13 @@ from math import ceil, fabs
 import matplotlib.pyplot as plt
 import networkx as nx
 import pyomo.environ as pe
+import logging
 from pyomo.environ import SolverFactory, Suffix, value
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from gdp.cstr.gdp_reactor import build_cstrs
-from gdp.dsda.dsda_functions import (external_ref, external_ref_mip,
+from gdp.dsda.dsda_functions import (external_ref,
                                      extvars_gdp_to_mip,
                                      generate_initialization,
                                      get_external_information,
@@ -123,12 +124,14 @@ def problem_logic_cstr(m):
 if __name__ == "__main__":
 
     # Results
-    NTs = range(4, 26, 1)
-    # NTs = [10]
+    NTs = range(5, 26, 1)
+    # NTs = [25]
     timelimit = 900
     starting_point = [1, 1]
 
     globaltee = True
+    # Setting logging level to ERROR to avoid printing FBBT warning of some constraints not implemented
+    logging.basicConfig(level=logging.ERROR)
 
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time', 'NT']
@@ -138,16 +141,16 @@ if __name__ == "__main__":
     csv_file = os.path.join(
         dir_path, "results", "cstr_results.csv")
 
-    nlps = ['knitro']
+    nlps = ['knitro', 'msnlp', 'baron']
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
-    # nlp_opts['msnlp']['add_options'] = [
-    #     'GAMS_MODEL.optfile = 1;'
-    #     '\n'
-    #     '$onecho > msnlp.opt \n'
-    #     'nlpsolver knitro \n'
-    #     '$offecho \n'
-    # ]
+    nlp_opts['msnlp']['add_options'] = [
+        'GAMS_MODEL.optfile = 1;'
+        '\n'
+        '$onecho > msnlp.opt \n'
+        'nlpsolver knitro \n'
+        '$offecho \n'
+    ]
 
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
@@ -190,8 +193,8 @@ if __name__ == "__main__":
                 x=[1, 1],
                 extra_logic_function=problem_logic_cstr,
                 dict_extvar=reformulation_dict,
-                tee=True,
-                )
+                tee=globaltee,
+            )
             m_solved = solve_subproblem(
                 m=m_fixed, subproblem_solver='baron', timelimit=100, tee=True)
             init_path = generate_initialization(
@@ -279,13 +282,12 @@ if __name__ == "__main__":
     # Complete enumeration
     for transformation in transformations:
         for solver in nlps:
-            NT = 5
+            NT = 25
             m = build_cstrs(NT)
             ext_ref = {m.YF: m.N, m.YR: m.N}
             reformulation_dict, _, _, _ = get_external_information(
                 m, ext_ref, tee=True)
             mip_m, mip_extvars = extvars_gdp_to_mip(m, reformulation_dict)
-            print(mip_extvars)
             m_solved = solve_complete_external_enumeration(
                 model_function=build_cstrs,
                 model_args={'NT': NT},
@@ -293,14 +295,13 @@ if __name__ == "__main__":
                 ext_logic=problem_logic_cstr,
                 mip_transformation=True,
                 transformation=transformation,
-                feasible_model='cstr_' +
-                str(NT),
+                feasible_model='cstr_'+str(NT),
                 subproblem_solver=solver,
                 subproblem_solver_options=nlp_opts[solver],
-                iter_timelimit=900,
-                timelimit=10000,
+                iter_timelimit=20,
                 gams_output=False,
-                tee=False,
-                global_tee=True,
+                # points=[(2, 2)],
+                tee=globaltee,
+                global_tee=globaltee,
                 export_csv=True,
-                )
+            )

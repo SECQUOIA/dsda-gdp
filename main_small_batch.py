@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 from math import ceil, fabs
 import time
@@ -33,6 +34,8 @@ if __name__ == "__main__":
     starting_point = [3, 3, 3]
 
     globaltee = True
+    # Setting logging level to ERROR to avoid printing FBBT warning of some constraints not implemented
+    logging.basicConfig(level=logging.ERROR)
 
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time']
@@ -88,7 +91,7 @@ if __name__ == "__main__":
         ext_ref = {m.Y: m.k}
         reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
             m, ext_ref, tee=globaltee)
-        m_fixed = external_ref(m=m, x=starting_point, other_function=problem_logic_batch,
+        m_fixed = external_ref(m=m, x=starting_point, extra_logic_function=problem_logic_batch,
                                dict_extvar=reformulation_dict, tee=globaltee)
         m_solved = solve_subproblem(
             m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee)

@@ -1359,6 +1359,7 @@ def solve_complete_external_enumeration(
             x=list(i),
             extra_logic_function=ext_logic,
             dict_extvar=dict_extvar,
+            mip_ref=mip_transformation,
             tee=False,
         )
         t_remaining = min(iter_timelimit, timelimit -
@@ -1417,11 +1418,18 @@ def solve_complete_external_enumeration(
             feasible_model=feasible_model,
             json_path=None,
         )
+        if mip_transformation:  # If you want a MIP reformulation, go ahead and use it
+            m2_init, dict_extvar = extvars_gdp_to_mip(
+                m=m2_init,
+                gdp_dict_extvar=dict_extvar,
+                transformation=transformation,
+            )
         m2_fixed = external_ref(
             m=m2_init,
             x=list(minimum),
             extra_logic_function=ext_logic,
             dict_extvar=dict_extvar,
+            mip_ref=mip_transformation,
             tee=False,
         )
         m2_solved = solve_subproblem(
@@ -1438,6 +1446,7 @@ def solve_complete_external_enumeration(
         t_end = time.perf_counter()-t_start
         m2_solved.total_time = t_end
 
+        print(m2_solved.results)
         if export_csv:
             final = {'Point': list(minimum), 'x': minimum[0], 'y': minimum[1], 'Objective': pe.value(
                 m2_solved.obj), 'Status': 'Final', 'Time': m2_solved.results.solver.user_time, 'Global_Time': t_end}

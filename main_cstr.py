@@ -280,7 +280,7 @@ if __name__ == "__main__":
         #     print("I/O error")
 
     # Complete enumeration
-    for transformation in transformations:
+    for transformation in ['hull']:
         for solver in ['baron']:
             NT = 25
             m = build_cstrs(NT)
@@ -300,7 +300,7 @@ if __name__ == "__main__":
                 subproblem_solver_options=nlp_opts[solver],
                 iter_timelimit=900,
                 gams_output=False,
-                # points=[(2, 2)],
+                points=[(j, i) for j in [24,25] for i in range(26)],
                 tee=globaltee,
                 global_tee=globaltee,
                 export_csv=True,

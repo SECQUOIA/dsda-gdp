@@ -141,16 +141,16 @@ if __name__ == "__main__":
     csv_file = os.path.join(
         dir_path, "results", "cstr_results.csv")
 
-    nlps = ['knitro', 'msnlp', 'baron']
+    nlps = ['knitro', 'baron']
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
-    nlp_opts['msnlp']['add_options'] = [
-        'GAMS_MODEL.optfile = 1;'
-        '\n'
-        '$onecho > msnlp.opt \n'
-        'nlpsolver knitro \n'
-        '$offecho \n'
-    ]
+    # nlp_opts['msnlp']['add_options'] = [
+    #     'GAMS_MODEL.optfile = 1;'
+    #     '\n'
+    #     '$onecho > msnlp.opt \n'
+    #     'nlpsolver knitro \n'
+    #     '$offecho \n'
+    # ]
 
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
@@ -280,8 +280,8 @@ if __name__ == "__main__":
         #     print("I/O error")
 
     # Complete enumeration
-    for transformation in transformations:
-        for solver in nlps:
+    for transformation in ['hull']:
+        for solver in ['baron']:
             NT = 25
             m = build_cstrs(NT)
             ext_ref = {m.YF: m.N, m.YR: m.N}
@@ -298,9 +298,9 @@ if __name__ == "__main__":
                 feasible_model='cstr_'+str(NT),
                 subproblem_solver=solver,
                 subproblem_solver_options=nlp_opts[solver],
-                iter_timelimit=20,
+                iter_timelimit=900,
                 gams_output=False,
-                # points=[(2, 2)],
+                points=[(j, i) for j in [24,25] for i in range(26)],
                 tee=globaltee,
                 global_tee=globaltee,
                 export_csv=True,

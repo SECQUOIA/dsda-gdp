@@ -1,5 +1,7 @@
 *.lst
 *.pyc
+*.lxi
+*.g00
 *.log
 gamsfiles/*
 util/jsonfiles

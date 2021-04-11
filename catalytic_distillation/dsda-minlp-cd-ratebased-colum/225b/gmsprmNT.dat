@@ -1,0 +1,6 @@
+Restart=s1
+Input=D_SDA.gms
+ScrDir=225b
+SysDir=C:\GAMS\34
+ScriptNext=225b\gamsnext.cmd
+LogOption=4

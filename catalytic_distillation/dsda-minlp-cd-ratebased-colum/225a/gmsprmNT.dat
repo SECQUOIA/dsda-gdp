@@ -1,0 +1,14 @@
+Input=C:\Users\dada2\Desktop\dsda-minlp-cd-ratebased-colum\main.gms
+PageWidth=80
+PageSize=0
+PageContr=3
+Action=CE
+ScrDir=225a
+SysDir=C:\GAMS\34
+WorkDir=C:\Users\dada2\Desktop\dsda-minlp-cd-ratebased-colum\
+ScriptNext=225a\gamsnext.cmd
+LogOption=3
+DFormat=0
+TFormat=0
+ErrorLog=99
+IDE=1

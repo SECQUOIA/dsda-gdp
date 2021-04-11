@@ -1,6 +1,8 @@
 *.lst
 *.pyc
 *.lxi
+*.dat
+*.txt
 *.g00
 *.log
 gamsfiles/*

@@ -5,7 +5,7 @@ set iter "Iterations" /i1*i100/;
 *iner1: This corresponds to the set It=In.
 set iner1 "Inner iterations 1" /i1/;
 *iner2: Select the maximum value of inner iterations in the line search. If iner2
-*=/i1/, the line search procedure wont be executed.
+*=/i1/, the line search procedure won't be executed.
 set iner2 "Inner iterations 2" /i1*i100/;
 $include param_sets.txt
 
@@ -43,14 +43,14 @@ extvarhstep(extvar,neigh)=hstep*directions(neigh,extvar);
 *stop1: stopping criterion in S4 for local optimality
 scalar stop1 "Main stopping criterion";
 *stop2: Stopping criterion that decides if the objective function value
-*of a neighbor was propperly calculated (e.g, if the nlp solver finds an infeassible
+*of a neighbor was propperly calculated (e.g, if the nlp solver finds an infeasible
 *solution, the additional convergence procedure is executed).
-scalar stop2 "Stoppong criterion 2";
+scalar stop2 "Stopping criterion 2";
 *stop3: Stopping criterion for the line search
-scalar stop3 "Stoppong criterion 3";
-*stop4: Sttoping criterion that decides if the objective function value
+scalar stop3 "Stopping criterion 3";
+*stop4: Stopping criterion that decides if the objective function value
 *in the line search was propperly calculated.
-scalar stop4 "Stoppong criterion 4";
+scalar stop4 "Stopping criterion 4";
 scalar count;
 parameter xvalue(iter,extvar) "value of x at each iteration";
 parameter xvalueselect(iter,extvar) "selected value of x for the next iteration";

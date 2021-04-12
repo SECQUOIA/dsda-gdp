@@ -2,7 +2,7 @@ $ontext
 ================================================================================
 MINLP solver
 
-          David Esteban Bernal Neira-David Alejandro Liñan Romero
+          David Esteban Bernal Neira-David Alejandro Liï¿½an Romero
                                  2020
 
 *this ordered set must start at 1
@@ -14,7 +14,7 @@ MINLP solver
 ================================================================================
 $offtext
 *-------------------------------------------------------------------------------
-*                                Sección 1
+*                                Secciï¿½n 1
 *           Conjuntos para definir operacion en estado estable
 *-------------------------------------------------------------------------------
 *Se usa solo el elemento inicial con el punto de colocacion inicial: estado estable
@@ -22,8 +22,8 @@ $offtext
 sets j "1 punto de colocacion (0)" /1/
      N "1 elemento finito" /1/;
 *-------------------------------------------------------------------------------
-*                                Sección 2
-*       Conjuntos, variables, parámetros y ecuaciones principales del sistema
+*                                Secciï¿½n 2
+*       Conjuntos, variables, parï¿½metros y ecuaciones principales del sistema
 *-------------------------------------------------------------------------------
 *Conjuntos
 set comp "lista de componentes que intervienen en el sistema" /iButene, Ethanol, nButene, ETBE/;
@@ -34,22 +34,22 @@ set F "1 representa etanol y 2 representa butenos" /1,2/;
 
 *Variables principales
 positive variables
-L(N,j,Net)  "Flujo de líquido [mol/min]"
+L(N,j,Net)  "Flujo de lï¿½quido [mol/min]"
 V(N,j,Net)  "Flujo de vapor [mol/min]"
-x(N,j,comp,Net)     "Porcentaje molar en el líqudio [%]"
+x(N,j,comp,Net)     "Porcentaje molar en el lï¿½qudio [%]"
 y(N,j,comp,Net)     "Porcentaje molar en el vapor [%]"
-Temp(N,j,Net)       "Temperatura de operación [K]"
-P(N,j,Net)  "Presión por etapa [bar]"
+Temp(N,j,Net)       "Temperatura de operaciï¿½n [K]"
+P(N,j,Net)  "Presiï¿½n por etapa [bar]"
 Z(N,j,Net)  "Coeficiente de compresibilidad [-]"
-RR(N,j)      "Relación molar de reflujo [-]"
-Qc(N,j)      "Carga térmica del condensador [kJ/min]"
-Qr(N,j)      "Carga térmica del rehervidor [kJ/min]"
+RR(N,j)      "Relaciï¿½n molar de reflujo [-]"
+Qc(N,j)      "Carga tï¿½rmica del condensador [kJ/min]"
+Qr(N,j)      "Carga tï¿½rmica del rehervidor [kJ/min]"
 BR(N,j)       "Boil up [-]"
 ;
 
-*Parámetros hidráulicos
+*Parï¿½metros hidrï¿½ulicos
 parameter
-da      "Diámetro de los agujeros [m]"  /2E-3/
+da      "Diï¿½metro de los agujeros [m]"  /2E-3/
 ep      "Espesor del plato [m]" /0.002/
 pitch   "Distancia entre agujeros [m]"  /0.009/
 Sfactor "Factor de seguridad altura de la columna [-]" /0.15/
@@ -60,7 +60,7 @@ poro=0.907*sqr(da/pitch);
 K0=(880.6-(67.7*da/ep)+(7.32*((da/ep)**2))-(0.338*((da/ep)**3)))*1E-3;
 
 *Variables hidraulicas
-positive variable D "Diámetro de la columna [m]";
+positive variable D "Diï¿½metro de la columna [m]";
 positive variable hw      "Weir height [m]";
 positive variable  HS      "Altura de cada plato [m]";
 positive variable Htotal "Altura total de la columna [m]";
@@ -84,8 +84,8 @@ equation EqA0;
 EqA0.. A0=e=At*poro;
 
 *Alimentacion  butenos
-parameter FB "Flujo de alimentación de butenos [mol/min]" /5.774/
-parameter zb(N,j,comp) "Porcentaje molar en la alimentación de butenos";
+parameter FB "Flujo de alimentaciï¿½n de butenos [mol/min]" /5.774/
+parameter zb(N,j,comp) "Porcentaje molar en la alimentaciï¿½n de butenos";
 zb(N,j,'iButene')=30;
 zb(N,j,'nButene')=100-zb(N,j,'iButene');
 zb(N,j,'Ethanol')=0;
@@ -93,8 +93,8 @@ zb(N,j,'ETBE')=0;
 
 *Alimentacion etanol
 parameter
-FE  "Flujo de alimentación de etanol [mol-h]" /1.7118/
-ze(comp)        "Porcentaje molar en la alimentación de etanol"
+FE  "Flujo de alimentaciï¿½n de etanol [mol-h]" /1.7118/
+ze(comp)        "Porcentaje molar en la alimentaciï¿½n de etanol"
 /
 iButene 0
 Ethanol 100
@@ -104,22 +104,22 @@ ETBE 0
 ;
 *Parametros de operacion
 parameter
-Pop     "Presión de operación condensador [bar]"        /9.5/
-TaliB   "Temperatura de alimentación de butenos [K]"    /323/
-TaliE   "Temperatura de alimentación etanol [K]"        /342.38/
-xBetbe  "Composición molar de ETBE en fondos deseada"   /83/
-MCR     "Retención constante en rehervidor y condensador [mol]" /1/
+Pop     "Presiï¿½n de operaciï¿½n condensador [bar]"        /9.5/
+TaliB   "Temperatura de alimentaciï¿½n de butenos [K]"    /323/
+TaliE   "Temperatura de alimentaciï¿½n etanol [K]"        /342.38/
+xBetbe  "Composiciï¿½n molar de ETBE en fondos deseada"   /83/
+MCR     "Retenciï¿½n constante en rehervidor y condensador [mol]" /1/
 cR      "Constante de los gases [m3*bar/K*mol]" /0.00008314/
 ;
 *-------------------------------------------------------------------------------
-*                                Sección 3
+*                                Secciï¿½n 3
 *                    Parametro de conversion de unidades
 *-------------------------------------------------------------------------------
 parameter
-hora    "Si estamos en análisis por minutos u hora [s]" /60/;
+hora    "Si estamos en anï¿½lisis por minutos u hora [s]" /60/;
 
 *-------------------------------------------------------------------------------
-*                                Sección 4
+*                                Secciï¿½n 4
 *                          Restricciones de pureza
 *-------------------------------------------------------------------------------
 
@@ -127,10 +127,10 @@ equations pureza0(Net);
 pureza0(Net)$(ord(Net) eq card(Net)).. x('1','1','ETBE',Net)=g=xBetbe;
 
 *-------------------------------------------------------------------------------
-*                                Sección 5
-*    Cálculo de presiones de saturación por medio de la ecuación de Antoine
+*                                Secciï¿½n 5
+*    Cï¿½lculo de presiones de saturaciï¿½n por medio de la ecuaciï¿½n de Antoine
 *-------------------------------------------------------------------------------
-*Constantes de la ecuación de Antoine expandida
+*Constantes de la ecuaciï¿½n de Antoine expandida
 parameters
 C1a(comp)
 /
@@ -182,17 +182,17 @@ nButene 6
 ETBE    6
 /
 ;
-positive variables Psat(N,j,comp,Net) presión de saturación (bar);
+positive variables Psat(N,j,comp,Net) presiï¿½n de saturaciï¿½n (bar);
 equations EqPsat(N,j,comp,Net);
 EqPsat(N,j,comp,Net).. Psat(N,j,comp,Net)=e=exp( C1a(comp) + (C2a(comp)/(Temp(N,j,Net)+C3a(comp))) + (C4a(comp)*Temp(N,j,Net)) + (C5a(comp)*log(Temp(N,j,Net)) + (C6a(comp)*(Temp(N,j,Net)**C7a(comp)))) );
 
 *-------------------------------------------------------------------------------
-*                                Sección 6
-*     Cálculo de densidades de líquido por medio de la ecuación IK-CAPI
-*     Cálculo de densidades de líquido por medio de la ecuación DIPPR crítica
-*     Cálculo de densidades de gas por medio de ecuación de gas ideal corregida
+*                                Secciï¿½n 6
+*     Cï¿½lculo de densidades de lï¿½quido por medio de la ecuaciï¿½n IK-CAPI
+*     Cï¿½lculo de densidades de lï¿½quido por medio de la ecuaciï¿½n DIPPR crï¿½tica
+*     Cï¿½lculo de densidades de gas por medio de ecuaciï¿½n de gas ideal corregida
 *-------------------------------------------------------------------------------
-*Constantes de la ecuación DIPPR
+*Constantes de la ecuaciï¿½n DIPPR
 parameters
 MW(comp) "Peso molecular [kg/kmol]"
 /
@@ -201,14 +201,14 @@ Ethanol 46.06904
 nButene 56.10752
 ETBE    102.17656
 /
-Tcrit(comp) "Temperatura crítica [K]"
+Tcrit(comp) "Temperatura crï¿½tica [K]"
 /
 iButene 417.9
 Ethanol 516.2
 nButene 419.6
 ETBE    509.4
 /
-Pcrit(comp) "Presión crítica [bar]"
+Pcrit(comp) "Presiï¿½n crï¿½tica [bar]"
 /
 iButene 38.98675
 Ethanol 60.35675
@@ -318,7 +318,7 @@ positive variable Tcritm(N,j,Net);
 
 equation EqTcritm(N,j,Net);
 EqTcritm(N,j,Net).. Tcritm(N,j,Net) =e= (sqr(sum(comp,(x(N,j,comp,Net)/100)*Tcrit(comp)/(Pcrit(comp)**0.5))))/(sum(comp,(x(N,j,comp,Net)/100)*Tcrit(comp)/Pcrit(comp)));
-positive variables rho(N,j,comp,Net) "Densidad molar por componente de líquido [mol/m^3]";
+positive variables rho(N,j,comp,Net) "Densidad molar por componente de lï¿½quido [mol/m^3]";
 equation Eqrho(N,j,comp,Net);
 Eqrho(N,j,comp,Net).. rho(N,j,comp,Net)=e=( C1r(comp)/(C2r(comp)**(1+((1-(Temp(N,j,Net)/Tcritm(N,j,Net)))**C4r(comp)))) )*1000;
 
@@ -327,10 +327,10 @@ equation EqurhoV(N,j,Net);
 EqurhoV(N,j,Net).. rhoV(N,j,Net)=e=P(N,j,Net)/(0.00008314*Temp(N,j,Net)*(Z(N,j,Net)));
 
 *-------------------------------------------------------------------------------
-*                                Sección 7
-*     Cálculo de tensión superficial por medio de la ecuación DIPPR crítica
+*                                Secciï¿½n 7
+*     Cï¿½lculo de tensiï¿½n superficial por medio de la ecuaciï¿½n DIPPR crï¿½tica
 *-------------------------------------------------------------------------------
-*Constantes de la ecuación DIPPR
+*Constantes de la ecuaciï¿½n DIPPR
 parameters
 C1sig(comp)
 /
@@ -361,14 +361,14 @@ nButene 0
 ETBE    0.76657
 /
 ;
-positive variables sigma(N,j,Net) "Tensión superficial líquido vapor [N/m]";
+positive variables sigma(N,j,Net) "Tensiï¿½n superficial lï¿½quido vapor [N/m]";
 equation Eqsigma(N,j,Net);
 Eqsigma(N,j,Net).. sigma(N,j,Net)=e=sum(comp,(x(N,j,comp,Net)/100)*C1sig(comp)*(1-(Temp(N,j,Net)/Tcritm(N,j,Net)))**(C2sig(comp)+C3sig(comp)*(Temp(N,j,Net)/Tcritm(N,j,Net))+C4sig(comp)*((Temp(N,j,Net)/Tcritm(N,j,Net)))**2));
 *-------------------------------------------------------------------------------
-*                                Sección 8
-*          Cálculo de coeficientes de actividad por medio del modelo NRTL
+*                                Secciï¿½n 8
+*          Cï¿½lculo de coeficientes de actividad por medio del modelo NRTL
 *-------------------------------------------------------------------------------
-table a_nrtl(comp,comp) Parámetro a de NRTL
+table a_nrtl(comp,comp) Parï¿½metro a de NRTL
                        iButene            Ethanol            nButene            ETBE
 iButene                0.0                0.0                0.0                0.0
 Ethanol                0.0                0.0                0.0                0.0
@@ -376,7 +376,7 @@ nButene                0.0                0.0                0.0                
 ETBE                   0.0                0.0                0.0                0.0
 ;
 
-table b_nrtl(comp,comp) Parámetro b de NRTL
+table b_nrtl(comp,comp) Parï¿½metro b de NRTL
                 iButene                Ethanol            nButene            ETBE
 iButene         0.0                    623.5810010        107.526499         219.73407
 Ethanol         141.9632130            0.0                164.57256          187.104064
@@ -384,7 +384,7 @@ nButene         -93.24546420           595.5299820        0.0                226
 ETBE            -172.59152             344.481315         -177.88565         0.0
 ;
 
-table c_nrtl(comp,comp) Parámetro c de NRTL
+table c_nrtl(comp,comp) Parï¿½metro c de NRTL
                        iButene            Ethanol            nButene            ETBE
 iButene                0.0                0.3                0.3                0.3
 Ethanol                0.3                0.0                0.3                0.3
@@ -395,7 +395,7 @@ alias (comp,comp1);
 parameter alfa_nrtl(comp,comp);
 alfa_nrtl(comp,comp1)$(ord(comp) ne ord(comp1))=c_nrtl(comp,comp1);
 
-*Parámetros G y Tao
+*Parï¿½metros G y Tao
 variables tao_nrtl(N,j,comp,comp1,Net);
 equations Eq_tao_nrtl(N,j,comp,comp1,Net);
 Eq_tao_nrtl(N,j,comp,comp1,Net).. tao_nrtl(N,j,comp,comp1,Net)=e=a_nrtl(comp,comp1) + (b_nrtl(comp,comp1)/Temp(N,j,Net));
@@ -419,11 +419,11 @@ Eqgamma(N,j,comp,Net).. gamma(N,j,comp,Net)=e=
         g_nrtl(N,j,comp3,comp1,Net)))));
 
 *-------------------------------------------------------------------------------
-*                                Sección 9
-*                           Cálculo de reacción química
+*                                Secciï¿½n 9
+*                           Cï¿½lculo de reacciï¿½n quï¿½mica
 *-------------------------------------------------------------------------------
 Parameter
-Nu(comp) "Coeficientes estequiométricos en la reacción"
+Nu(comp) "Coeficientes estequiomï¿½tricos en la reacciï¿½n"
 /
 iButene -1
 Ethanol -1
@@ -443,31 +443,31 @@ EqKetbe(N,j,Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1)).. Ketbe(N,j,Net) 
                 +0.0000528586*power(Temp(N,j,Net),2)
                 -0.0000000532977*power(Temp(N,j,Net),3));
 
-positive variable Krate(N,j,Net) "Tasa de avance de reacción [mol/(kg_cat.min)]";
+positive variable Krate(N,j,Net) "Tasa de avance de reacciï¿½n [mol/(kg_cat.min)]";
 equation EqKrate(N,j,Net);
 EqKrate(N,j,Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1))..  Krate(N,j,Net) =e= 7.41816E15*exp(-60400.0/(8.314*Temp(N,j,Net)))*hora/3600;
-positive variable Ka(N,j,Net) "Tasa de adsorción";
+positive variable Ka(N,j,Net) "Tasa de adsorciï¿½n";
 equation EqKa(N,j,Net);
 EqKa(N,j,Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1))..  Ka(N,j,Net) =e= exp(-1.0707+1323.1/Temp(N,j,Net));
-variable Rx(N,j,Net) "Tasa de reacción [mol/(kg_cat.min)]";
+variable Rx(N,j,Net) "Tasa de reacciï¿½n [mol/(kg_cat.min)]";
 equation EqRx(N,j,Net);
 EqRx(N,j,Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1))..  Rx(N,j,Net)*(power(1+Ka(N,j,Net)*gamma(N,j,'Ethanol',Net)*x(N,j,'Ethanol',Net)/100,3))*Ketbe(N,j,Net) =e=
                         (Krate(N,j,Net)*(gamma(N,j,'Ethanol',Net)*x(N,j,'Ethanol',Net)/100))
                         *((Ketbe(N,j,Net)*gamma(N,j,'iButene',Net)*x(N,j,'iButene',Net)/100*gamma(N,j,'Ethanol',Net)*x(N,j,'Ethanol',Net)/100)
                         -(gamma(N,j,'ETBE',Net)*x(N,j,'ETBE',Net)/100));
 *-------------------------------------------------------------------------------
-*                                Sección 10
-*                           Ecuación de estado (calculo de phi)
+*                                Secciï¿½n 10
+*                           Ecuaciï¿½n de estado (calculo de phi)
 *-------------------------------------------------------------------------------
 parameter
-Omega(comp) "Factor acéntrico [-]"
+Omega(comp) "Factor acï¿½ntrico [-]"
 /
 iButene 0.19484
 Ethanol 0.643558
 nButene 0.184495
 ETBE    0.316231
 /
-TcritSRK(comp) "Temperatura crítica de Soave-Redlich-Kwong [K]"
+TcritSRK(comp) "Temperatura crï¿½tica de Soave-Redlich-Kwong [K]"
 /
 iButene 417.9
 Ethanol 514
@@ -512,8 +512,8 @@ EqPhi(N,j,comp,Net).. phi(N,j,comp,Net) =e= exp(((Z(N,j,Net))-1)*biEOS(comp)/bEO
                                         -bEOS(N,j,Net))/(Z(N,j,Net))));
 
 *-------------------------------------------------------------------------------
-*                                Sección 11
-*                           Cálculo de entalpías
+*                                Secciï¿½n 11
+*                           Cï¿½lculo de entalpï¿½as
 *-------------------------------------------------------------------------------
 *Constantes de Cp (kJ/mol.K) gas ideal
 parameters
@@ -562,14 +562,14 @@ ETBE           0
 ;
 parameter
 Tref "Temperatura de referencia [K]" /298.15/
-Hform(comp) "Entalpía de formación (kJ/mol)"
+Hform(comp) "Entalpï¿½a de formaciï¿½n (kJ/mol)"
 /
 iButene -16.9147
 Ethanol -234.963
 nButene -0.125604
 ETBE        -313.9
 /
-Tb      "Temperatura de ebullición de los componentes a P=9.5bar [K]"
+Tb      "Temperatura de ebulliciï¿½n de los componentes a P=9.5bar [K]"
 /
 iButene 341.7
 Ethanol 421.9
@@ -577,7 +577,7 @@ nButene 342.6
 ETBE    438.8
 /
 ;
-*Entalpía de la fase vapor (kJ/mol) -- Int(CpdT)
+*Entalpï¿½a de la fase vapor (kJ/mol) -- Int(CpdT)
 variable HVi(N,j,comp,Net),HV(N,j,Net);
 equations EqHVi(N,j,comp,Net),EqHV(N,j,Net);
 EqHVi(N,j,comp,Net).. HVi(N,j,comp,Net)=e=( (C1c(comp)*(Temp(N,j,Net)-Tref)) + ((C2c(comp)/2)*((Temp(N,j,Net)**2)-(Tref**2)))
@@ -587,7 +587,7 @@ EqHVi(N,j,comp,Net).. HVi(N,j,comp,Net)=e=( (C1c(comp)*(Temp(N,j,Net)-Tref)) + (
 
 EqHV(N,j,Net).. HV(N,j,Net)=e=sum(comp,HVi(N,j,comp,Net)*y(N,j,comp,Net)/100);
 
-*Constantes de entalpía de vaporización (kJ/mol)
+*Constantes de entalpï¿½a de vaporizaciï¿½n (kJ/mol)
 parameter
 C1v(comp)
 /iButene        32.614
@@ -638,7 +638,7 @@ VaporZb(N,j,comp,Net).. (Zboil(N,j,comp,Net))**3-(Zboil(N,j,comp,Net))**2+(Zboil
                         -((aiEOSb(comp)*P(N,j,Net)/((0.00008314*Tb(comp))**2)))
                         *(biEOS(comp)*P(N,j,Net)/(0.00008314*Tb(comp))) =e= 0;
 
-*Entalpía de vaporización (kJ/mol)
+*Entalpï¿½a de vaporizaciï¿½n (kJ/mol)
 parameter DHvap(comp), Hvib(comp);
 DHVap(comp)=( C1v(comp)*( (1-Tred(comp))**( C2v(comp) + (C3v(comp)*Tred(comp)) + (C4v(comp)*(Tred(comp)**2)) + (C5v(comp)*(Tred(comp)**3)) ) ) );
 HVib(comp)=( (C1c(comp)*(Tb(comp)-Tref)) + ((C2c(comp)/2)*((Tb(comp)**2)-(Tref**2))) + ((C3c(comp)/3)*((Tb(comp)**3)-(Tref**3))) + ((C4c(comp)/4)*((Tb(comp)**4)-(Tref**4))) + ((C5c(comp)/5)*((Tb(comp)**5)-(Tref**5))) + ((C6c(comp)/6)*((Tb(comp)**6)-(Tref**6))) + Hform(comp));
@@ -648,7 +648,7 @@ EqdepHvib(N,j,comp,Net).. depHvib(N,j,comp,Net) =e= (8.314/1000)*Tb(comp)*(Zboil
                                                 +(1+mEOS(comp))*((aiEOSb(comp)**0.5)/biEOS(comp))
                                                 *log(Zboil(N,j,comp,Net)/(Zboil(N,j,comp,Net)+(biEOS(comp)*P(N,j,Net)/(0.00008314*Tb(comp)))));
 
-*Constantes de Cp (kJ/mol.K) de líquido
+*Constantes de Cp (kJ/mol.K) de lï¿½quido
 parameter
 C1l(comp)
 /
@@ -683,7 +683,7 @@ ETBE            0
 /
 ;
 
-*Entalpía de la fase liquida (kJ/mol)
+*Entalpï¿½a de la fase liquida (kJ/mol)
 variable HLi(N,j,comp,Net),HL(N,j,Net);
 equation EqHLi(N,j,comp,Net),EqHL(N,j,Net);
 EqHLi(N,j,comp,Net).. HLi(N,j,comp,Net)=e=HVib(comp)-DHVap(comp)
@@ -693,14 +693,14 @@ EqHLi(N,j,comp,Net).. HLi(N,j,comp,Net)=e=HVib(comp)-DHVap(comp)
 
 EqHL(N,j,Net).. HL(N,j,Net)=e=sum(comp,HLi(N,j,comp,Net)*x(N,j,comp,Net)/100);
 *-------------------------------------------------------------------------------
-*                                Sección 12
-*                  Cálculo de entalpía de alimentación
+*                                Secciï¿½n 12
+*                  Cï¿½lculo de entalpï¿½a de alimentaciï¿½n
 *-------------------------------------------------------------------------------
-*Entalpía de la alimentación de butenos
-parameter HV_b(comp)    "Entalpía de vapor de la alimentación [kJ/mol]"
-          Tred_b(comp)  "Temperatura reducida alimentación [-]"
-          DHVap_b(comp) "Entalpía de vaporización alimentación [kJ/mol]"
-          HL_b(comp)    "Entalpía de líquido de la alimentación [kJ/mol]";
+*Entalpï¿½a de la alimentaciï¿½n de butenos
+parameter HV_b(comp)    "Entalpï¿½a de vapor de la alimentaciï¿½n [kJ/mol]"
+          Tred_b(comp)  "Temperatura reducida alimentaciï¿½n [-]"
+          DHVap_b(comp) "Entalpï¿½a de vaporizaciï¿½n alimentaciï¿½n [kJ/mol]"
+          HL_b(comp)    "Entalpï¿½a de lï¿½quido de la alimentaciï¿½n [kJ/mol]";
 HV_b(comp)=( (C1c(comp)*(TaliB-Tref)) + ((C2c(comp)/2)*((TaliB**2)-(Tref**2))) + ((C3c(comp)/3)*((TaliB**3)-(Tref**3))) + ((C4c(comp)/4)*((TaliB**4)-(Tref**4))) + ((C5c(comp)/5)*((TaliB**5)-(Tref**5))) + ((C6c(comp)/6)*((TaliB**6)-(Tref**6))) + Hform(comp));
 Tred_b(comp)=TaliB/Tcrit(comp);
 DHVap_b(comp)=( C1v(comp)*( (1-Tred_b(comp))**( C2v(comp) + (C3v(comp)*Tred_b(comp)) + (C4v(comp)*(Tred_b(comp)**2)) + (C5v(comp)*(Tred_b(comp)**3)) ) ) );
@@ -723,17 +723,17 @@ VaporZbut(N,j,Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1)).. (Zbut(N,j,Net
                         *(bEOSbut(N,j)*P(N,j,Net)/(0.00008314*TaliB)) =e= 0;
 
 *HFB se calcula para todas las etapas internas
-variable HFB(N,j,Net) "Entalpía de la alimentación de butenos";
+variable HFB(N,j,Net) "Entalpï¿½a de la alimentaciï¿½n de butenos";
 equation EqHFB(N,j,Net);
 EqHFB(N,j,Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1)).. HFB(N,j,Net) =e= sum(comp,(zb(N,j,comp)/100)*(HL_b(comp)+(8.314/1000)*TaliB*(Zbut(N,j,Net)-1)
                         +(1+mEOS(comp))*((aEOSbut(N,j)**0.5)/bEOSbut(N,j))
                         *log(Zbut(N,j,Net)/(Zbut(N,j,Net)+(bEOSbut(N,j)*P(N,j,Net)/(0.00008314*TaliB))))));
 
-*Entalpía de la alimentación de etanol
-parameter HV_e(comp)    "Entalpía de vapor de la alimentación [kJ/mol]"
-          Tred_e(comp)  "Temperatura reducida alimentación [K]"
-          DHVap_e(comp) "Entalpía de vaporización alimentación [kJ/mol]"
-          HL_e(comp)    "Entalpía de líquido de la alimentación [kJ/mol]";
+*Entalpï¿½a de la alimentaciï¿½n de etanol
+parameter HV_e(comp)    "Entalpï¿½a de vapor de la alimentaciï¿½n [kJ/mol]"
+          Tred_e(comp)  "Temperatura reducida alimentaciï¿½n [K]"
+          DHVap_e(comp) "Entalpï¿½a de vaporizaciï¿½n alimentaciï¿½n [kJ/mol]"
+          HL_e(comp)    "Entalpï¿½a de lï¿½quido de la alimentaciï¿½n [kJ/mol]";
 HV_e(comp)=( (C1c(comp)*(TaliE-Tref)) + ((C2c(comp)/2)*((TaliE**2)-(Tref**2))) + ((C3c(comp)/3)*((TaliE**3)-(Tref**3))) + ((C4c(comp)/4)*((TaliE**4)-(Tref**4))) + ((C5c(comp)/5)*((TaliE**5)-(Tref**5))) + ((C6c(comp)/6)*((TaliE**6)-(Tref**6))) + Hform(comp));
 Tred_e(comp)=TaliE/Tcrit(comp);
 DHVap_e(comp)=( C1v(comp)*( (1-Tred_e(comp))**( C2v(comp) + (C3v(comp)*Tred_e(comp)) + (C4v(comp)*(Tred_e(comp)**2)) + (C5v(comp)*(Tred_e(comp)**3)) ) ) );
@@ -755,13 +755,13 @@ VaporZeth(N,j,Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1)).. (Zeth(N,j,Net
                         *(bEOSeth*P(N,j,Net)/(0.00008314*TaliE)) =e= 0;
 
 *HFE se alcula para todas las etapas internas
-variable  HFE(N,j,Net)   "Entalpía de la alimentación de etanol [kJ/mol]";
+variable  HFE(N,j,Net)   "Entalpï¿½a de la alimentaciï¿½n de etanol [kJ/mol]";
 equation EqHFE(N,j,Net);
 EqHFE(N,j,Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1)).. HFE(N,j,Net) =e= sum(comp,(ze(comp)/100)*(HL_e(comp)+(8.314/1000)*TaliE*(Zeth(N,j,Net)-1)
                         +(1+mEOS(comp))*((aEOSeth**0.5)/bEOSeth)
                         *log(Zeth(N,j,Net)/(Zeth(N,j,Net)+(bEOSeth*P(N,j,Net)/(0.00008314*TaliE))))));
 *-------------------------------------------------------------------------------
-*                                Sección 13
+*                                Secciï¿½n 13
 *          Definicion de parametros, restricciones y variables binarias
 *-------------------------------------------------------------------------------
 
@@ -789,7 +789,7 @@ parameter yf1(Net) "1 indica que en la etapa hay alimentacion de F";
 parameter yf2(Net) "1 indica que en la etapa hay alimentacion de F";
 
 *-------------------------------------------------------------------------------
-*                                Sección 14
+*                                Secciï¿½n 14
 *                           Restricciones logicas
 *-------------------------------------------------------------------------------
 
@@ -837,11 +837,11 @@ logic13(Net)$(ord(Net)>1 and ord(Net)<card(Net))..cmej*((sum(Net1$((ord(Net1) ge
 
 
 *-------------------------------------------------------------------------------
-*                                Sección 15
+*                                Secciï¿½n 15
 *                         Ecuaciones del condensador
 *-------------------------------------------------------------------------------
 
-*Condiciones iniciales (operación en estado estable)
+*Condiciones iniciales (operaciï¿½n en estado estable)
 equation BalMasaC0,BalMasaParcialC0(comp),SumaC0,EquilibrioC0(comp),BalEnergiaC0;
 BalMasaC0.. 0=e=V('1','1','2')-V('1','1','1')*(1+RR('1','1'));
 BalMasaParcialC0(comp).. 0=e=V('1','1','2')*y('1','1',comp,'2')-V('1','1','1')*x('1','1',comp,'1')*(1+RR('1','1'));
@@ -854,11 +854,11 @@ equation fixedL(N,j);
 fixedL(N,j)..L(N,j,'1')=e=0;
 
 *-------------------------------------------------------------------------------
-*                                Sección 16
+*                                Secciï¿½n 16
 *                    Ecuaciones de la columna (Punto Inicial)
 *-------------------------------------------------------------------------------
 
-*Condiciones iniciales (operación en estado estable)
+*Condiciones iniciales (operaciï¿½n en estado estable)
 equations BalMasa0(Net,Net1),BalMasaParcial0(comp,Net,Net1),Suma0(Net),BalEnergia0(Net,Net1);
 BalMasa0(Net,Net1)$((ord(Net)>1 and ord(Net)<card(Net)) and (ord(Net1) eq card(Net1)))..0=e=yf1(Net)*FE+yf2(Net)*FB+RR('1','1')*V('1','1','1')*yr(Net)+BR('1','1')*L('1','1',Net1)*yb(Net)+L('1','1',Net-1)+V('1','1',Net+1)-L('1','1',Net)-V('1','1',Net)+yc(Net)*(sum(comp,Nu(comp))*mcat*Rx('1','1',Net)) ;
 BalMasaParcial0(comp,Net,Net1)$((ord(Net)>1 and ord(Net)<card(Net)) and (ord(Net1) eq card(Net1)))..0=e=yf1(Net)*FE*ze(comp)+yf2(Net)*FB*zb('1','1',comp)+RR('1','1')*V('1','1','1')*yr(Net)*x('1','1',comp,'1')+BR('1','1')*L('1','1',Net1)*yb(Net)*y('1','1',comp,Net1)+L('1','1',Net-1)*x('1','1',comp,Net-1)+V('1','1',Net+1)*y('1','1',comp,Net+1)-L('1','1',Net)*x('1','1',comp,Net)-V('1','1',Net)*y('1','1',comp,Net)+100*yc(Net)*(Nu(comp)*mcat*Rx('1','1',Net));
@@ -876,11 +876,11 @@ Equation Equilibrio40(Net,Net1);
 Equilibrio40(Net,Net1)$(ord(Net)>1 and ord(Net)<card(Net) and ord(Net1) eq card(Net1))..0=e=(1-ye(Net))*(V('1','1',Net)-V('1','1',Net+1)-BR('1','1')*L('1','1',Net1)*yb(Net));
 
 *-------------------------------------------------------------------------------
-*                                Sección 17
+*                                Secciï¿½n 17
 *                        Ecuaciones del rehervidor
 *-------------------------------------------------------------------------------
 
-*Condiciones iniciales (operación en estado estable)
+*Condiciones iniciales (operaciï¿½n en estado estable)
 equation BalMasaR0(Net),BalMasaParcialR0(comp,Net),SumaR0(Net),EquilibrioR0(comp,Net),BalEnergiaR0(Net);
 BalMasaR0(Net)$(ord(Net) eq card(Net))..0=e=L('1','1',Net-1)-L('1','1',Net)*(1+BR('1','1'));
 BalMasaParcialR0(comp,Net)$(ord(Net) eq card(Net))..0=e=L('1','1',Net-1)*x('1','1',comp,Net-1)-L('1','1',Net)*(x('1','1',comp,Net)+BR('1','1')*y('1','1',comp,Net));
@@ -895,19 +895,19 @@ fixedV(N,j,Net)$(ord(Net) eq card(Net))..V(N,j,Net)=e=0;
 
 
 *-------------------------------------------------------------------------------
-*                                Sección 18
-*               Relaciones hidráulicas para todas las etapas internas
+*                                Secciï¿½n 18
+*               Relaciones hidrï¿½ulicas para todas las etapas internas
 *-------------------------------------------------------------------------------
 *Caracteristicas del catalizador
 scalar fracvol /0.3/;
 scalar fracEnvelop /0.5/;
 
-*Definición de velocidad de vapor
-positive variables far(N,j,Net) "Factor de areación [-]";
+*Definiciï¿½n de velocidad de vapor
+positive variables far(N,j,Net) "Factor de areaciï¿½n [-]";
 equations Eqfa(N,j,Net);
 Eqfa(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. par(Net)*(far(N,j,Net))=e=par(Net)*(0.981*exp(-0.411*((V(N,j,Net)/(rhoV(N,j,Net))/hora)*(rhoV(N,j,Net)*sum(comp,MW(comp)*y(N,j,comp,Net)/100)/1000)**(0.5))/At));
 
-positive variable hD(N,j,Net)   "Altura del líquido por encima del divisor [m]";
+positive variable hD(N,j,Net)   "Altura del lï¿½quido por encima del divisor [m]";
 equations EqhD(N,j,Net);
 EqhD(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. (hD(N,j,Net))=e=(0.6*(((((L(N,j,Net)/sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100))/hora)/Lw))**(2/3)));
 
@@ -920,12 +920,12 @@ equations Equnv(N,j,Net);
 Equnv(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. par(Net)*unv(N,j,Net)=e=par(Net)*((V(N,j,Net)/(rhoV(N,j,Net))/hora)/At);
 
 *Definicion de velocidad del liquido
-positive variable ul(N,j,Net) "Velocidad del líquido en el derramadero [m/s]";
+positive variable ul(N,j,Net) "Velocidad del lï¿½quido en el derramadero [m/s]";
 equations Equl(N,j,Net);
 Equl(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. par(Net)*ul(N,j,Net)=e=par(Net)*((L(N,j,Net)/(sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100))/hora)/Ad);
 
 *Carga de liquido
-positive variable hcl(N,j,Net)  "Altura del líquido libre en régimen de spray [m]"
+positive variable hcl(N,j,Net)  "Altura del lï¿½quido libre en rï¿½gimen de spray [m]"
 equation Eqhcl(N,j,Net);
 scalar consmach /1e-20/;
 Eqhcl(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. par(Net)*hcl(N,j,Net)=e=par(Net)*((0.157*(poro**(-0.791))/(1+1.04E-4*(((((L(N,j,Net)+consmach)/sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100))/hora)/Lw)**(-0.59))
@@ -947,21 +947,21 @@ equation eqFfactor(N,j,Net);
 eqFfactor(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. (1-fracvol)*(3.1415926/4)*(D**2)*(((rhov(N,j,net))*(sum(comp,(y(N,j,comp,Net)/100)*MW(comp)))*(1/1000))**(1/2))*(Ffactor(N,j,Net))=e=(V(N,j,net)*(1/60))*(sum(comp,(y(N,j,comp,Net)/100)*MW(comp)*(1/1000)));
 
 *Caida de presion
-positive variables DPL(N,j,Net) "Caída de presión por la presencia de líquido [bar]";
+positive variables DPL(N,j,Net) "Caï¿½da de presiï¿½n por la presencia de lï¿½quido [bar]";
 equations EqDPL(N,j,Net);
 EqDPL(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. (DPL(N,j,Net))=e=((far(N,j,Net)*9.81*(sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100)*sum(comp,MW(comp)*x(N,j,comp,Net)/100)/1000)*(hD(N,j,Net)+hw))/100000);
 
-positive variables DPS(N,j,Net) "Caída de presión debido a la presencia de los agujeros - seco [bar]";
+positive variables DPS(N,j,Net) "Caï¿½da de presiï¿½n debido a la presencia de los agujeros - seco [bar]";
 equations EqDPS(N,j,Net);
 EqDPS(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. (DPS(N,j,Net))=e=((1/(2*sqr(K0)))*( (((sqr(V(N,j,Net)/(rhoV(N,j,Net))/hora)/A0)) )*((rhoV(N,j,Net))*sum(comp,MW(comp)*y(N,j,comp,Net)/100)/1000)*(1-sqr(poro)))/100000);
 
-positive variable DPq(N,j,Net)      "Caída de presión en el derramadero [bar]";
+positive variable DPq(N,j,Net)      "Caï¿½da de presiï¿½n en el derramadero [bar]";
 equations EqDPq(N,j,Net);
 EqDPq(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. DPq(N,j,Net)=e=(1/(100000))*1.62*((sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100)*sum(comp,MW(comp)*x(N,j,comp,Net)/100)/1000))/(sqr(Lw*hw))*(sqr((L(N,j,Net)/sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100))/hora)+sqr((V(N,j,Net)/(rhoV(N,j,Net))/hora)));
 
-positive variables DP(N,j,Net)  "Caída de presión total [bar]";
+positive variables DP(N,j,Net)  "Caï¿½da de presiï¿½n total [bar]";
 positive variable dPcat(N,j,net)    "caida de presion por catalizador en etapas cataliticas [bar]";
-equations EqDP(N,j,Net),EqDPR(N,j,Net),EqdPcat(N,j,net),EqP(N,j,Net),EqPC(N,j,Net),EqPR(N,j,Net) "Definición de presión por etapa [bar]";
+equations EqDP(N,j,Net),EqDPR(N,j,Net),EqdPcat(N,j,net),EqP(N,j,Net),EqPC(N,j,Net),EqPR(N,j,Net) "Definiciï¿½n de presiï¿½n por etapa [bar]";
 
 EqDPR(N,j,Net)$(ord(Net) eq card(Net)).. DP(N,j,Net)=e=DP(N,j,Net-1);
 EqdPcat(N,j,net)$(ord(Net)>1 and ord(Net)<card(Net))..dPcat(N,j,net)=e=hs*fracEnvelop*(0.001)*(   (5.69228924748553E-06)*((Lload(N,j,Net)*60*60)**3.05308055949085)*((Ffactor(N,j,Net))**7.851695947) + 1.367015225*((Ffactor(N,j,Net))**1.764157687)    );
@@ -971,12 +971,12 @@ EqPC(N,j,Net)$(ord(Net) eq 1).. P(N,j,Net)=e=Pop;
 EqPR(N,j,Net)$(ord(Net) eq card(Net)).. P(N,j,Net)=e=P(N,j,Net-1);
 
 *Efectos indeseados en la columna
-*Downflow flooding (inundación en los derramaderos)
+*Downflow flooding (inundaciï¿½n en los derramaderos)
 equation DownFlood(N,j,Net);
 DownFlood(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net))..0=g=((HD(N,j,Net)+((DP(N,j,Net)+DPq(N,j,Net))*100000)
                                                         /(9.81*(((sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100)*sum(comp,MW(comp)*x(N,j,comp,Net)/100)/1000))
                                                         -(rhoV(N,j,Net)*sum(comp,MW(comp)*y(N,j,comp,Net)/100)/1000))))-(HS))*par(Net);
-*Entrainment flooding (inundación por arrastre de líquido)
+*Entrainment flooding (inundaciï¿½n por arrastre de lï¿½quido)
 equation EntrainFloodV(N,j,Net), EntrainFloodL(N,j,Net);
 EntrainFloodV(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net))..par(Net)*((unv(N,j,Net))-(Csbf(N,j,Net)*(((((sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100)*sum(comp,MW(comp)*x(N,j,comp,Net)/100)/1000))
                                                         -(rhoV(N,j,Net)*sum(comp,MW(comp)*y(N,j,comp,Net)/100)/1000)))
@@ -989,12 +989,12 @@ equation Weep(N,j,Net);
 Weep(N,j,Net)$(ord(Net)>1 and ord(Net)<card(Net)).. 0=g=(((0.68-0.12)/(((rhoV(N,j,Net)*sum(comp,MW(comp)*y(N,j,comp,Net)/100)/1000)
                                                                 /((sum(comp,rho(N,j,comp,Net)*x(N,j,comp,Net)/100)*sum(comp,MW(comp)*x(N,j,comp,Net)/100)/1000)
                                                                 *9.81*far(N,j,Net)*(hw+hd(N,j,Net))))**0.5))-(uhv(N,j,Net)))*par(Net);
-*Catalyst flooding (inundación del empaque del catalizador)
+*Catalyst flooding (inundaciï¿½n del empaque del catalizador)
 equation catflood(N,j,net);
 catflood(N,j,net)..yc(net)*(dPcat(N,j,net)-(12E-3)*hs*fracEnvelop)=l=0;
 
-*Construcción de la columna
-equation Size "Tamaño del equipo";
+*Construcciï¿½n de la columna
+equation Size "Tamaï¿½o del equipo";
 Size.. 1*Htotal =e= 1*((1+Sfactor)*sum(Net$(ord(Net)>1 and ord(Net)<card(Net)),HS*par(Net)));
 
 equation  ammountcat "Espacio disponible para el catalizador";
@@ -1003,26 +1003,26 @@ ammountcat..mcat=l=(fracvol)*((3.1415926/4)*(D**2))*(hs*fracEnvelop)*770;
 equation DtoLratio "Relacion entre el diametro y la altura";
 DtoLratio..htotal/D=l=20;
 *-------------------------------------------------------------------------------
-*                                Sección 19
-*                            Función objetivo
+*                                Secciï¿½n 19
+*                            Funciï¿½n objetivo
 *-------------------------------------------------------------------------------
 parameters alfa1 "Peso para pureza de ETBE" /1e4/
-           alfa2 "Peso para carga térmica del rehervidor" /500/
-           alfa3 "Peso para relación de reflujo" /100/
-           CostQr "Costo de la carga térmica del rehervidor [$/yr]"
-           CostQc "Costo de la carga térmica del condensador [$/yr]"
+           alfa2 "Peso para carga tï¿½rmica del rehervidor" /500/
+           alfa3 "Peso para relaciï¿½n de reflujo" /100/
+           CostQr "Costo de la carga tï¿½rmica del rehervidor [$/yr]"
+           CostQc "Costo de la carga tï¿½rmica del condensador [$/yr]"
            CostB  "Ganacia del ETBE en fondos [$/yr]"
-           CostEth"Costo de alimentación de etanol [$/yr]"
-           CostBut"Costo de alimentación de butanos [$/yr]"
+           CostEth"Costo de alimentaciï¿½n de etanol [$/yr]"
+           CostBut"Costo de alimentaciï¿½n de butanos [$/yr]"
            year   "Operational hours per year [hr/yr]" /8000/
            CostCat"Costo del catalizador [$/kg]" /7.7/
-           AF     "Factor de anualización (5 años, 5% de tasa de interés) [1/yr]"
+           AF     "Factor de anualizaciï¿½n (5 aï¿½os, 5% de tasa de interï¿½s) [1/yr]"
            MS     "Marshall & Swift coefficient" /1050/
            FM     "Material factor (carbon steel)" /1/
            FPres  "Pressure factor (up to 200psi=13.78bar)" /1.15/
-           C0     "Costo de inversión inicial AF(Cr1+Cc1) [$]" /10000/
-           CT     "Costo de inversión para etapas [$]"
-           Csh    "Costo de inversión para coraza [$]"
+           C0     "Costo de inversiï¿½n inicial AF(Cr1+Cc1) [$]" /10000/
+           CT     "Costo de inversiï¿½n para etapas [$]"
+           Csh    "Costo de inversiï¿½n para coraza [$]"
            Fcol   "Factor de costo de la columna [-]";
 Fcol=FM*FPres;
 AF=(0.05/(1-1/(1+0.05)**5));
@@ -1043,7 +1043,7 @@ Fobj(Net)$(ord(Net) eq card(Net)).. zobj=e=1*((((CostEth*FE+CostBut*FB+(CostQr*Q
 +(C0+AF*(mcat*CostCat*sum(Net1,yc(Net1))+CT*((D/0.3048)**1.55)*(sum(Net1,HS*par(Net1))/0.3048)+Csh*((D/0.3048)**1.066)*((Htotal/0.3048)**0.802)))
 -((((CostB*L('1','1',Net)))/year)*year));
 *-------------------------------------------------------------------------------
-*                                Sección 20
+*                                Secciï¿½n 20
 *                            Cotas en las variables
 *-------------------------------------------------------------------------------
 *bounds
@@ -1229,7 +1229,7 @@ ye(Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1))=par(Net)*(1-yc(Net))*CASE+
 *----------------------MODEL AND SOLUTION---------------------------------------
 *the name of the model must be DSDA
 model DSDA /all/;
-option nlp=conopt;
+option nlp=msnlp;
 *--------------------DATA FROM THE MODEL------------------------------------
 $embeddedCode Python:
 import csv
@@ -1245,9 +1245,9 @@ Dep=["par(Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1))=(sum(Net1$((ord(Net
 
 ###User params 2: neighborhood--------------------------------------------------
 #use: Infinity,Separable,Mflat,Lflat
-neighborhood="Infinity"
+neighborhood="Separable"
 
-###User params 3:User defined reformualtion,initialization----------------------
+###User params 3:User defined reformulation,initialization----------------------
 ###and_ inequality constraints--------------------------------------------------
 
 #use: Automatic,User_defined

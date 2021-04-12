@@ -75,7 +75,7 @@ def _set_axes_radius(ax, origin, radius):
 if __name__ == "__main__":
 
     # # Small Batch Graph
-    # batch = pd.read_csv("results/compl_enum_small_batch_baron.csv") 
+    batch = pd.read_csv("results/compl_enum_small_batch_baron.csv") 
     # batch.head()
 
 

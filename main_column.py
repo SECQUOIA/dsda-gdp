@@ -207,8 +207,8 @@ if __name__ == "__main__":
     #           (15, 6), (15, 7), (15, 8), (15, 9), (7, 1),
     #           (8, 1), (9, 1), (9, 2), (10, 3), ]
     
-    for transformation in transformations:
-        for solver in ['knitro', 'baron']:
+    for transformation in ['hull']:
+        for solver in ['knitro']:
             m_solved = solve_complete_external_enumeration(
                 model_function=build_column,
                 model_args=model_args,

@@ -1229,7 +1229,7 @@ ye(Net)$((ord(Net) ne card(Net)) and (ord(Net) ne 1))=par(Net)*(1-yc(Net))*CASE+
 *----------------------MODEL AND SOLUTION---------------------------------------
 *the name of the model must be DSDA
 model DSDA /all/;
-option nlp=conopt4;
+option nlp=conopt;
 *--------------------DATA FROM THE MODEL------------------------------------
 $embeddedCode Python:
 import csv

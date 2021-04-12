@@ -3,6 +3,7 @@
 from __future__ import division
 
 import csv
+import logging
 import os
 from math import ceil, fabs
 
@@ -47,6 +48,8 @@ if __name__ == "__main__":
     # Initializing at column with all trays, reboil in bottom tray and reflux in top-most tray
     starting_point = [NT-2, 1]
     globaltee = True
+    # Setting logging level to ERROR to avoid printing FBBT warning of some constraints not implemented
+    logging.basicConfig(level=logging.ERROR)
 
     csv_columns = ['Method', 'Approach', 'Solver',
                    'Objective', 'Time', 'Status', 'User_time']
@@ -104,7 +107,7 @@ if __name__ == "__main__":
         ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
         reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
             m, ext_ref, tee=globaltee)
-        m_fixed = external_ref(m=m, x=starting_point, other_function=problem_logic_column,
+        m_fixed = external_ref(m=m, x=starting_point, extra_logic_function=problem_logic_column,
                                dict_extvar=reformulation_dict, tee=globaltee)
         m_solved = solve_subproblem(
             m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee)
@@ -173,7 +176,7 @@ if __name__ == "__main__":
     #             iter_timelimit=timelimit,
     #             timelimit=timelimit,
     #             gams_output=False,
-    #             tee=globaltee,
+    #             tee=False,
     #             global_tee=globaltee,
     #         )
     #         new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
@@ -203,20 +206,23 @@ if __name__ == "__main__":
     #           (15, 1), (15, 2), (15, 3), (15, 4), (15, 5),
     #           (15, 6), (15, 7), (15, 8), (15, 9), (7, 1),
     #           (8, 1), (9, 1), (9, 2), (10, 3), ]
-    m_solved = solve_complete_external_enumeration(
-        model_function=build_column,
-        model_args=model_args,
-        ext_dict=ext_ref,
-        ext_logic=problem_logic_column,
-        feasible_model='column_'+str(NT)+'_optimal',
-        # points=points,
-        subproblem_solver='baron',
-        subproblem_solver_options=nlp_opts['baron'],
-        iter_timelimit=iterlim,
-        # timelimit=1.5*len(points)*iterlim,
-        timelimit=1.5*8*9*iterlim,
-        gams_output=False,
-        tee=globaltee,
-        global_tee=globaltee,
-        export_csv=True,
-    )
+    
+    for transformation in ['hull']:
+        for solver in ['knitro']:
+            m_solved = solve_complete_external_enumeration(
+                model_function=build_column,
+                model_args=model_args,
+                ext_dict=ext_ref,
+                ext_logic=problem_logic_column,
+                feasible_model='column_'+str(NT)+'_optimal',
+                # points=points,
+                subproblem_solver=solver,
+                subproblem_solver_options=nlp_opts[solver],
+                iter_timelimit=iterlim,
+                mip_transformation=True,
+                transformation=transformation,
+                gams_output=False,
+                tee=globaltee,
+                global_tee=globaltee,
+                export_csv=True,
+            )

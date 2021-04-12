@@ -568,7 +568,7 @@ def to_json(o, fname=None, human_read=False, wts=None, metadata={}, gz=None,
         metadata: A dictionary of addtional metadata to add.
         wts: is What To Save, this is a StoreSpec object that specifies what
             object types and attributes to save.  If None, the default is used
-            which saves the state of the compelte model state.
+            which saves the state of the complete model state.
         metadata: addtional metadata to save beyond the standard format_version,
             date, and time.
         return_dict: default is False if true returns a dictionary representation

@@ -1,7 +1,9 @@
-*.GDX
-*.gdx
 *.lst
 *.pyc
+*.lxi
+*.dat
+*.txt
+*.g00
 *.log
 gamsfiles/*
 util/jsonfiles

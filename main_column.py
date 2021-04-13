@@ -58,16 +58,16 @@ if __name__ == "__main__":
     csv_file = os.path.join(
         dir_path, "results", "column_results.csv")
 
-    nlps = ['msnlp', 'knitro', 'baron']
+    nlps = ['knitro', 'baron'] #msnlp
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
-    nlp_opts['msnlp']['add_options'] = [
-        'GAMS_MODEL.optfile = 1;'
-        '\n'
-        '$onecho > msnlp.opt \n'
-        'nlpsolver knitro \n'
-        '$offecho \n'
-    ]
+    # nlp_opts['msnlp']['add_options'] = [
+    #     'GAMS_MODEL.optfile = 1;'
+    #     '\n'
+    #     '$onecho > msnlp.opt \n'
+    #     'nlpsolver knitro \n'
+    #     '$offecho \n'
+    # ]
 
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
@@ -154,44 +154,47 @@ if __name__ == "__main__":
     #         dict_data.append(new_result)
     #         print(new_result)
 
-    # # D-SDA
-    # m = build_column(**model_args)
-    # ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
-    # get_external_information(m, ext_ref, tee=globaltee)
+    # D-SDA
+    m = build_column(**model_args)
+    ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
+    get_external_information(m, ext_ref, tee=globaltee)
 
-    # for solver in nlps:
-    #     for k in ks:
-    #         new_result = {}
-    #         m_solved, _, _ = solve_with_dsda(
-    #             model_function=build_column,
-    #             model_args=model_args,
-    #             starting_point=starting_point,
-    #             ext_dict=ext_ref,
-    #             ext_logic=problem_logic_column,
-    #             k=k,
-    #             provide_starting_initialization=True,
-    #             feasible_model='column_' + str(NT),
-    #             subproblem_solver=solver,
-    #             subproblem_solver_options=nlp_opts[solver],
-    #             iter_timelimit=timelimit,
-    #             timelimit=timelimit,
-    #             gams_output=False,
-    #             tee=False,
-    #             global_tee=globaltee,
-    #         )
-    #         new_result = {'Method': 'D-SDA', 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-    #             m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}
-    #         dict_data.append(new_result)
-    #         print(new_result)
+    for solver in nlps:
+        for k in ks:
+            for transformation in ['bigm','hull']:
+                new_result = {}
+                m_solved, _, _ = solve_with_dsda(
+                    model_function=build_column,
+                    model_args=model_args,
+                    starting_point=starting_point,
+                    ext_dict=ext_ref,
+                    mip_transformation=True,
+                    transformation=transformation,
+                    ext_logic=problem_logic_column,
+                    k=k,
+                    provide_starting_initialization=True,
+                    feasible_model='column_' + str(NT),
+                    subproblem_solver=solver,
+                    subproblem_solver_options=nlp_opts[solver],
+                    iter_timelimit=timelimit,
+                    timelimit=timelimit,
+                    gams_output=False,
+                    tee=False,
+                    global_tee=globaltee,
+                )
+                new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
+                    m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}
+                dict_data.append(new_result)
+                print(new_result)
 
-    # try:
-    #     with open(csv_file, 'w') as csvfile:
-    #         writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-    #         writer.writeheader()
-    #         for data in dict_data:
-    #             writer.writerow(data)
-    # except IOError:
-    #     print("I/O error")
+    try:
+        with open(csv_file, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in dict_data:
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")
 
     m = build_column(**model_args)
     ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
@@ -207,22 +210,22 @@ if __name__ == "__main__":
     #           (15, 6), (15, 7), (15, 8), (15, 9), (7, 1),
     #           (8, 1), (9, 1), (9, 2), (10, 3), ]
     
-    for transformation in ['hull']:
-        for solver in ['knitro']:
-            m_solved = solve_complete_external_enumeration(
-                model_function=build_column,
-                model_args=model_args,
-                ext_dict=ext_ref,
-                ext_logic=problem_logic_column,
-                feasible_model='column_'+str(NT)+'_optimal',
-                # points=points,
-                subproblem_solver=solver,
-                subproblem_solver_options=nlp_opts[solver],
-                iter_timelimit=iterlim,
-                mip_transformation=True,
-                transformation=transformation,
-                gams_output=False,
-                tee=globaltee,
-                global_tee=globaltee,
-                export_csv=True,
-            )
+    # for transformation in ['hull']:
+    #     for solver in ['knitro']:
+    #         m_solved = solve_complete_external_enumeration(
+    #             model_function=build_column,
+    #             model_args=model_args,
+    #             ext_dict=ext_ref,
+    #             ext_logic=problem_logic_column,
+    #             feasible_model='column_'+str(NT)+'_optimal',
+    #             # points=points,
+    #             subproblem_solver=solver,
+    #             subproblem_solver_options=nlp_opts[solver],
+    #             iter_timelimit=iterlim,
+    #             mip_transformation=True,
+    #             transformation=transformation,
+    #             gams_output=False,
+    #             tee=globaltee,
+    #             global_tee=globaltee,
+    #             export_csv=True,
+    #         )

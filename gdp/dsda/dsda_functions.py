@@ -772,6 +772,8 @@ def evaluate_neighbors(
     model_args: dict,
     ext_dict: dict,
     ext_logic,
+    mip_transformation: bool = False,
+    transformation: str = 'bigm',
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
     iter_timelimit: float = 10,
@@ -793,6 +795,8 @@ def evaluate_neighbors(
         model_args: Contains the argument values needed for model_function
         ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values)
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
+        mip_transformation: Whether to solve the enumeration using the external variables applied to the MIP problem insed of the GDP
+        transformation: Which transformation to apply to the GDP 
         subproblem_solver: MINLP or NLP solver algorithm
         subproblem_solver_options: MINLP or NLP solver algorithm options
         iter_timelimit: time limit in seconds for the solve statement for each iteration
@@ -831,6 +835,7 @@ def evaluate_neighbors(
     best_path = init_path
     temp = ext_vars # TODO change name to something more saying. Points? Combinations?
     temp.pop(0, None)
+
     if global_tee:
         print()
         print('Neighbor search around:', best_var)
@@ -839,11 +844,20 @@ def evaluate_neighbors(
         if temp[i] not in global_evaluated:
             m = model_function(**model_args)
             m_init = initialize_model(m, json_path=init_path)
+            if mip_transformation:  # If you want a MIP reformulation, go ahead and use it'
+                m_init, ext_dict = extvars_gdp_to_mip(
+                    m=m,
+                    gdp_dict_extvar=ext_dict,
+                    transformation=transformation,
+                )
+
             m_fixed = external_ref(
                 m=m_init,
                 x=temp[i],
                 extra_logic_function=ext_logic,
                 dict_extvar=ext_dict,
+                mip_ref=mip_transformation,
+                tee=False,
             )
             t_remaining = min(iter_timelimit, timelimit -
                               (time.perf_counter() - current_time))
@@ -909,6 +923,8 @@ def do_line_search(
     model_args: dict,
     ext_dict: dict,
     ext_logic,
+    mip_transformation: bool = False,
+    transformation: str = 'bigm',
     subproblem_solver: str = 'knitro',
     subproblem_solver_options: dict = {},
     min_allowed: dict = {},
@@ -933,6 +949,8 @@ def do_line_search(
         model_args: Contains the argument values needed for model_function
         ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values)
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
+        mip_transformation: Whether to solve the enumeration using the external variables applied to the MIP problem insed of the GDP
+        transformation: Which transformation to apply to the GDP 
         subproblem_solver: MINLP or NLP solver algorithm
         subproblem_solver_options: MINLP or NLP solver algorithm options
         min_allowed: In keys contains external variables and in items their respective lower bounds
@@ -965,6 +983,7 @@ def do_line_search(
     moved = False
     new_path = init_path
 
+
     # Line search in given direction
     moved_point = list(map(sum, zip(list(start), list(direction))))
     checked = 0
@@ -976,8 +995,21 @@ def do_line_search(
         if moved_point not in global_evaluated:
             m = model_function(**model_args)
             m_init = initialize_model(m, json_path=init_path)
+            if mip_transformation:  # If you want a MIP reformulation, go ahead and use it'
+                m_init, ext_dict = extvars_gdp_to_mip(
+                    m=m,
+                    gdp_dict_extvar=ext_dict,
+                    transformation=transformation,
+                )
             m_fixed = external_ref(
-                m_init, moved_point, ext_logic, ext_dict)
+                m=m_init,
+                x=moved_point,
+                extra_logic_function=ext_logic,
+                dict_extvar=ext_dict,
+                mip_ref=mip_transformation,
+                tee=False,
+            )
+    
             t_remaining = min(iter_timelimit, timelimit -
                               (time.perf_counter() - current_time))
             if t_remaining < 0:
@@ -1015,6 +1047,8 @@ def solve_with_dsda(
     starting_point: list,
     ext_dict,
     ext_logic,
+    mip_transformation: bool = False,
+    transformation: str = 'bigm',
     k: str = 'Infinity',
     provide_starting_initialization: bool = True,
     feasible_model: str = '',
@@ -1036,6 +1070,8 @@ def solve_with_dsda(
         starting_point: Feasible external variable initial point
         ext_dict: Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values). Both keys and values are pyomo objects.
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
+        mip_transformation: Whether to solve the enumeration using the external variables applied to the MIP problem insed of the GDP
+        transformation: Which transformation to apply to the GDP 
         provide_intialization: If an existing json file is provided with a feasible initialization of starting_point
         subproblem_solver: MINLP or NLP solver algorithm
         subproblem_solver_options: MINLP or NLP solver algorithm options
@@ -1074,10 +1110,24 @@ def solve_with_dsda(
     if provide_starting_initialization:
         m_init = initialize_model(
             m, from_feasible=True, feasible_model=feasible_model, json_path=None)
-        m_fixed = external_ref(
-            m_init, ext_var, ext_logic, dict_extvar)
     else:
-        m_fixed = external_ref(m, ext_var, ext_logic, dict_extvar)
+        m_init = m
+
+    if mip_transformation:  # If you want a MIP reformulation, go ahead and use it'
+            m_init, dict_extvar = extvars_gdp_to_mip(
+                m=m,
+                gdp_dict_extvar=dict_extvar,
+                transformation=transformation,
+            )
+
+    m_fixed = external_ref(
+        m=m_init,
+        x=ext_var,
+        extra_logic_function=ext_logic,
+        dict_extvar=dict_extvar,
+        mip_ref=mip_transformation,
+        tee=False
+        )
 
     # Solve for initialization
     m_solved = solve_subproblem(
@@ -1094,8 +1144,10 @@ def solve_with_dsda(
         print('Initializing...')
         print('Evaluated:', ext_var, '   |   Objective:', round(fmin, 5),
               '   |   Global Time:', round(time.perf_counter() - t_start, 2))
-    best_path = generate_initialization(m_solved)
 
+    # m_solved.pprint()
+    best_path = generate_initialization(m_solved)
+    
     route.append(ext_var)
     obj_route.append(fmin)
     global_evaluated.append(ext_var)
@@ -1130,6 +1182,8 @@ def solve_with_dsda(
             model_args=model_args,
             ext_dict=dict_extvar,
             ext_logic=ext_logic,
+            mip_transformation=mip_transformation,
+            transformation=transformation,
             subproblem_solver=subproblem_solver,
             subproblem_solver_options=subproblem_solver_options,
             iter_timelimit=iter_timelimit,
@@ -1169,6 +1223,8 @@ def solve_with_dsda(
                     model_args=model_args,
                     ext_dict=dict_extvar,
                     ext_logic=ext_logic,
+                    mip_transformation=mip_transformation,
+                    transformation=transformation,
                     subproblem_solver=subproblem_solver,
                     min_allowed=min_allowed,
                     max_allowed=max_allowed,
@@ -1296,7 +1352,7 @@ def solve_complete_external_enumeration(
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
         mip_transformation: Whether to solve the enumeration using the external variables applied to the MIP problem insed of the GDP
         transformation: Which transformation to apply to the GDP 
-        feasible_model: TODO complete
+        feasible_model: feasible model name to initialize
         points: list of points to carry on enumeration
         subproblem_solver: MINLP or NLP solver algorithm
         subproblem_solver_options: MINLP or NLP solver algorithm options

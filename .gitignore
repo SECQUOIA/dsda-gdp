@@ -5,9 +5,10 @@
 *.~gm
 *.gpr
 *.txt
-*.g00
+*1.g00
 *.log
 gamsfiles/*
 gamsnext.sh
 util/jsonfiles
 .vscode/*
+225?/

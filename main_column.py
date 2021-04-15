@@ -154,14 +154,14 @@ if __name__ == "__main__":
     #         dict_data.append(new_result)
     #         print(new_result)
 
-    # D-SDA
+    # D-SDA MINLP
     m = build_column(**model_args)
     ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
     get_external_information(m, ext_ref, tee=globaltee)
 
     for solver in nlps:
         for k in ks:
-            for transformation in ['bigm','hull']:
+            for transformation in transformations:
                 new_result = {}
                 m_solved, _, _ = solve_with_dsda(
                     model_function=build_column,

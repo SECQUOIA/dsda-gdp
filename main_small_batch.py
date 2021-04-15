@@ -138,14 +138,14 @@ if __name__ == "__main__":
     #         dict_data.append(new_result)
     #         print(new_result)
 
-    # D-SDA
+    # D-SDA - MINLP
     m = build_small_batch()
     ext_ref = {m.Y: m.k}
     get_external_information(m, ext_ref, tee=globaltee)
 
     for solver in nlps:
         for k in ks:
-            for transformation in ['hull', 'bigm']:
+            for transformation in transformations:
                 new_result = {}
                 m_solved, _, _ = solve_with_dsda(
                     model_function=build_small_batch,

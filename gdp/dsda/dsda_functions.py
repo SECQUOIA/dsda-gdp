@@ -241,15 +241,15 @@ def external_ref(
         # Double loop required from fact that exactly_number >= 1. TODO Is there a better way to do this?
         for j in range(dict_extvar[i]['exactly_number']):
             for k in range(1, len(dict_extvar[i]['Boolean_vars'])+1):
-                    if not mip_ref:
-                        # fix False variables: If the independent Boolean variable is not fixed at "True", then it is fixed at "False".
-                        if not dict_extvar[i]['Boolean_vars'][k-1].is_fixed():
-                            dict_extvar[i]['Boolean_vars'][k-1].fix(False)
-                    else:
-                        # fix 0 variables: If the independent Boolean variable is not fixed at "1", then it is fixed at "0".
-                        if not dict_extvar[i]['Binary_vars'][k-1].is_fixed():
-                            dict_extvar[i]['Binary_vars'][k-1].fix(0)
-                            dict_extvar[i]['Boolean_vars'][k-1].set_value(False)
+                if not mip_ref:
+                    # fix False variables: If the independent Boolean variable is not fixed at "True", then it is fixed at "False".
+                    if not dict_extvar[i]['Boolean_vars'][k-1].is_fixed():
+                        dict_extvar[i]['Boolean_vars'][k-1].fix(False)
+                else:
+                    # fix 0 variables: If the independent Boolean variable is not fixed at "1", then it is fixed at "0".
+                    if not dict_extvar[i]['Binary_vars'][k-1].is_fixed():
+                        dict_extvar[i]['Binary_vars'][k-1].fix(0)
+                        dict_extvar[i]['Boolean_vars'][k-1].set_value(False)
 
     # Other Boolean and Indicator variables are fixed depending on the information provided by the user
     logic_expr = extra_logic_function(m)
@@ -833,7 +833,7 @@ def evaluate_neighbors(
     best_dir = 0  # Position in dictionary
     best_dist = 0
     best_path = init_path
-    temp = ext_vars # TODO change name to something more saying. Points? Combinations?
+    temp = ext_vars  # TODO change name to something more saying. Points? Combinations?
     temp.pop(0, None)
 
     if global_tee:
@@ -878,13 +878,11 @@ def evaluate_neighbors(
                 if global_tee:
                     print('Evaluated:', temp[i], '   |   Objective:', round(pe.value(
                         m_solved.obj), 5), '   |   Global Time:', round(t_end - current_time, 2))
-                # objectives[i] = pe.value(m_solved.obj)
-                # feasibles[i] = temp[i]
                 dist = sum((x-y)**2 for x, y in zip(temp[i], here))
                 act_obj = pe.value(m_solved.obj)
+
                 # Assuming minimization problem
                 # Implements heuristic of largest move
-
                 if not improve:
                     # We want a minimum improvement in the first found solution
                     if (fmin - act_obj) > min_improve or (fmin - act_obj)/(abs(fmin)+epsilon) > min_improve_rel:
@@ -983,7 +981,6 @@ def do_line_search(
     moved = False
     new_path = init_path
 
-
     # Line search in given direction
     moved_point = list(map(sum, zip(list(start), list(direction))))
     checked = 0
@@ -1009,7 +1006,7 @@ def do_line_search(
                 mip_ref=mip_transformation,
                 tee=False,
             )
-    
+
             t_remaining = min(iter_timelimit, timelimit -
                               (time.perf_counter() - current_time))
             if t_remaining < 0:
@@ -1114,11 +1111,11 @@ def solve_with_dsda(
         m_init = m
 
     if mip_transformation:  # If you want a MIP reformulation, go ahead and use it'
-            m_init, dict_extvar = extvars_gdp_to_mip(
-                m=m,
-                gdp_dict_extvar=dict_extvar,
-                transformation=transformation,
-            )
+        m_init, dict_extvar = extvars_gdp_to_mip(
+            m=m,
+            gdp_dict_extvar=dict_extvar,
+            transformation=transformation,
+        )
 
     m_fixed = external_ref(
         m=m_init,
@@ -1127,7 +1124,7 @@ def solve_with_dsda(
         dict_extvar=dict_extvar,
         mip_ref=mip_transformation,
         tee=False
-        )
+    )
 
     # Solve for initialization
     m_solved = solve_subproblem(
@@ -1147,7 +1144,7 @@ def solve_with_dsda(
 
     # m_solved.pprint()
     best_path = generate_initialization(m_solved)
-    
+
     route.append(ext_var)
     obj_route.append(fmin)
     global_evaluated.append(ext_var)

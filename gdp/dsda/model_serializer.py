@@ -494,7 +494,8 @@ def _write_component_data(sd, o, wts, count=None, lookup={}, suffixes=[]):
                 else:
                     el = o[key]
                 if frst:  # assume all item are same type, use first to get alist
-                    alist, ff = wts.get_data_class_attr_list(el)  # get attributes
+                    alist, ff = wts.get_data_class_attr_list(
+                        el)  # get attributes
                     if alist is None:
                         return  # if None then skip writing
                 frst = False  # done with first only stuff
@@ -504,7 +505,8 @@ def _write_component_data(sd, o, wts, count=None, lookup={}, suffixes=[]):
                     lookup[id(el)] = count.count  # and add to lookup table
                 if count is not None:
                     count.count += 1  # inciment component counter
-                sd[repr(key)] = edict  # stick item dict into component data dict
+                # stick item dict into component data dict
+                sd[repr(key)] = edict
                 for a in alist:  # store desired attributes
                     if a in wts.write_cbs:
                         if wts.write_cbs[a] is None:
@@ -513,8 +515,10 @@ def _write_component_data(sd, o, wts, count=None, lookup={}, suffixes=[]):
                             edict[a] = wts.write_cbs[a](el)
                     else:
                         edict[a] = getattr(el, a)
-                hascomps = False  # Has sub-components (like a Block would have)
-                if _may_have_subcomponents(el):  # block or block like component
+                # Has sub-components (like a Block would have)
+                hascomps = False
+                # block or block like component
+                if _may_have_subcomponents(el):
                     for o2 in el.component_objects(descend_into=False):
                         # loop through sub-components
                         if not hascomps:  # if here it does have sub-components
@@ -523,7 +527,7 @@ def _write_component_data(sd, o, wts, count=None, lookup={}, suffixes=[]):
                         hascomps = True  # only make __pyomo_components__ dict once
                         # write each sub-component
                         _write_component(sd=cdict, o=o2, wts=wts, count=count,
-                                        lookup=lookup, suffixes=suffixes)
+                                         lookup=lookup, suffixes=suffixes)
         except:
             pass
 

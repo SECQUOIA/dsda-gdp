@@ -74,8 +74,246 @@ def _set_axes_radius(ax, origin, radius):
 
 if __name__ == "__main__":
 
+    # _______________________________________________________________________________
+    # CSTR Enumeration vs NT Graph
+    baron = pd.read_csv("results/compl_enum_cstr_25_baron.csv")
+    baronb = pd.read_csv("results/compl_enum_cstr_25_baron_bigm.csv")
+    baronh = pd.read_csv("results/compl_enum_cstr_25_baron_hull.csv")
+
+    knitro = pd.read_csv("results/compl_enum_cstr_25_knitro.csv")
+    knitrob = pd.read_csv("results/compl_enum_cstr_25_knitro_bigm.csv")
+    knitroh = pd.read_csv("results/compl_enum_cstr_25_knitro_hull.csv")
+
+    
+    colors={'bigm':'blue','hull':'red','GDP':'green'}
+    shapes={'antigone':'2','baron':'o','scip':'s','dicopt':'*','sbb':'+','msnlp':'D','knitro':'^'}
+
+    absolutes = {}
+    baron_time, baronb_time, baronh_time, knitro_time, knitrob_time, knitroh_time = {}, {}, {}, {}, {}, {}
+    baron_obj, baronb_obj, baronh_obj, knitro_obj, knitrob_obj, knitroh_obj = {}, {}, {}, {}, {}, {}
+
+    for i in range(len(baron)):
+        if baron['x'][i] == baron['y'][i]:
+            absolutes[baron['x'][i]] = baron['Objective'][i]
+
+            baron_time[baron['x'][i]] = baron['Global_Time'][i]
+            baron_obj[baron['x'][i]] = baron['Objective'][i]
+
+        if baronb['x'][i] == baronb['y'][i]:
+            baronb_time[baronb['x'][i]] = baronb['Global_Time'][i]
+            baronb_obj[baronb['x'][i]] = baronb['Objective'][i]
+
+        if knitro['x'][i] == knitro['y'][i]:
+            knitro_time[knitro['x'][i]] = knitro['Global_Time'][i]
+            knitro_obj[knitro['x'][i]] = knitro['Objective'][i]
+
+        if knitrob['x'][i] == knitrob['y'][i]:
+            knitrob_time[knitrob['x'][i]] = knitrob['Global_Time'][i]
+            knitrob_obj[knitrob['x'][i]] = knitrob['Objective'][i]
+
+        if knitroh['x'][i] == knitroh['y'][i]:
+            knitroh_time[knitroh['x'][i]] = knitroh['Global_Time'][i]
+            knitroh_obj[knitroh['x'][i]] = knitroh['Objective'][i]
+
+    for i in range(len(baronh)):
+        if baronh['x'][i] == baronh['y'][i]:
+            baronh_time[baronh['x'][i]] = baronh['Global_Time'][i]
+            baronh_obj[baronh['x'][i]] = baronh['Objective'][i]
+
+    cstr = pd.DataFrame()
+
+    baron_nr, baronb_nr, baronh_nr, knitro_nr, knitrob_nr, knitroh_nr = {}, {}, {}, {}, {}, {}
+
+    new_row = {}
+
+    for i in baron_obj.keys():
+        new_row = {'Method':'total', 'Approach':'GDP', 'Solver':'baron', 'Objective':baron_obj[i],'Time':baron_time[i],'NT':i}
+        cstr = cstr.append(new_row, ignore_index=True)
+
+    for i in baronb_obj.keys():
+        new_row = {'Method':'total', 'Approach':'bigm', 'Solver':'baron', 'Objective':baronb_obj[i],'Time':baronb_time[i],'NT':i}
+        cstr = cstr.append(new_row, ignore_index=True)
+
+    for i in baronh_obj.keys():
+        new_row = {'Method':'total', 'Approach':'hull', 'Solver':'baron', 'Objective':baronh_obj[i],'Time':baronh_time[i],'NT':i}
+        cstr = cstr.append(new_row, ignore_index=True)
+
+    for i in knitro_obj.keys():
+        new_row = {'Method':'total', 'Approach':'GDP', 'Solver':'knitro', 'Objective':knitro_obj[i],'Time':knitro_time[i],'NT':i}
+        cstr = cstr.append(new_row, ignore_index=True)
+
+    for i in knitrob_obj.keys():
+        new_row = {'Method':'total', 'Approach':'bigm', 'Solver':'knitro', 'Objective':knitrob_obj[i],'Time':knitrob_time[i],'NT':i}
+        cstr = cstr.append(new_row, ignore_index=True)
+
+    for i in knitroh_obj.keys():
+        new_row = {'Method':'total', 'Approach':'hull', 'Solver':'knitro', 'Objective':knitroh_obj[i],'Time':knitroh_time[i],'NT':i}
+        cstr = cstr.append(new_row, ignore_index=True)
+
+    print(cstr)
+
+
+
+
+    cstr['Gap'] = 101
+
+    #cstr['Method'] = pd.Categorical(cstr['Method'], ["GDPopt", "MINLP", "Enumeration","D-SDA"])
+    cstr['Solver'] = pd.Categorical(cstr['Solver'], ["baron", 'knitro'])
+    cstr['Approach'] = pd.Categorical(cstr['Approach'], ["bigm", "hull",'GDP'])
+    #cstr = cstr.sort_values(by='Approach')
+    cstr = cstr.sort_values(by=['Solver', 'Approach'])
+    cstr = cstr.reset_index(drop=True)
+
+    print(cstr)
+
+    artists = []
+    legends = []
+    max_gaps = [10, 0]
+    for max_gap in max_gaps:
+        fig = plt.figure()
+        ax = plt.gca()
+        for i in range(len(cstr)):
+            for j in absolutes.keys():
+                if cstr['NT'][i] == j:
+                    cstr['Gap'][i] = float(100*(cstr['Objective'][i] - absolutes[j])/absolutes[j])
+
+            if cstr['Time'][i] < 1000 and cstr['NT'][i] >= 5:
+                if cstr['Gap'][i] <= max_gap + 1e-3:
+                    art = plt.scatter(cstr['NT'][i], cstr['Time'][i], marker=shapes[cstr['Solver'][i]],  c=colors[cstr['Approach'][i]])
+                    leg = str(cstr['Approach'][i]+'-'+cstr['Solver'][i])
+                    artists.append(art)
+                    legends.append(leg)
+                # else:
+                #     art = plt.scatter([10], 10, marker='.',  c='white')
+                #     leg = "" #str(cstr['Approach'][i]+'-'+cstr['Solver'][i])
+                #     artists.append(art)
+                #     legends.append(leg)
+
+  
+        artists2, legends2 = [], []
+
+        for i in range(len(legends)):
+            if legends[i] not in legends2:
+                legends2.append(legends[i])
+                artists2.append(artists[i])
+
+        # order_legends, order_artists = [], []
+        # order = [22,25,19,5,1,3,8,11,13,17,23,26,20,6,2,4,0,9,14,15,24,27,21,7,0,0,12,10,18,16]
+        # for o in order:
+        #     order_legends.append(legends2[o])
+        #     order_artists.append(artists2[o])
+
+
+        ax.legend(artists2, legends2, loc=8, prop={'size': 8}, scatterpoints=1, 
+        ncol=2, framealpha=1, fancybox=False, edgecolor='black', bbox_to_anchor=(0.5, -0.45))
+        ax.set_yscale('log')
+        #fig.subplots_adjust(bottom=0.01)
+        xs = [5,25]
+        xint = range(min(xs), ceil(max(xs))+1,5)
+        gap_str = ''
+        if max_gap == 0:
+            gap_str = 'Gap = 0%)'
+        else:
+            gap_str = 'Gap < 10%)'
+        title_string = 'CSTR Superstructure Enumeration Comparison (Achieved '+gap_str
+        plt.title(title_string)
+        plt.xlabel('Superstructure Size NT')
+        plt.ylabel('Execution Time [s]')
+        matplotlib.pyplot.xticks(xint)
+        plt.show()
+
+
+    # _______________________________________________________________________________
+    # CSTR D-SDAs vs NT Graph
+    cstr = pd.read_csv("results/cstr_results.csv") 
+    cstr.head()
+    enumb = pd.read_csv("results/compl_enum_cstr_25_baron.csv")
+    
+    colors={'bigm':'blue','hull':'turquoise','LOA':'purple','GLOA':'red','LBB':'green','k=2':'slategrey','k=Infinity':'black','total':'gold'}
+    shapes={'antigone':'2','baron':'o','scip':'s','dicopt':'*','sbb':'+','msnlp':'D','knitro':'^'}
+
+    colors2={'MIP_bigm-k=2':'blue','MIP_bigm-k=Infinity':'red','MIP_hull-k=2':'yellow','MIP_hull-k=Infinity':'green'}
+    absolutes = {}
+    sumb, sumk, summ = {}, {}, {}
+    objb, objk, objm = {}, {}, {}
+
+    for i in range(len(enumb)):
+        if enumb['x'][i] == enumb['y'][i]:
+            absolutes[enumb['x'][i]] = enumb['Objective'][i]
+
+
+    cstr['Gap'] = 101
+
+    cstr['Method'] = pd.Categorical(cstr['Method'], ['D-SDA_MIP_bigm','D-SDA_MIP_hull',"GDPopt", "MINLP", "Enumeration","D-SDA"])
+    cstr['Solver'] = pd.Categorical(cstr['Solver'], ["baron", "antigone", "msnlp", "sbb",'knitro','dicopt','scip'])
+    cstr['Approach'] = pd.Categorical(cstr['Approach'], ["bigm", "hull", "LOA","GLOA",'LBB','total','k=2','k=Infinity'])
+    #cstr = cstr.sort_values(by='Approach')
+    cstr = cstr.sort_values(by=['Method','Approach', 'Solver'])
+    cstr = cstr.reset_index(drop=True)
+
+    print(cstr)
+
+    artists = []
+    legends = []
+    max_gaps = [10, 0]
+    for max_gap in max_gaps:
+        fig = plt.figure()
+        ax = plt.gca()
+        for i in range(len(cstr)):
+            for j in absolutes.keys():
+                if cstr['NT'][i] == j:
+                    cstr['Gap'][i] = float(100*(cstr['Objective'][i] - absolutes[j])/absolutes[j])
+
+            if cstr['Time'][i] < 1000 and cstr['NT'][i] >= 5: # and (cstr['Method'][i]=='D-SDA_MIP_bigm' or cstr['Method'][i]=='D-SDA_MIP_hull'):
+                if cstr['Gap'][i] <= max_gap + 1e-3:
+                    if cstr['Method'][i]=='D-SDA_MIP_bigm':
+                        text = str('MIP_bigm-'+cstr['Approach'][i])
+                        art = plt.scatter(cstr['NT'][i], cstr['Time'][i], marker=shapes[cstr['Solver'][i]],  c=colors2[text])
+                        leg = str('MIP_bigm-'+cstr['Approach'][i]+'-'+cstr['Solver'][i])
+                        artists.append(art)
+                        legends.append(leg)
+                    elif cstr['Method'][i]=='D-SDA_MIP_hull':
+                        text = str('MIP_hull-'+cstr['Approach'][i])
+                        art = plt.scatter(cstr['NT'][i], cstr['Time'][i], marker=shapes[cstr['Solver'][i]],  c=colors2[text])
+                        leg = str('MIP_hull-'+cstr['Approach'][i]+'-'+cstr['Solver'][i])
+                        artists.append(art)
+                        legends.append(leg)
+                    elif cstr['Method'][i]=='D-SDA' and cstr['Solver'][i]!='msnlp':
+                        art = plt.scatter(cstr['NT'][i], cstr['Time'][i], marker=shapes[cstr['Solver'][i]],  c=colors[cstr['Approach'][i]])
+                        leg = str(cstr['Approach'][i]+'-'+cstr['Solver'][i])
+                        artists.append(art)
+                        legends.append(leg)
+  
+        artists2, legends2 = [], []
+
+        for i in range(len(legends)):
+            if legends[i] not in legends2:
+                legends2.append(legends[i])
+                artists2.append(artists[i])
+
+
+        ax.legend(artists2, legends2, loc=8, prop={'size': 8}, scatterpoints=1, 
+        ncol=3, framealpha=1, fancybox=False, edgecolor='black', bbox_to_anchor=(0.5, -0.45))
+        ax.set_yscale('log')
+        #fig.subplots_adjust(bottom=0.01)
+        xs = [5,25]
+        xint = range(min(xs), ceil(max(xs))+1,5)
+        gap_str = ''
+        if max_gap == 0:
+            gap_str = 'Gap = 0%)'
+        else:
+            gap_str = 'Gap < 10%)'
+        title_string = 'CSTR Superstructure D-SDA Comparison (Achieved '+gap_str
+        plt.title(title_string)
+        plt.xlabel('Superstructure Size NT')
+        plt.ylabel('Execution Time [s]')
+        matplotlib.pyplot.xticks(xint)
+        plt.show()
+
+
+    # # _______________________________________________________________________________
     # # Small Batch Graph
-    batch = pd.read_csv("results/compl_enum_small_batch_baron.csv") 
+    # batch = pd.read_csv("results/compl_enum_small_batch_baron.csv") 
     # batch.head()
 
 
@@ -231,8 +469,6 @@ if __name__ == "__main__":
     #     plt.ylabel('Execution Time [s]')
     #     matplotlib.pyplot.xticks(xint)
     #     plt.show()
-
-
 
 
     # # _______________________________________________________________________________

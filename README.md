@@ -3,8 +3,11 @@ This repository contains the code for the LD-SDA. The code here receives a Gener
 This algorithm is particularly well-suited for GDP problems with ordered sets and knapsack equality constraints, i.e., where from an ordered set of Boolean variables only a given number can be *True* at the same time.
 This kind of problem structure arises very often in process superstructure optimization.
 
-The implementation of the method can be found [here](gdp/dsda).
+The implementation of the method can be found [here](gdp/dsda). To execute the problems and recreate the resuts run:
 
+``python main_*.py``
+
+Where * represents the problem you would like to solve.
 This repository contains several examples.
 - [CSTR in series network](gdp/cstr) : Example adjusted from [^1] of a series of CSTR reactors where the volume is minimized depending a parametric number of total possible reacotrs to install and the position of the reflux in the network. Has an analytical solution when the number of reactors tend to be infinite as the Plug Flow Reactor solution.
 - [Distillation column](gdp/column) : Example from [^2] avaliable [here](https://github.com/grossmann-group/gdplib/tree/master/gdplib/gdp_col) of a distillation column design problem to determine the optimal number of trays and feed stage.

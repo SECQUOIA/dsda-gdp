@@ -227,7 +227,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         # FR desactivation
         @disjunct.Constraint(m.I)
         def neg_YPD_FR_desact(disjunct, i):
-            # Defines the constraint for desactivating the flow rate 'FR' in the bypass scenario.
+            # Defines the constraint for deactivating the flow rate 'FR' in the bypass scenario.
             return m.FR[i, n] == 0
 
         # Rate desactivation
@@ -239,7 +239,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         # QFR desactivation
         @disjunct.Constraint()
         def neg_YPD_QFR_desact(disjunct):
-            # Defines the constraint for desactivating the flow rate 'QFR' in the bypass scenario.
+            # Defines the constraint for deactivating the flow rate 'QFR' in the bypass scenario.
             return m.QFR[n] == 0
 
         @disjunct.Constraint()

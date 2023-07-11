@@ -20,6 +20,8 @@ from pyomo.opt.base.solvers import SolverFactory # Base class for solver factori
 
 def build_column(min_trays, max_trays, xD, xB):
     """Builds the column model."""
+    # References: Optimal synthesis and design of catalytic distillation columns: A rate-based modeling approach (Linan et al., 2021)\
+
     # This function defines a model for a benzene-toluene distillation column.
     # min_trays: Minimum number of trays in the column.
     # max_trays: Maximum number of trays in the column.
@@ -549,7 +551,7 @@ def _build_feed_tray_energy_balance(m):
             k['B'] * (m.T_feed ** 2 - m.T_ref ** 2) / 2 +
             k['C'] * (m.T_feed ** 3 - m.T_ref ** 3) / 3 +
             k['D'] * (m.T_feed ** 4 - m.T_ref ** 4) / 4 +
-            k['E'] * (m.T_feed ** 5 - m.T_ref ** 5) / 5) * 1E-3  # Feed vapor enthalpy = f(T_feed)
+            k['E'] * (m.T_feed ** 5 - m.T_ref ** 5) / 5) * 1E-3  # m.H_V_spec_feed[c]
 
     @m.Constraint(m.comps)
     def feed_vap_enthalpy_calc(_, c):

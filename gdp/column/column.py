@@ -1,4 +1,4 @@
-"""Distillation column model for 2018 PSE conference"""
+"""Distillation column model for 2018 PSE conference""" # It was on there before, but I don't know what it means. I just left it there.
 
 from __future__ import division
 
@@ -24,20 +24,21 @@ from .initialize import initialize
 def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init=False, init={}, boolean_ref=False):
     t_start = time.process_time()
     """Builds the column model."""
+    # References: Optimal synthesis and design of catalytic distillation columns: A rate-based modeling approach (Linan et al., 2021)
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene']) ## Initialize component set
     min_T, max_T = 300, 400  ## Define temperature range
     m.T_ref = 298.15 ## Define reference temperature
     max_flow = 500 ## Define maximum flow rate
-    ## Define number of trays, condenser and reboiler trays
+    # Define number of trays, condenser and reboiler trays
     m.max_trays = max_trays
     m.condens_tray = max_trays
     m.feed_tray = math.ceil((max_trays / 2))
     m.reboil_tray = 1
-    ## Define distillate and bottoms purity
+    # Define distillate and bottoms purity
     m.distillate_purity = xD
     m.bottoms_purity = xB
-    ## Vapor pressure constants for benzene and toluene
+    # Vapor pressure constants for benzene and toluene
     m.pvap_const = {
         'benzene': {'A': -6.98273, 'B': 1.33213, 'C': -2.62863,
                     'D': -3.33399, 'Tc': 562.2, 'Pc': 48.9},

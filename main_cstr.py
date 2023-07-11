@@ -1,5 +1,7 @@
 from __future__ import division
+"""
 
+"""
 # Imports for various utilities
 import csv  # To work with csv files
 import json  # To work with json files
@@ -159,10 +161,17 @@ if __name__ == "__main__":
     csv_file = os.path.join(dir_path, "results", "cstr_results.csv")
 
     # List of NLP solvers to try
-    nlps = ['knitro', 'baron']
+    nlps = ['knitro', 'baron'] # , 'msnlp']
 
     # Setup options for each NLP solver
     nlp_opts = dict((nlp, {}) for nlp in nlps)
+    # nlp_opts['msnlp']['add_options'] = [
+    #     'GAMS_MODEL.optfile = 1;'
+    #     '\n'
+    #     '$onecho > msnlp.opt \n'
+    #     'nlpsolver knitro \n'
+    #     '$offecho \n'
+    # ]
 
     # List of MINLP solvers to try
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
@@ -200,17 +209,27 @@ if __name__ == "__main__":
     # Loop over each number of stages
     for NT in NTs:
         # Check if initialization exists for this number of stages
-        json_file = os.path.join(dir_path, 'gdp/dsda/', 'cstr_' + str(NT) + '_initialization.json')
+        json_file = os.path.join(
+            dir_path, 'gdp/dsda/', 'cstr_' + str(NT) + '_initialization.json')
         if os.path.exists(json_file):
             init_path = json_file
         else:
             # If not, create an initial solution
             m = build_cstrs(NT)
             ext_ref = {m.YF: m.N, m.YR: m.N}
-            reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(m, ext_ref, tee=globaltee)
-            m_fixed = external_ref(m=m, x=[1, 1], extra_logic_function=problem_logic_cstr, dict_extvar=reformulation_dict, tee=globaltee)
-            m_solved = solve_subproblem(m=m_fixed, subproblem_solver='baron', timelimit=100, tee=True)
-            init_path = generate_initialization(m=m_solved, starting_initialization=True, model_name='cstr_'+str(NT))
+            reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
+                m, ext_ref, tee=globaltee)
+            m_fixed = external_ref(
+                m=m, 
+                x=[1, 1], 
+                extra_logic_function=problem_logic_cstr, 
+                dict_extvar=reformulation_dict, 
+                tee=globaltee
+                )
+            m_solved = solve_subproblem(
+                m=m_fixed, subproblem_solver='baron', timelimit=100, tee=True)
+            init_path = generate_initialization(
+                m=m_solved, starting_initialization=True, model_name='cstr_'+str(NT))
 
 
         # # MINLP

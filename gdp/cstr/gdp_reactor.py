@@ -224,19 +224,19 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         # This function builds the equations for the bypass disjunction block.
         m = disjunct.model()  # Accesses the underlying model from the disjunct.
 
-        # FR desactivation
+        # FR deactivation
         @disjunct.Constraint(m.I)
         def neg_YPD_FR_desact(disjunct, i):
             # Defines the constraint for deactivating the flow rate 'FR' in the bypass scenario.
             return m.FR[i, n] == 0
 
-        # Rate desactivation
+        # Rate deactivation
         @disjunct.Constraint(m.I)
         def neg_YPD_rate_desact(disjunct, i):
-            # Defines the constraint for desactivating the reaction rate in the bypass scenario.
+            # Defines the constraint for deactivating the reaction rate in the bypass scenario.
             return m.rate[i, n] == 0
 
-        # QFR desactivation
+        # QFR deactivation
         @disjunct.Constraint()
         def neg_YPD_QFR_desact(disjunct):
             # Defines the constraint for deactivating the flow rate 'QFR' in the bypass scenario.
@@ -245,14 +245,14 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         @disjunct.Constraint()
         def neg_YPD_vol_desact(disjunct):
             '''
-            Volume desactivation function for defining pyomo model
+            Volume deactivation function for defining pyomo model
             args:
                 disjunct: pyomo block with disjunct to include the constraint
                 n: pyomo set with reactor index
             return: 
                 return constraint
             '''
-            # Defines the constraint for desactivating the volume 'c' in the bypass scenario.
+            # Defines the constraint for deactivating the volume 'c' in the bypass scenario.
             return m.c[n] == 0
 
     # YR Disjuction block equation definition
@@ -277,13 +277,13 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def build_no_recycle_equations(disjunct, n):
         m = disjunct.model()  # Accesses the underlying model from the disjunct.
 
-        # FR desactivation
+        # FR deactivation
         @disjunct.Constraint(m.I)
         def neg_YRD_FR_desact(disjunct, i):
         # Defines the constraint for deactivating the flow rate 'FR' in the non-recycle scenario.
             return m.FR[i, n] == 0
 
-        # QFR desactivation
+        # QFR deactivation
         @disjunct.Constraint()
         def neg_YRD_QFR_desact(disjunct):
             # Defines the constraint for deactivating the flow rate 'QFR' in the non-recycle scenario.

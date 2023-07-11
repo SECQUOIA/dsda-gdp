@@ -83,7 +83,7 @@ if __name__ == "__main__":
     csv_file = os.path.join(dir_path, "results", "small_batch_results.csv")  # Defining the path of the results file
 
     # Defining the list of Nonlinear Programming (NLP) and Mixed Integer Nonlinear Programming (MINLP) solvers to be used
-    nlps = ['knitro', 'baron']
+    nlps = ['knitro', 'baron'] # msnlp
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
     # Defining options for the NLP and MINLP solvers

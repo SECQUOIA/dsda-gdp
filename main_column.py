@@ -272,9 +272,23 @@ if __name__ == "__main__":
             for transformation in transformations:
                 new_result = {}
                 m_solved, _, _ = solve_with_dsda(
-                ...
-                # A long list of arguments for the 'solve_with_dsda' function
-                ...
+                model_function=build_column,
+                    model_args=model_args,
+                    starting_point=starting_point,
+                    ext_dict=ext_ref,
+                    mip_transformation=True,
+                    transformation=transformation,
+                    ext_logic=problem_logic_column,
+                    k=k,
+                    provide_starting_initialization=True,
+                    feasible_model='column_' + str(NT),
+                    subproblem_solver=solver,
+                    subproblem_solver_options=nlp_opts[solver],
+                    iter_timelimit=timelimit,
+                    timelimit=timelimit,
+                    gams_output=False,
+                    tee=False,
+                    global_tee=globaltee,
                 )
                 new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
                     m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}

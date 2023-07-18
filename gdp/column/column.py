@@ -382,8 +382,9 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         return m.B[c] == m.L[c, m.reboil_tray]
 
     # Constraint to define the boilup fraction as the ratio between the bottoms flow and the liquid leaving the reboiler
-    @m.Constraint()
+    @m.Constraint(doc="Boilup fraction is the ratio between the bottoms flow and the liquid leaving the reboiler.")
     def boilup_frac_defn(m):
+        """Boilup fraction is the ratio between the bottoms flow and the liquid leaving the reboiler."""
         return m.bot == (1 - m.boilup_frac) * m.liq[m.reboil_tray + 1]
 
     # Constraint to define the reflux fraction as the ratio between the distillate flow and the difference in vapor flow in the condenser tray

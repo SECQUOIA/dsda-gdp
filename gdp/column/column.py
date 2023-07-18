@@ -895,16 +895,16 @@ def _build_reboiler_mass_balance(m):
         return m.V[c, t] == m.vap[t] * m.y[c, t]
 
 def _build_tray_phase_equilibrium(m, t, tray):
-    # This function defines Raoult's law for each component in a tray
+    """This function defines Raoult's law for each component in a tray"""
     @tray.Constraint(m.comps)
     def raoults_law(_, c):
         """Raoult's law for each component in a tray."""
         return m.y[c, t] == m.x[c, t] * m.Kc[c, t]
 
-    # This function defines the phase equilibrium constant for each component in a tray
+    
     @tray.Constraint(m.comps)
     def phase_equil_const(_, c):
-        # The equation relates the phase equilibrium constant to the activity coefficient and the vapor pressure
+        """This function defines the relationship between the phase equilibrium constant and the activity coefficient"""
         return m.Kc[c, t] * m.P == (
             m.gamma[c, t] * m.Pvap[c, t])
 
@@ -913,35 +913,32 @@ def _build_tray_phase_equilibrium(m, t, tray):
     def Pvap_relation(_, c):
         k = m.pvap_const[c]
         x = m.Pvap_X[c, t]
-        # The equation uses the Antoine equation to relate the vapor pressure 
-        # to the composition (represented by the variable x)
+        """ The equation uses the Antoine equation to relate the vapor pressure to the composition (represented by the variable x)"""
         return (log(m.Pvap[c, t]) - log(k['Pc'])) * (1 - x) == (
             k['A'] * x +
             k['B'] * x ** 1.5 +
             k['C'] * x ** 3 +
             k['D'] * x ** 6)
 
-    # This function defines the relationship between the temperature variable (x) and the temperature in a tray
     @tray.Constraint(m.comps)
     def Pvap_X_defn(_, c):
         k = m.pvap_const[c]
-        # The equation relates the temperature variable (x) to the temperature 
-        # using the critical temperature of the component
+        """The equation uses the critical temperature of the component to relate the temperature variable (X) to the temperature"""
         return m.Pvap_X[c, t] == 1 - m.T[t] / k['Tc']
 
     # This function calculates the activity coefficient for each component in a tray
     @tray.Constraint(m.comps)
     def gamma_calc(_, c):
-        # For simplicity, the activity coefficient is assumed to be 1 in this case
+        """ For simplicity, the activity coefficient is assumed to be 1 in this case"""
         return m.gamma[c, t] == 1
 
 
 def _build_column_heat_relations(m):
-    # This function calculates the enthalpy of the liquid phase for each component in each tray
+    """This function calculates the enthalpy of the liquid phase for each component in each tray"""
     @m.Expression(m.trays, m.comps)
     def liq_enthalpy_expr(_, t, c):
         k = m.liq_Cp_const[c]
-        # The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature[kJ/mol]
+        """The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature[kJ/mol]""""
         return (
             k['A'] * (m.T[t] - m.T_ref) +
             k['B'] * (m.T[t] ** 2 - m.T_ref ** 2) / 2 +
@@ -953,7 +950,8 @@ def _build_column_heat_relations(m):
     @m.Expression(m.trays, m.comps)
     def vap_enthalpy_expr(_, t, c):
         k = m.vap_Cp_const[c]
-        # The equation calculates the enthalpy based on the heat of vaporization and the heat capacity coefficients, as well as the temperature difference from a reference temperature[kJ/mol]
+        """The equation calculates the enthalpy based on the heat of vaporization and the heat capacity coefficients, 
+        as well as the temperature difference from a reference temperature[kJ/mol]"""
         return (
             m.dH_vap[c] +
             k['A'] * (m.T[t] - m.T_ref) +
@@ -982,18 +980,22 @@ def _build_conditional_tray_energy_balance(m, t, tray, no_tray):
 
     @tray.Constraint(m.comps)
     def liq_enthalpy_calc(_, c):
+        """Enthalpy of liquid leaving a tray"""
         return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
 
     @tray.Constraint(m.comps)
     def vap_enthalpy_calc(_, c):
+        """Enthalpy of vapor leaving a tray"""  
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
 
     @no_tray.Constraint(m.comps)
     def liq_enthalpy_pass_through(_, c):
+        """Enthalpy of liquid passing through a tray with no liquid"""
         return m.H_L[c, t] == m.H_L[c, t + 1]
 
     @no_tray.Constraint(m.comps)
     def vap_enthalpy_pass_through(_, c):
+        """Enthalpy of vapor passing through a tray with no vapor"""
         return m.H_V[c, t] == m.H_V[c, t - 1]
 
 

@@ -804,9 +804,7 @@ def _build_feed_tray_mass_balance(m):
     # This function defines the mass balance for each component in the feed tray
     @m.Constraint(m.comps)
     def feed_mass_balance(_, c):
-        # The equation considers the mass balance in terms of molar flow rates:
-        # Feed into the tray, Vapor leaving the tray, Liquid flowing from the tray above, 
-        # Liquid flowing to the tray below, and Vapor coming from the tray below
+        """Mass balance on each component on a tray."""
         return (
             m.feed[c]        # Feed into the tray
             - m.V[c, t]      # Vapor leaving from the tray
@@ -815,18 +813,14 @@ def _build_feed_tray_mass_balance(m):
             + m.V[c, t - 1]  # Vapor coming from the tray below
             == 0)
 
-    # This function defines the composition of the liquid phase in the feed tray
     @m.Constraint(m.comps)
     def feed_tray_liquid_composition(_, c):
-        # The equation calculates the amount of component c in the liquid phase 
-        # by multiplying the total liquid molar flow rate with its mole fraction
+        """Liquid composition on each component on a tray."""
         return m.L[c, t] == m.liq[t] * m.x[c, t]
 
-    # This function defines the composition of the vapor phase in the feed tray
     @m.Constraint(m.comps)
     def feed_tray_vapor_composition(_, c):
-        # The equation calculates the amount of component c in the vapor phase 
-        # by multiplying the total vapor molar flow rate with its mole fraction
+        """Vapor composition on each component on a tray."""
         return m.V[c, t] == m.vap[t] * m.y[c, t]
 
 def _build_condenser_mass_balance(m):
@@ -836,9 +830,7 @@ def _build_condenser_mass_balance(m):
     # This function defines the mass balance for each component in the condenser tray
     @m.Constraint(m.comps)
     def condenser_mass_balance(_, c):
-        # The equation considers the mass balance in terms of molar flow rates:
-        # Vapor leaving the tray, Loss to distillate, Liquid flowing to the tray below, 
-        # and Vapor coming from the tray below
+        """Mass balance for each component in the condenser tray."""
         return (
             - m.V[c, t]      # Vapor leaving the tray
             - m.D[c]         # Loss to distillate
@@ -846,36 +838,31 @@ def _build_condenser_mass_balance(m):
             + m.V[c, t - 1]  # Vapor coming from the tray below
             == 0)
 
-    # This function defines the composition of the liquid phase in the condenser tray for partial condensation
     @m.partial_cond.Constraint(m.comps)
     def condenser_liquid_composition(_, c):
-        # The equation calculates the amount of component c in the liquid phase 
-        # by multiplying the total liquid molar flow rate with its mole fraction
+        """This is the composition of the liquid phase in the condenser tray for partial condensation"""
         return m.L[c, t] == m.liq[t] * m.x[c, t]
 
-    # This function defines the composition of the vapor phase in the condenser tray for partial condensation
     @m.partial_cond.Constraint(m.comps)
     def condenser_vapor_composition(_, c):
-        # The equation calculates the amount of component c in the vapor phase 
-        # by multiplying the total vapor molar flow rate with its mole fraction
+        """This is the composition of the vapor phase in the condenser tray for partial condensation"""
         return m.V[c, t] == m.vap[t] * m.y[c, t]
 
-    # This function ensures no vapor flow for each component in the case of total condensation
     @m.total_cond.Constraint(m.comps)
     def no_vapor_flow(_, c):
+        """This function ensures no vapor flow for each component in the case of total condensation."""
         return m.V[c, t] == 0
 
-    # This function ensures no total vapor flow in the case of total condensation
     @m.total_cond.Constraint()
     def no_total_vapor_flow(_):
+        """This function ensures no total vapor flow in the case of total condensation."""
         return m.vap[t] == 0
 
-    # This function ensures the mole fractions of the liquid phase are equal to those of the vapor phase from the tray below
     @m.total_cond.Constraint(m.comps)
     def liquid_fraction_pass_through(_, c):
+        """This function ensures the mole fractions of the liquid phase are equal to those of the vapor phase from the tray below"""
         return m.x[c, t] == m.y[c, t - 1]
 
-    # This function defines the composition of the distillate in the condenser tray
     @m.Constraint(m.comps)
     def condenser_distillate_composition(_, c):
         """This function defines the composition of the distillate in the condenser tray"""
@@ -891,41 +878,34 @@ def _build_reboiler_mass_balance(m):
     def reboiler_mass_balance(_, c):
         """This function defines the mass balance for each component in the reboiler tray"""
         t = m.reboil_tray
-        # The equation considers the mass balance in terms of molar flow rates:
-        # Vapor leaving the tray, Liquid coming from the tray above, and Loss to bottoms
+        """The equation considers the mass balance in terms of molar flow rates"""
         return (
             - m.V[c, t]      # Vapor leaving the tray
             + m.L[c, t + 1]  # Liquid coming from the tray above
             - m.B[c]         # Loss to bottoms
             == 0)
 
-    # This function defines the composition of the liquid phase in the reboiler tray
     @m.Constraint(m.comps)
     def reboiler_liquid_composition(_, c):
-        # The equation calculates the amount of component c in the liquid phase 
-        # by multiplying the total liquid molar flow rate with its mole fraction
+        """This function defines the composition of the liquid phase in the reboiler tray"""
         return m.L[c, t] == m.liq[t] * m.x[c, t]
 
-    # This function defines the composition of the vapor phase in the reboiler tray
     @m.Constraint(m.comps)
     def reboiler_vapor_composition(_, c):
-        # The equation calculates the amount of component c in the vapor phase 
-        # by multiplying the total vapor molar flow rate with its mole fraction
+        """This function defines the composition of the vapor phase in the reboiler tray"""
         return m.V[c, t] == m.vap[t] * m.y[c, t]
 
 def _build_tray_phase_equilibrium(m, t, tray):
     # This function defines Raoult's law for each component in a tray
     @tray.Constraint(m.comps)
     def raoults_law(_, c):
-        # The equation uses Raoult's law to relate the mole fraction in the vapor phase 
-        # to the mole fraction in the liquid phase and the equilibrium constant
+        """Raoult's law for each component in a tray."""
         return m.y[c, t] == m.x[c, t] * m.Kc[c, t]
 
     # This function defines the phase equilibrium constant for each component in a tray
     @tray.Constraint(m.comps)
     def phase_equil_const(_, c):
-        # The equation relates the phase equilibrium constant to the activity coefficient
-        # and the vapor pressure
+        # The equation relates the phase equilibrium constant to the activity coefficient and the vapor pressure
         return m.Kc[c, t] * m.P == (
             m.gamma[c, t] * m.Pvap[c, t])
 
@@ -962,8 +942,7 @@ def _build_column_heat_relations(m):
     @m.Expression(m.trays, m.comps)
     def liq_enthalpy_expr(_, t, c):
         k = m.liq_Cp_const[c]
-        # The equation calculates the enthalpy based on the heat capacity coefficients 
-        # and the temperature difference from a reference temperature[kJ/mol]
+        # The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature[kJ/mol]
         return (
             k['A'] * (m.T[t] - m.T_ref) +
             k['B'] * (m.T[t] ** 2 - m.T_ref ** 2) / 2 +
@@ -975,8 +954,7 @@ def _build_column_heat_relations(m):
     @m.Expression(m.trays, m.comps)
     def vap_enthalpy_expr(_, t, c):
         k = m.vap_Cp_const[c]
-        # The equation calculates the enthalpy based on the heat of vaporization and the heat capacity coefficients, 
-        # as well as the temperature difference from a reference temperature[kJ/mol]
+        # The equation calculates the enthalpy based on the heat of vaporization and the heat capacity coefficients, as well as the temperature difference from a reference temperature[kJ/mol]
         return (
             m.dH_vap[c] +
             k['A'] * (m.T[t] - m.T_ref) +
@@ -1025,6 +1003,7 @@ def _build_feed_tray_energy_balance(m):
 
     @m.Constraint()
     def feed_tray_energy_balance(_):
+        """Energy balance for the feed tray """
         return (
             sum(m.feed[c] * (
                 m.H_L_spec_feed[c] * (1 - m.feed_vap_frac) +
@@ -1043,14 +1022,17 @@ def _build_feed_tray_energy_balance(m):
 
     @m.Constraint(m.comps)
     def feed_tray_liq_enthalpy_calc(_, c):
+        """Enthalpy of liquid from feed tray"""
         return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
 
     @m.Constraint(m.comps)
     def feed_tray_vap_enthalpy_calc(_, c):
+        """Enthalpy of vapor from feed tray"""
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
 
     @m.Expression(m.comps)
     def feed_liq_enthalpy_expr(_, c):
+        """Enthalpy of liquid feed"""
         k = m.liq_Cp_const[c]
         return (
             k['A'] * (m.T_feed - m.T_ref) +
@@ -1061,10 +1043,12 @@ def _build_feed_tray_energy_balance(m):
 
     @m.Constraint(m.comps)
     def feed_liq_enthalpy_calc(_, c):
+        """Enthalpy of liquid feed"""
         return m.H_L_spec_feed[c] == m.feed_liq_enthalpy_expr[c]
 
     @m.Expression(m.comps)
     def feed_vap_enthalpy_expr(_, c):
+        """Enthalpy of vapor feed"""
         k = m.vap_Cp_const[c]
         return (
             m.dH_vap[c] +
@@ -1076,6 +1060,7 @@ def _build_feed_tray_energy_balance(m):
 
     @m.Constraint(m.comps)
     def feed_vap_enthalpy_calc(_, c):
+        """The enthalpy of the vapor feed is calculated using the feed temperature and the vapor heat capacity"""
         return m.H_V_spec_feed[c] == m.feed_vap_enthalpy_expr[c]
 
 
@@ -1084,6 +1069,7 @@ def _build_condenser_energy_balance(m):
 
     @m.partial_cond.Constraint()
     def partial_condenser_energy_balance(_):
+        """The partial condenser energy balance is calculated using the enthalpy of the liquid distillate."""
         return -m.Qc + sum(
             - m.D[c] * m.H_L[c, t]  # Enthalpy of liquid distillate
             - m.L[c, t] * m.H_L[c, t]  # Enthalpy of liquid to tray below
@@ -1093,6 +1079,7 @@ def _build_condenser_energy_balance(m):
 
     @m.total_cond.Constraint()
     def total_condenser_energy_balance(_):
+        """The total condenser energy balance is calculated using the enthalpy of the liquid distillate."""
         return -m.Qc + sum(
             - m.D[c] * m.H_L[c, t]  # Enthalpy of liquid distillate
             - m.L[c, t] * m.H_L[c, t]  # Enthalpy of liquid to tray below
@@ -1101,10 +1088,12 @@ def _build_condenser_energy_balance(m):
 
     @m.Constraint(m.comps)
     def condenser_liq_enthalpy_calc(_, c):
+        """The enthalpy of liquid from the partial condenser is calculated using the liquid Cp constants."""
         return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
 
     @m.partial_cond.Constraint(m.comps)
     def vap_enthalpy_calc(_, c):
+        """The enthalpy of vapor from the partial condenser is calculated using the vapor Cp constants."""
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
 
 
@@ -1113,10 +1102,7 @@ def _build_reboiler_energy_balance(m):
 
     @m.Constraint()
     def reboiler_energy_balance(_):
-        # The reboiler energy balance constraint takes into account the energy from the reboiler,
-        # the enthalpy of the liquid flow from the tray above, and the enthalpy of the vapor and
-        # liquid (bottoms) leaving the reboiler. The sum of these terms should be zero for energy
-        # conservation.
+        """The reboiler energy balance involves conserving energy by balancing input and output enthalpies."""
         return m.Qb + sum(
             m.L[c, t + 1] * m.H_L[c, t + 1]  # Enthalpy of liquid from tray above
             - m.B[c] * m.H_L[c, t]  # Enthalpy of liquid bottoms if reboiler
@@ -1125,14 +1111,10 @@ def _build_reboiler_energy_balance(m):
 
     @m.Constraint(m.comps)
     def reboiler_liq_enthalpy_calc(_, c):
-        # This constraint sets the liquid enthalpy on the reboiler tray equal to the 
-        # calculated liquid enthalpy from a given expression. The expression can be a 
-        # function of temperature and composition.
+        """This constraint sets the liquid enthalpy on the reboiler tray equal to the calculated liquid enthalpy from a given expression."""
         return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
 
     @m.Constraint(m.comps)
     def reboiler_vap_enthalpy_calc(_, c):
-        # Similarly, this constraint sets the vapor enthalpy on the reboiler tray equal to the 
-        # calculated vapor enthalpy from a given expression. The expression can be a 
-        # function of temperature and composition.
+        """Constraint sets the vapor enthalpy on the reboiler tray equal to the calculated vapor enthalpy from a given expression."""
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]

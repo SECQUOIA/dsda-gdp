@@ -92,6 +92,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     # Disjunction statement defining whether a tray exists or not
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not') 
     def tray_no_tray(b, t):
+        """Disjunction statement defining whether a tray exists or not"""""
         return [b.tray[t], b.no_tray[t]]
 
     # Constraint for minimum number of trays, adding 1 for feed tray
@@ -102,7 +103,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
 
     # If user provides initialization values, use them
     if provide_init:
-        # Feed temperature variable (Kelvin)
+        # Feed temperature variable [K]
         m.T_feed = Var(
             doc='Feed temperature [K]', domain=NonNegativeReals,
             bounds=(min_T, max_T), initialize=init['T_feed'])
@@ -124,43 +125,43 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         m.y = Var(m.comps, m.trays, doc='Vapor mole fraction',
                   bounds=(0, 1), domain=NonNegativeReals, initialize=init['y'])
     
-        # Component liquid flows from tray variable (kmol)
+        # Component liquid flows from tray variable [kmol]
         m.L = Var(m.comps, m.trays,
                   doc='component liquid flows from tray [kmol]',
                   domain=NonNegativeReals, bounds=(0, max_flow),
                   initialize=init['L'])
 
-        # Component vapor flows from tray variable (kmol)
+        # Component vapor flows from tray variable [kmol]
         m.V = Var(m.comps, m.trays,
                   doc='component vapor flows from tray [kmol]',
                   domain=NonNegativeReals, bounds=(0, max_flow),
                   initialize=init['V'])
     
-        # Liquid flows from tray variable (kmol)
+        # Liquid flows from tray variable [kmol]
         m.liq = Var(m.trays, domain=NonNegativeReals,
                     doc='liquid flows from tray [kmol]', initialize=init['liq'],
                     bounds=(0, max_flow))
     
-        # Vapor flows from tray variable (kmol)
+        # Vapor flows from tray variable [kmol]
         m.vap = Var(m.trays, domain=NonNegativeReals,
                     doc='vapor flows from tray [kmol]', initialize=init['vap'],
                     bounds=(0, max_flow))
     
-        # Bottoms component flows variable (kmol)
+        # Bottoms component flows variable [kmol]
         m.B = Var(m.comps, domain=NonNegativeReals,
                   doc='bottoms component flows [kmol]',
                   bounds=(0, max_flow), initialize=init['B'])
     
-        # Distillate component flows variable (kmol)
+        # Distillate component flows variable [kmol]
         m.D = Var(m.comps, domain=NonNegativeReals,
                   doc='distillate component flows [kmol]',
                   bounds=(0, max_flow), initialize=init['D'])
 
-        # Bottoms flow variable (kmol)
+        # Bottoms flow variable [kmol]
         m.bot = Var(domain=NonNegativeReals, initialize=init['bot'], bounds=(0, 100),
                     doc='bottoms flow [kmol]')
 
-        # Distillate flow variable (kmol)
+        # Distillate flow variable [kmol]
         m.dis = Var(domain=NonNegativeReals, initialize=init['dis'],
                     doc='distillate flow [kmol]', bounds=(0, 100))
     
@@ -185,7 +186,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             m.comps, m.trays, doc='Phase equilibrium constant',
             domain=NonNegativeReals, initialize=init['Kc'], bounds=(0, 1000))
 
-        # Temperature variable (Kelvin)
+        # Temperature variable [K]
         m.T = Var(m.trays, doc='Temperature [K]',
                   domain=NonNegativeReals,
                   bounds=(min_T, max_T), initialize=init['T'])
@@ -248,7 +249,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         # Vapor fraction of the feed, value between 0 and 1
         m.feed_vap_frac = Var(doc='Vapor fraction of feed', initialize=0, bounds=(0, 1))
 
-        # Total component feed flow in mol/s
+        # Total component feed flow [mol/s]
         m.feed = Var(m.comps, doc='Total component feed flow [mol/s]', initialize=50)
 
         # Liquid mole fraction variable for each component on each tray
@@ -374,9 +375,10 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     _build_reboiler_mass_balance(m)
 
 
-        # Constraint to ensure that the flow of each component at the bottom is equal to the liquid leaving the reboiler
+    # Constraint to ensure that the flow of each component at the bottom is equal to the liquid leaving the reboiler
     @m.Constraint(m.comps, doc="Bottoms flow is equal to liquid leaving reboiler.")
     def bottoms_mass_balance(m, c):
+        """Bottoms flow is equal to liquid leaving reboiler."""
         return m.B[c] == m.L[c, m.reboil_tray]
 
     # Constraint to define the boilup fraction as the ratio between the bottoms flow and the liquid leaving the reboiler

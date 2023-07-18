@@ -1089,42 +1089,33 @@ def _build_feed_tray_energy_balance(m):
         return m.H_V_spec_feed[c] == m.feed_vap_enthalpy_expr[c]
 
 
-def _build_conditional_tray_energy_balance(m, t, tray, no_tray):
-    @tray.Constraint()
-    def energy_balance(_):
-        # This function sets up the energy balance for a tray. 
-        # The total heat entering the tray should equal the total heat leaving the tray.
-        # It calculates the total heat by summing up the product of molar flow rate and enthalpy for each stream.
-        return sum(
-            m.L[c, t + 1] * m.H_L[c, t + 1]  # heat of liquid from tray above
-            - m.L[c, t] * m.H_L[c, t]  # heat of liquid to tray below
-            + m.V[c, t - 1] * m.H_V[c, t - 1]  # heat of vapor from tray below
-            - m.V[c, t] * m.H_V[c, t]  # heat of vapor to tray above
+def _build_condenser_energy_balance(m):
+    t = m.condens_tray
+
+    @m.partial_cond.Constraint()
+    def partial_condenser_energy_balance(_):
+        return -m.Qc + sum(
+            - m.D[c] * m.H_L[c, t]  # Enthalpy of liquid distillate
+            - m.L[c, t] * m.H_L[c, t]  # Enthalpy of liquid to tray below
+            + m.V[c, t - 1] * m.H_V[c, t - 1]  # Enthalpy of vapor from tray below
+            - m.V[c, t] * m.H_V[c, t]  # Enthalpy of vapor from partial condenser
             for c in m.comps) * 1E-3 == 0
 
-    @tray.Constraint(m.comps)
-    def liq_enthalpy_calc(_, c):
-        # This function calculates the enthalpy of the liquid phase on the tray. 
-        # It sets the enthalpy of the liquid phase equal to the previously defined expression.
+    @m.total_cond.Constraint()
+    def total_condenser_energy_balance(_):
+        return -m.Qc + sum(
+            - m.D[c] * m.H_L[c, t]  # Enthalpy of liquid distillate
+            - m.L[c, t] * m.H_L[c, t]  # Enthalpy of liquid to tray below
+            + m.V[c, t - 1] * m.H_V[c, t - 1]  # Enthalpy of vapor from tray below
+            for c in m.comps) * 1E-3 == 0
+
+    @m.Constraint(m.comps)
+    def condenser_liq_enthalpy_calc(_, c):
         return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
 
-    @tray.Constraint(m.comps)
+    @m.partial_cond.Constraint(m.comps)
     def vap_enthalpy_calc(_, c):
-        # This function calculates the enthalpy of the vapor phase on the tray. 
-        # It sets the enthalpy of the vapor phase equal to the previously defined expression.
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
-
-    @no_tray.Constraint(m.comps)
-    def liq_enthalpy_pass_through(_, c):
-        # This function makes sure that if a tray does not exist, 
-        # the enthalpy of the liquid phase passing through the tray does not change.
-        return m.H_L[c, t] == m.H_L[c, t + 1]
-
-    @no_tray.Constraint(m.comps)
-    def vap_enthalpy_pass_through(_, c):
-        # This function makes sure that if a tray does not exist, 
-        # the enthalpy of the vapor phase passing through the tray does not change.
-        return m.H_V[c, t] == m.H_V[c, t - 1]
 
 
 def _build_reboiler_energy_balance(m):

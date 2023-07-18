@@ -28,8 +28,23 @@ from .initialize import initialize
 
 def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init=False, init={}, boolean_ref=False):
     t_start = time.process_time()
-    """Builds the column model."""
-    # A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
+    """
+    Builds the column model according the reference:
+    Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
+    
+    Args:
+        min_trays (int): Minimum number of trays in the column
+        max_trays (int): Maximum number of trays in the column
+        xD (float): Distillate purity
+        xB (float): Bottoms purity
+        x_input (dict): Dictionary of component mole fractions in the feed
+        nlp_solver (str): Name of the NLP solver to use
+        provide_init (bool): Whether to provide initialization values
+        init (dict): Dictionary of initialization values
+        boolean_ref (bool): Whether to use boolean reformulation
+    Returns:
+        m (ConcreteModel): Pyomo model
+    """
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene']) # Initialize component set
     min_T, max_T = 300, 400  # Define temperature range

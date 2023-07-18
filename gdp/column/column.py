@@ -766,19 +766,19 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
             - (m.L[c, t] if t > m.reboil_tray else 0) # Liquid flow to the tray below if it's not a reboiler
             + (m.V[c, t - 1] if t > m.reboil_tray else 0) == 0) # Vapor flow from the tray below if it's not a reboiler
 
-    # Definition of liquid composition on a tray
     @tray.Constraint(m.comps)
     def tray_liquid_composition(_, c):
+        """Definition of liquid composition on a tray."""
         return m.L[c, t] == m.liq[t] * m.x[c, t]
 
-    # Definition of vapor composition on a tray
     @tray.Constraint(m.comps)
     def tray_vapor_compositions(_, c):
+        """Definition of vapor composition on a tray."""
         return m.V[c, t] == m.vap[t] * m.y[c, t]
 
-    # If there is no tray, liquid composition from the tray above is passed directly to the tray below
     @no_tray.Constraint(m.comps)
     def liq_comp_pass_through(_, c):
+        """If there is no tray, liquid composition from the tray above is passed directly to the tray below."""
         return m.x[c, t] == m.x[c, t + 1]
 
     # If there is no tray, liquid flow from the tray above is passed directly to the tray below
@@ -873,7 +873,6 @@ def _build_reboiler_mass_balance(m):
     """This function defines the mass balance for each component in the reboiler tray"""
     t = m.reboil_tray
 
-    # This function defines the mass balance for each component in the reboiler tray
     @m.Constraint(m.comps)
     def reboiler_mass_balance(_, c):
         """This function defines the mass balance for each component in the reboiler tray"""

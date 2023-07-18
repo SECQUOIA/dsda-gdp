@@ -1,4 +1,5 @@
-"""Distillation column model for 2018 PSE conference""" # It was on there before, but I don't know what it means. I just left it there.
+"""Distillation column model for 2018 PSE conference
+A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)"""
 
 from __future__ import division
 
@@ -24,7 +25,7 @@ from .initialize import initialize
 def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init=False, init={}, boolean_ref=False):
     t_start = time.process_time()
     """Builds the column model."""
-    # References: Optimal synthesis and design of catalytic distillation columns: A rate-based modeling approach (Linan et al., 2021)
+    # A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene']) # Initialize component set
     min_T, max_T = 300, 400  # Define temperature range
@@ -170,7 +171,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                   domain=NonNegativeReals,
                   bounds=(min_T, max_T), initialize=init['T'])
     
-        # Pressure variable (bar)
+        # Pressure variable [bar]
         m.P = Var(doc='Pressure [bar]',
                   bounds=(0, 5), initialize=init['P'])
     
@@ -180,7 +181,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             doc='liquid activity coefficent of component on tray',
             domain=NonNegativeReals, bounds=(0, 10), initialize=init['gamma'])
 
-        # Pure component vapor pressure variable (bar)
+        # Pure component vapor pressure variable [bar]
         m.Pvap = Var(
             m.comps, m.trays,
             doc='pure component vapor pressure of component on tray in bar',
@@ -202,12 +203,12 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             m.comps, m.trays, bounds=(30, 16 + 40),
             doc='Vapor molar enthalpy of component in tray (kJ/mol)', initialize=init['H_V'])
     
-        # Component liquid molar enthalpy in feed variable (kJ/mol)
+        # Component liquid molar enthalpy in feed variable [kJ/mol]
         m.H_L_spec_feed = Var(
             m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]',
             initialize=init['H_L_spec_feed'], bounds=(0.1, 16))
     
-        # Component vapor molar enthalpy in feed variable (kJ/mol)
+        # Component vapor molar enthalpy in feed variable [kJ/mol]
         m.H_V_spec_feed = Var(
             m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]',
             initialize=init['H_V_spec_feed'], bounds=(30, 16 + 40))
@@ -507,55 +508,55 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         def no_boilup_up(m):
             return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
 
-        # Loop over internal trays
-    for n in m.intTrays:
-        # Fix the boolean variable YR based on comparison with ext_var_1
-        if n == ext_var_1:
-            m.YR[n].fix(True)
-        else:
-            m.YR[n].fix(False)
+            # Loop over internal trays
+        for n in m.intTrays:
+            # Fix the boolean variable YR based on comparison with ext_var_1
+            if n == ext_var_1:
+                m.YR[n].fix(True)
+            else:
+                m.YR[n].fix(False)
         
-        # Fix the boolean variable YB based on comparison with ext_var_2
-        if n == ext_var_2:
-            m.YB[n].fix(True)
-        else:
-            m.YB[n].fix(False)
+            # Fix the boolean variable YB based on comparison with ext_var_2
+            if n == ext_var_2:
+                m.YB[n].fix(True)
+            else:
+                m.YB[n].fix(False)
 
-    # Check if the condition for all trays above the reboil tray holds, 
-    # and fix YR_is_down based on this
-    temp = value(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
-    if temp == True:
-        m.YR_is_down.fix(True)
-
-    # Check if the condition for all trays above the feed tray holds, 
-    # and fix YB_is_up based on this
-    temp = value(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
-    if temp == True:
-        m.YB_is_up.fix(True)
-
-    # Define logical constraint YP_or_notYP based on conditions of reflux 
-    # and boil-up flows above and including the tray
-    @m.LogicalConstraint(m.conditional_trays)
-    def YP_or_notYP(m, n):
-        return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
-
-    # Loop over conditional trays
-    # Associate YP variable with its corresponding binary variable
-    for n in m.conditional_trays:
-        m.YP[n].associate_binary_var(m.tray[n].indicator_var)
-
-    # Loop over conditional trays again
-    for n in m.conditional_trays:
-        # Check the logical condition (similar to the one in YP_or_notYP)
-        temp = value(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
-    
-        # Fix the binary variables based on the outcome of the logical condition
+        # Check if the condition for all trays above the reboil tray holds, 
+        # and fix YR_is_down based on this
+        temp = value(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
         if temp == True:
-            m.tray[n].indicator_var.fix(True)
-            m.no_tray[n].indicator_var.fix(False)
-        else:
-            m.tray[n].indicator_var.fix(False)
-            m.no_tray[n].indicator_var.fix(True)
+            m.YR_is_down.fix(True)
+
+        # Check if the condition for all trays above the feed tray holds, 
+        # and fix YB_is_up based on this
+        temp = value(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
+        if temp == True:
+            m.YB_is_up.fix(True)
+
+        # Define logical constraint YP_or_notYP based on conditions of reflux 
+        # and boil-up flows above and including the tray
+        @m.LogicalConstraint(m.conditional_trays)
+        def YP_or_notYP(m, n):
+            return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
+
+        # Loop over conditional trays
+        # Associate YP variable with its corresponding binary variable
+        for n in m.conditional_trays:
+            m.YP[n].associate_binary_var(m.tray[n].indicator_var)
+
+        # Loop over conditional trays again
+        for n in m.conditional_trays:
+            # Check the logical condition (similar to the one in YP_or_notYP)
+            temp = value(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
+    
+            # Fix the binary variables based on the outcome of the logical condition
+            if temp == True:
+                m.tray[n].indicator_var.fix(True)
+                m.no_tray[n].indicator_var.fix(False)
+            else:
+                m.tray[n].indicator_var.fix(False)
+                m.no_tray[n].indicator_var.fix(True)
 
     else:
         # We are using a using of a boolean formulation because we know boolean and relationships take longer for GAMS to write
@@ -911,7 +912,7 @@ def _build_tray_phase_equilibrium(m, t, tray):
         k = m.pvap_const[c]
         x = m.Pvap_X[c, t]
         # The equation uses the Antoine equation to relate the vapor pressure 
-        # to the temperature (represented by the variable x)
+        # to the composition (represented by the variable x)
         return (log(m.Pvap[c, t]) - log(k['Pc'])) * (1 - x) == (
             k['A'] * x +
             k['B'] * x ** 1.5 +
@@ -939,7 +940,7 @@ def _build_column_heat_relations(m):
     def liq_enthalpy_expr(_, t, c):
         k = m.liq_Cp_const[c]
         # The equation calculates the enthalpy based on the heat capacity coefficients 
-        # and the temperature difference from a reference temperature
+        # and the temperature difference from a reference temperature(kJ/mol)
         return (
             k['A'] * (m.T[t] - m.T_ref) +
             k['B'] * (m.T[t] ** 2 - m.T_ref ** 2) / 2 +
@@ -952,7 +953,7 @@ def _build_column_heat_relations(m):
     def vap_enthalpy_expr(_, t, c):
         k = m.vap_Cp_const[c]
         # The equation calculates the enthalpy based on the heat of vaporization and the heat capacity coefficients, 
-        # as well as the temperature difference from a reference temperature
+        # as well as the temperature difference from a reference temperature(kJ/mol)
         return (
             m.dH_vap[c] +
             k['A'] * (m.T[t] - m.T_ref) +

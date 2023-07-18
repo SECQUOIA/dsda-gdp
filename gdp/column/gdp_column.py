@@ -20,7 +20,7 @@ from pyomo.opt.base.solvers import SolverFactory # Base class for solver factori
 
 def build_column(min_trays, max_trays, xD, xB):
     """Builds the column model."""
-    # References: Optimal synthesis and design of catalytic distillation columns: A rate-based modeling approach (Linan et al., 2021)\
+    # References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
 
     # This function defines a model for a benzene-toluene distillation column.
     # min_trays: Minimum number of trays in the column.
@@ -28,7 +28,7 @@ def build_column(min_trays, max_trays, xD, xB):
     # xD: Required distillate purity.
     # xB: Required bottoms purity.
     m = ConcreteModel('benzene-toluene column')
-    m.comps = Set(initialize=['benzene', 'toluene']) # The components in the feed
+    m.comps = Set(initialize=['benzene', 'toluene']) # The components in the feed [mol/s]
     min_T, max_T = 300, 400
     m.T_ref = 298.15
     max_flow = 500

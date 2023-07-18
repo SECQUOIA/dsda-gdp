@@ -161,17 +161,17 @@ def external_ref(m, x, logic_expr=None):
                 # Fix the boolean variable Y[k,j] to True, meaning unit k is chosen for stage j
                 m.Y[k, j].fix(True)
                 # Fix the indicator variable of Y_exists[k, j] to True, because unit k exists
-                m.Y_exists[k, j].indicator_var.fix(True)  # IS THIS REQUIRED????
+                m.Y_exists[k, j].indicator_var.fix(True)  
                 # Fix the indicator variable of Y_not_exists[k, j] to False, because unit k does not exist
-                m.Y_not_exists[k, j].indicator_var.fix(False)  # IS THIS REQUIRED????
+                m.Y_not_exists[k, j].indicator_var.fix(False)  
             else:
                 # If unit k is not the selected unit for stage j according to ext_var
                 # Fix the boolean variable Y[k,j] to False, meaning unit k is not chosen for stage j
                 m.Y[k, j].fix(False)
                 # Fix the indicator variable of Y_exists[k, j] to False, because unit k does not exist
-                m.Y_exists[k, j].indicator_var.fix(False)  # IS THIS REQUIRED????
+                m.Y_exists[k, j].indicator_var.fix(False)  
                 # Fix the indicator variable of Y_not_exists[k, j] to True, because unit k exists
-                m.Y_not_exists[k, j].indicator_var.fix(True)  # IS THIS REQUIRED????
+                m.Y_not_exists[k, j].indicator_var.fix(True)  
 
     # Applying transformations
     # Convert logical constraints to linear constraints

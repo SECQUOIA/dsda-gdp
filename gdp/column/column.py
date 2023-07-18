@@ -454,11 +454,13 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     # Define the constraint to calculate the reflux ratio, which is defined as the reflux fraction times the increment of the reflux ratio.
     @m.Constraint()
     def reflux_ratio_calc(m):
+        """Reflux ratio is the ratio between the distillate flow and the difference in vapor flow in the condenser tray."""
         return m.reflux_frac * (m.reflux_ratio + 1) == m.reflux_ratio
 
     # Define the constraint to calculate the reboil ratio, which is defined as the boilup fraction times the increment of the reboil ratio.
     @m.Constraint()
     def reboil_ratio_calc(m):
+        """"""
         return m.boilup_frac * (m.reboil_ratio + 1) == m.reboil_ratio
 
     # Define the constraint to ensure that trays closer to the feed are activated before those farther from the feed.
@@ -507,26 +509,32 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         # Ensure that only one reflux flow exists.
         @m.LogicalConstraint()
         def one_reflux(m):
+            """Ensure that only one reflux flow exists."""
             return exactly(1, m.YR)
         # Ensure that only one boil-up flow exists.
         @m.LogicalConstraint()
         def one_boilup(m):
+            """Ensure that only one boil-up flow exists."""
             return exactly(1, m.YB)
         # Ensure that only one boil-up is happening.
         @m.LogicalConstraint()
         def boilup_fix(m):
+            """Ensure that only one boil-up is happening."""
             return exactly(1, m.YB_is_up)
         # Ensure that only one reflux is happening.
         @m.LogicalConstraint()
         def reflux_fix(m):
+            """Ensure that only one reflux is happening."""
             return exactly(1, m.YR_is_down)
         # Ensure no reflux flow exists below the feed tray.
         @m.LogicalConstraint()
         def no_reflux_down(m):
+            """Ensure no reflux flow exists below the feed tray."""
             return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
         # Ensure no boil-up flow exists above the feed tray.
         @m.LogicalConstraint()
         def no_boilup_up(m):
+            """Ensure no boil-up flow exists above the feed tray."""
             return m.YB_is_up.equivalent_to(land(~m.YB[n] for n in range(m.feed_tray+1, m.max_trays)))
 
             # Loop over internal trays

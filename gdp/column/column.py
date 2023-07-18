@@ -375,31 +375,29 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     _build_reboiler_mass_balance(m)
 
 
-    # Constraint to ensure that the flow of each component at the bottom is equal to the liquid leaving the reboiler
     @m.Constraint(m.comps, doc="Bottoms flow is equal to liquid leaving reboiler.")
     def bottoms_mass_balance(m, c):
         """Bottoms flow is equal to liquid leaving reboiler."""
         return m.B[c] == m.L[c, m.reboil_tray]
 
-    # Constraint to define the boilup fraction as the ratio between the bottoms flow and the liquid leaving the reboiler
     @m.Constraint(doc="Boilup fraction is the ratio between the bottoms flow and the liquid leaving the reboiler.")
     def boilup_frac_defn(m):
         """Boilup fraction is the ratio between the bottoms flow and the liquid leaving the reboiler."""
         return m.bot == (1 - m.boilup_frac) * m.liq[m.reboil_tray + 1]
 
-    # Constraint to define the reflux fraction as the ratio between the distillate flow and the difference in vapor flow in the condenser tray
     @m.Constraint()
     def reflux_frac_defn(m):
+        """Reflux fraction is the ratio between the distillate flow and the difference in vapor flow in the condenser tray"""
         return m.dis == (1 - m.reflux_frac) * (m.vap[m.condens_tray - 1] - m.vap[m.condens_tray])
 
-    # Constraint to ensure the total liquid flow on each tray is the sum of all component liquid flows on the tray
     @m.Constraint(m.trays)
     def liquid_sum(m, t):
+        """Total liquid flow on each tray is the sum of all component liquid flows on the tray"""
         return sum(m.L[c, t] for c in m.comps) == m.liq[t]
 
-    # Constraint to ensure the total vapor flow on each tray is the sum of all component vapor flows on the tray
     @m.Constraint(m.trays)
     def vapor_sum(m, t):
+        """Total vapor flow on each tray is the sum of all component vapor flows on the tray"""
         return sum(m.V[c, t] for c in m.comps) == m.vap[t]
 
     # Constraint to ensure the total bottoms flow is the sum of all component flows at the bottom
@@ -408,9 +406,9 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     # Constraint to ensure the total distillate flow is the sum of all component flows at the top
     m.distil_sum = Constraint(expr=sum(m.D[c] for c in m.comps) == m.dis)
 
-    # Constraint to ensure the temperature decreases (or remains constant) from one tray to the next one down
     @m.Constraint(m.trays)
     def monotonoic_temperature(_, t):
+        """Temperature decreases (or remains constant) from one tray to the next one down"""
         return m.T[t] >= m.T[t + 1] if t < max_trays else Constraint.Skip
 
     # Construct phase equilibrium relations for each conditional tray
@@ -430,14 +428,14 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     # Construct heat relations for the column
     _build_column_heat_relations(m)
 
-    # Constraint to ensure the flow of benzene in the distillate meets the specified purity requirement
     @m.Constraint()
     def distillate_req(m):
+        """Flow of benzene in the distillate meets the specified purity requirement"""
         return m.D['benzene'] >= m.distillate_purity * m.dis
 
-    # Constraint to ensure the flow of toluene in the bottoms meets the specified purity requirement
     @m.Constraint()
     def bottoms_req(m):
+        """Flow of toluene in the bottoms meets the specified purity requirement"""
         return m.B['toluene'] >= m.bottoms_purity * m.bot
 
 
@@ -454,19 +452,16 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     # m.obj = Objective(
     #     expr=sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1)
 
-    # Define the constraint to calculate the reflux ratio, which is defined as the reflux fraction times the increment of the reflux ratio.
     @m.Constraint()
     def reflux_ratio_calc(m):
         """Reflux ratio is the ratio between the distillate flow and the difference in vapor flow in the condenser tray."""
         return m.reflux_frac * (m.reflux_ratio + 1) == m.reflux_ratio
 
-    # Define the constraint to calculate the reboil ratio, which is defined as the boilup fraction times the increment of the reboil ratio.
     @m.Constraint()
     def reboil_ratio_calc(m):
-        """"""
+        """Reboil ratio is the ratio between the bottoms flow and the liquid leaving the reboiler."""
         return m.boilup_frac * (m.reboil_ratio + 1) == m.reboil_ratio
 
-    # Define the constraint to ensure that trays closer to the feed are activated before those farther from the feed.
     @m.Constraint(m.conditional_trays)
     def tray_ordering(m, t):
         """Trays close to the feed should be activated first."""
@@ -509,32 +504,31 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         m.YR_is_down = BooleanVar()
 
         # Logical constraints
-        # Ensure that only one reflux flow exists.
         @m.LogicalConstraint()
         def one_reflux(m):
             """Ensure that only one reflux flow exists."""
             return exactly(1, m.YR)
-        # Ensure that only one boil-up flow exists.
+    
         @m.LogicalConstraint()
         def one_boilup(m):
             """Ensure that only one boil-up flow exists."""
             return exactly(1, m.YB)
-        # Ensure that only one boil-up is happening.
+        
         @m.LogicalConstraint()
         def boilup_fix(m):
             """Ensure that only one boil-up is happening."""
             return exactly(1, m.YB_is_up)
-        # Ensure that only one reflux is happening.
+        
         @m.LogicalConstraint()
         def reflux_fix(m):
             """Ensure that only one reflux is happening."""
             return exactly(1, m.YR_is_down)
-        # Ensure no reflux flow exists below the feed tray.
+        
         @m.LogicalConstraint()
         def no_reflux_down(m):
             """Ensure no reflux flow exists below the feed tray."""
             return m.YR_is_down.equivalent_to(land(~m.YR[n] for n in range(m.reboil_tray+1, m.feed_tray)))
-        # Ensure no boil-up flow exists above the feed tray.
+        
         @m.LogicalConstraint()
         def no_boilup_up(m):
             """Ensure no boil-up flow exists above the feed tray."""
@@ -566,8 +560,6 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         if temp == True:
             m.YB_is_up.fix(True)
 
-        # Define logical constraint YP_or_notYP based on conditions of reflux 
-        # and boil-up flows above and including the tray
         @m.LogicalConstraint(m.conditional_trays)
         def YP_or_notYP(m, n):
             """Define logical constraint YP_or_notYP based on conditions of reflux and boil-up flows above and including the tray"""

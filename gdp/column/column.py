@@ -749,32 +749,30 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     return m
 
 
-# ---------Other functions do define the model-------------------------------------------------
+# ---------Other functions to define the model-------------------------------------------------
 # Function for creating mass balances and flow rates for each component in a distillation column
 def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     """
-    t = tray number
-    tray = tray exists disjunct
-    no_tray = tray absent disjunct
+    Internal function to build mass balances for a conditional tray
+
+    Args:
+        m (pyo.ConcreteModel): model to build constraints for
+        t (int): tray number
+        tray (pyo.Constraint): tray exists disjunct
+        no_tray (pyo.Constraint): tray absent disjunct
     """
     # Mass balance on each component on a tray
     @tray.Constraint(m.comps)
     def mass_balance(_, c):
-        # Total feed to the tray if it's a feed tray
-        # Total vapor flow from the tray
-        # Total distillate if it's a condenser tray
-        # Liquid flow from the tray above if it's not a condenser
-        # Total bottoms if it's a reboiler tray
-        # Liquid flow to the tray below if it's not a reboiler
-        # Vapor flow from the tray below if it's not a reboiler
+        """Mass balance on each component on a tray."""
         return (
-            (m.feed[c] if t == m.feed_tray else 0)
-            - m.V[c, t]
-            - (m.D[c] if t == m.condens_tray else 0)
-            + (m.L[c, t + 1] if t < m.condens_tray else 0)
-            - (m.B[c] if t == m.reboil_tray else 0)
-            - (m.L[c, t] if t > m.reboil_tray else 0)
-            + (m.V[c, t - 1] if t > m.reboil_tray else 0) == 0)
+            (m.feed[c] if t == m.feed_tray else 0) # Total feed to the tray if it's a feed tray
+            - m.V[c, t] # Total vapor flow from the tray
+            - (m.D[c] if t == m.condens_tray else 0) # Total distillate if it's a condenser tray
+            + (m.L[c, t + 1] if t < m.condens_tray else 0) # Liquid flow from the tray above if it's not a condenser
+            - (m.B[c] if t == m.reboil_tray else 0) # Total bottoms if it's a reboiler tray
+            - (m.L[c, t] if t > m.reboil_tray else 0) # Liquid flow to the tray below if it's not a reboiler
+            + (m.V[c, t - 1] if t > m.reboil_tray else 0) == 0) # Vapor flow from the tray below if it's not a reboiler
 
     # Definition of liquid composition on a tray
     @tray.Constraint(m.comps)
@@ -888,18 +886,18 @@ def _build_condenser_mass_balance(m):
     # This function defines the composition of the distillate in the condenser tray
     @m.Constraint(m.comps)
     def condenser_distillate_composition(_, c):
-        # The equation calculates the amount of component c in the distillate
-        # by multiplying the total distillate molar flow rate with its mole fraction
+        """This function defines the composition of the distillate in the condenser tray"""
         return m.D[c] == m.dis * m.x[c, t]
 
 
 def _build_reboiler_mass_balance(m):
-    # Defining the tray as the reboiler tray for the mass balance
+    """This function defines the mass balance for each component in the reboiler tray"""
     t = m.reboil_tray
 
     # This function defines the mass balance for each component in the reboiler tray
     @m.Constraint(m.comps)
     def reboiler_mass_balance(_, c):
+        """This function defines the mass balance for each component in the reboiler tray"""
         t = m.reboil_tray
         # The equation considers the mass balance in terms of molar flow rates:
         # Vapor leaving the tray, Liquid coming from the tray above, and Loss to bottoms

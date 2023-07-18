@@ -438,14 +438,16 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         return m.B['toluene'] >= m.bottoms_purity * m.bot
 
 
-    # Define the objective function for optimization. The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, 
-    # multiplied by 1E3 to convert units, and also the number of activated trays, which is obtained by summing up the indicator variables 
-    # for the trays.
-    # m.obj = Objective(expr=(m.Qc + m.Qb) * 1E-3, sense=minimize)
+    # Define the objective function for optimization. 
+    # The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units, 
+    # and also the number of activated trays, which is obtained by summing up the indicator variables for the trays.
     m.obj = Objective(
         expr=(m.Qc + m.Qb) * 1E3 + 1E3 * (
             sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1),
         sense=minimize)
+    # The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units.
+    # m.obj = Objective(expr=(m.Qc + m.Qb) * 1E-3, sense=minimize)
+    # The objective is to minimize the number of activated trays, which is obtained by summing up the indicator variables for the trays.
     # m.obj = Objective(
     #     expr=sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1)
 

@@ -100,12 +100,12 @@ def build_column(min_trays, max_trays, xD, xB):
     m.reflux_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6), doc='reflux fractions') # Reflux fractions
     m.boilup_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6), doc='boilup fraction') # Boilup fraction
     m.Kc = Var(m.comps, m.trays, doc='Phase equilibrium constant', domain=NonNegativeReals, initialize=1, bounds=(0, 1000)) # Phase equilibrium constant
-    m.T = Var(m.trays, doc='Temperature [K]', domain=NonNegativeReals, bounds=(min_T, max_T)) # Tray temperature
-    m.P = Var(doc='Pressure [bar]', bounds=(0, 5)) # Pressure
+    m.T = Var(m.trays, doc='Temperature [K]', domain=NonNegativeReals, bounds=(min_T, max_T)) # Tray temperature [K]
+    m.P = Var(doc='Pressure [bar]', bounds=(0, 5)) # Pressure [bar]
     m.gamma = Var(m.comps, m.trays, doc='liquid activity coefficent of component on tray', domain=NonNegativeReals, bounds=(0, 10), initialize=1) # Liquid activity coefficient
-    m.Pvap = Var(m.comps, m.trays, doc='pure component vapor pressure of component on tray in bar', domain=NonNegativeReals, bounds=(1E-3, 5), initialize=0.4) # Pure component vapor pressure
-    m.Pvap_rel = Var(m.comps, m.trays, doc='pure component relative vapor pressure of component on tray in bar (to avoid numerical problems)', domain=NonNegativeReals, bounds=(0, 5), initialize=0.4) # Pure component relative vapor pressure
-    m.Pvap_X = Var(m.comps, m.trays, doc='Related to fraction of critical temperature (1 - T/Tc)', bounds=(0.25, 0.5), initialize=0.4) # Related to fraction of critical temperature
+    m.Pvap = Var(m.comps, m.trays, doc='pure component vapor pressure of component on tray in bar', domain=NonNegativeReals, bounds=(1E-3, 5), initialize=0.4) # Pure component vapor pressure [bar]
+    m.Pvap_rel = Var(m.comps, m.trays, doc='pure component relative vapor pressure of component on tray in bar (to avoid numerical problems)', domain=NonNegativeReals, bounds=(0, 5), initialize=0.4) # Pure component relative vapor pressure [bar]
+    m.Pvap_X = Var(m.comps, m.trays, doc='Related to fraction of critical temperature (1 - T/Tc)', bounds=(0.25, 0.5), initialize=0.4) # Related to fraction of critical temperature [kJ/mol]
     m.H_L = Var(m.comps, m.trays, bounds=(0.1, 16), doc='Liquid molar enthalpy of component in tray (kJ/mol)') # Liquid molar enthalpy of component in tray
     m.H_V = Var(m.comps, m.trays, bounds=(30, 16 + 40), doc='Vapor molar enthalpy of component in tray (kJ/mol)') # Vapor molar enthalpy of component in tray
     m.H_L_spec_feed = Var(m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]', initialize=0, bounds=(0.1, 16)) # Component liquid molar enthalpy in feed
@@ -536,11 +536,11 @@ def _build_feed_tray_energy_balance(m):
     # Constraints to calculate enthalpy for liquid and vapor based on temperature for feed tray
     @m.Constraint(m.comps)
     def feed_tray_liq_enthalpy_calc(_, c):
-        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy = f(T)
+        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy as the fucntion of temperature
 
     @m.Constraint(m.comps)
     def feed_tray_vap_enthalpy_calc(_, c):
-        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy = f(T)
+        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy as the fucntion of temperature
 
     # Expressions to calculate feed liquid and vapor enthalpy based on feed temperature
     @m.Expression(m.comps)
@@ -551,7 +551,7 @@ def _build_feed_tray_energy_balance(m):
             k['B'] * (m.T_feed ** 2 - m.T_ref ** 2) / 2 +
             k['C'] * (m.T_feed ** 3 - m.T_ref ** 3) / 3 +
             k['D'] * (m.T_feed ** 4 - m.T_ref ** 4) / 4 +
-            k['E'] * (m.T_feed ** 5 - m.T_ref ** 5) / 5) * 1E-6  # Feed liquid enthalpy = f(T_feed)
+            k['E'] * (m.T_feed ** 5 - m.T_ref ** 5) / 5) * 1E-6  # Feed liquid enthalpy, the function of feed temperature
 
     @m.Constraint(m.comps)
     def feed_liq_enthalpy_calc(_, c):
@@ -599,11 +599,11 @@ def _build_condenser_energy_balance(m):
     # Constraints to calculate enthalpy for liquid and vapor based on temperature for condenser
     @m.Constraint(m.comps)
     def condenser_liq_enthalpy_calc(_, c):
-        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy = f(T)
+        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy as the function of temperature
 
     @m.partial_cond.Constraint(m.comps)
     def vap_enthalpy_calc(_, c):
-        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy = f(T)
+        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy as the function of temperature
 
 
 def _build_reboiler_energy_balance(m):
@@ -621,11 +621,11 @@ def _build_reboiler_energy_balance(m):
     # Constraints to calculate enthalpy for liquid and vapor based on temperature for reboiler
     @m.Constraint(m.comps)
     def reboiler_liq_enthalpy_calc(_, c):
-        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy = f(T)
+        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy as the function of temperature
 
     @m.Constraint(m.comps)
     def reboiler_vap_enthalpy_calc(_, c):
-        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy = f(T)
+        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy as the function of temperature
 
 
 if __name__ == "__main__":

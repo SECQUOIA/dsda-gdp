@@ -442,7 +442,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         """Flow of toluene in the bottoms meets the specified purity requirement"""
         return m.B['toluene'] >= m.bottoms_purity * m.bot
 
-
+    """The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E-3 to convert units."""
+    # m.obj = Objective(expr=(m.Qc + m.Qb) * 1E-3, sense=minimize)
     """Define the objective function for optimization. 
     The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units, 
     and also the number of activated trays, which is obtained by summing up the indicator variables for the trays."""
@@ -450,9 +451,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         expr=(m.Qc + m.Qb) * 1E3 + 1E3 * (
             sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1),
         sense=minimize)
-    # The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units.
-    # m.obj = Objective(expr=(m.Qc + m.Qb) * 1E-3, sense=minimize)
-    # The objective is to minimize the number of activated trays, which is obtained by summing up the indicator variables for the trays.
+    """The objective is to minimize the number of activated trays, which is obtained by summing up the indicator variables for the trays."""
     # m.obj = Objective(
     #     expr=sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1)
 
@@ -488,8 +487,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
 
 # -----------End of model declaration. These changes are required to run the DSDA--------------
     # FIX Indicator variables according to input
-    ext_var_1 = x_input[0] # Extract the first input value.
-    ext_var_2 = x_input[1] # Extract the second input value.
+    ext_var_1 = x_input[0] # Extract the first external variable from the input value.
+    ext_var_2 = x_input[1] # Extract the second external variable from the input value.
 
     if boolean_ref:
         # Boolean variables and intTrays set definition
@@ -540,13 +539,13 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
 
             # Loop over internal trays
         for n in m.intTrays:
-            # Fix the boolean variable YR based on comparison with ext_var_1
+            # Fix the existence of reflux flow in stage n based on comparison with ext_var_1
             if n == ext_var_1:
                 m.YR[n].fix(True)
             else:
                 m.YR[n].fix(False)
         
-            # Fix the boolean variable YB based on comparison with ext_var_2
+            # Fix the existence of boil-up flow in stage n based on comparison with ext_var_2
             if n == ext_var_2:
                 m.YB[n].fix(True)
             else:

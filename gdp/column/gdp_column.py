@@ -19,8 +19,23 @@ from pyomo.opt.base.solvers import SolverFactory # Base class for solver factori
 
 
 def build_column(min_trays, max_trays, xD, xB):
-    """Builds the column model."""
-    # References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
+    """Builds the column model.
+    References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
+    
+    Args:
+        min_trays (int): Minimum number of trays in the column
+        max_trays (int): Maximum number of trays in the column
+        xD (float): Distillate purity
+        xB (float): Bottoms purity
+        x_input (dict): Dictionary of component mole fractions in the feed
+        nlp_solver (str): Name of the NLP solver to use
+        provide_init (bool): Whether to provide initialization values
+        init (dict): Dictionary of initialization values
+        boolean_ref (bool): Whether to use boolean reformulation
+    Returns:
+        m (ConcreteModel): Pyomo model
+    """
+    
 
     # This function defines a model for a benzene-toluene distillation column.
     # min_trays: Minimum number of trays in the column.
@@ -29,8 +44,8 @@ def build_column(min_trays, max_trays, xD, xB):
     # xB: Required bottoms purity.
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene']) # The components in the feed [mol/s]
-    min_T, max_T = 300, 400
-    m.T_ref = 298.15
+    min_T, max_T = 300, 400 # Temperatures [K]
+    m.T_ref = 298.15 # Reference temperature [K]
     max_flow = 500
     m.max_trays = max_trays
     m.condens_tray = max_trays
@@ -484,11 +499,11 @@ def _build_conditional_tray_energy_balance(m, t, tray, no_tray):
     # Constraints to calculate enthalpy for liquid and vapor based on temperature for each tray
     @tray.Constraint(m.comps)
     def liq_enthalpy_calc(_, c):
-        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy = f(T)
+        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy as the function of Temperature
 
     @tray.Constraint(m.comps)
     def vap_enthalpy_calc(_, c):
-        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy = f(T)
+        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy as the function of Temperature
 
     # In case the tray does not exist, pass the enthalpy values through to the next tray
     @no_tray.Constraint(m.comps)

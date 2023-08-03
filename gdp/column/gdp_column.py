@@ -178,9 +178,9 @@ def build_column(min_trays, max_trays, xD, xB):
     m.condenser_phase_eq = Block()
 
     # Building phase equilibrium for feed tray, reboiler and condenser
-    _build_tray_phase_equilibrium(m, m.feed_tray, m.feed_tray_phase_eq)
-    _build_tray_phase_equilibrium(m, m.reboil_tray, m.reboiler_phase_eq)
-    _build_tray_phase_equilibrium(m, m.condens_tray, m.condenser_phase_eq)
+    _build_tray_phase_equilibrium(m, m.feed_tray, m.feed_tray_phase_eq) # Building phase equilibrium for feed tray
+    _build_tray_phase_equilibrium(m, m.reboil_tray, m.reboiler_phase_eq) # Building phase equilibrium for reboiler
+    _build_tray_phase_equilibrium(m, m.condens_tray, m.condenser_phase_eq) # Building phase equilibrium for condenser
 
     # Building heat relations for the column
     _build_column_heat_relations(m)

@@ -954,7 +954,7 @@ def _build_column_heat_relations(m):
     def vap_enthalpy_expr(_, t, c):
         k = m.vap_Cp_const[c]
         """The equation calculates the enthalpy based on the heat of vaporization and the heat capacity coefficients, 
-        as well as the temperature difference from a reference temperature[kJ/mol]"""
+        as well as the temperature difference from a reference temperature [kJ/mol]"""
         return (
             m.dH_vap[c] +
             k['A'] * (m.T[t] - m.T_ref) +

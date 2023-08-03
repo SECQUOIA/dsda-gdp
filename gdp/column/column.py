@@ -49,7 +49,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     m.comps = Set(initialize=['benzene', 'toluene']) # Initialize component set
     min_T, max_T = 300, 400  # [K] Define temperature range
     m.T_ref = 298.15 # [K] Define reference temperature
-    max_flow = 500 # Define maximum flow rate
+    max_flow = 500 # Define maximum flow rate [mol/s]
     # Define number of trays, condenser and reboiler trays
     m.max_trays = max_trays
     m.condens_tray = max_trays
@@ -75,8 +75,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                     'D': 0, 'E': 0},
         'toluene': {'A': 1.40E5, 'B': -1.52E2, 'C': 6.95E-1,
                     'D': 0, 'E': 0}}
-    # Heat of vaporization for each component
-    m.dH_vap = {'benzene': 33.770E3, 'toluene': 38.262E3}  # J/mol
+    # Heat of vaporization for each component [J/mol]
+    m.dH_vap = {'benzene': 33.770E3, 'toluene': 38.262E3}  
 
     # Define set of potential trays
     m.trays = RangeSet(max_trays, doc='Set of potential trays')
@@ -375,7 +375,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     _build_reboiler_mass_balance(m)
 
 
-    @m.Constraint(m.comps, doc="Bottoms flow is equal to liquid leaving reboiler.")
+    @m.Constraint(m.comps, 
+                  doc="Bottoms flow is equal to liquid leaving reboiler.")
     def bottoms_mass_balance(m, c):
         """Bottoms flow is equal to liquid leaving reboiler."""
         return m.B[c] == m.L[c, m.reboil_tray]
@@ -385,17 +386,19 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         """Boilup fraction is the ratio between the bottoms flow and the liquid leaving the reboiler."""
         return m.bot == (1 - m.boilup_frac) * m.liq[m.reboil_tray + 1]
 
-    @m.Constraint()
+    @m.Constraint(doc="Reflux fraction is the ratio between the distillate flow and the difference in vapor flow in the condenser tray.")
     def reflux_frac_defn(m):
         """Reflux fraction is the ratio between the distillate flow and the difference in vapor flow in the condenser tray"""
         return m.dis == (1 - m.reflux_frac) * (m.vap[m.condens_tray - 1] - m.vap[m.condens_tray])
 
-    @m.Constraint(m.trays)
+    @m.Constraint(m.trays, 
+                  doc="Total liquid flow on each tray is the sum of all component liquid flows on the tray.")
     def liquid_sum(m, t):
         """Total liquid flow on each tray is the sum of all component liquid flows on the tray"""
         return sum(m.L[c, t] for c in m.comps) == m.liq[t]
 
-    @m.Constraint(m.trays)
+    @m.Constraint(m.trays,
+                  doc="Total vapor flow on each tray is the sum of all component vapor flows on the tray.")
     def vapor_sum(m, t):
         """Total vapor flow on each tray is the sum of all component vapor flows on the tray"""
         return sum(m.V[c, t] for c in m.comps) == m.vap[t]
@@ -406,7 +409,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     # Constraint to ensure the total distillate flow is the sum of all component flows at the top
     m.distil_sum = Constraint(expr=sum(m.D[c] for c in m.comps) == m.dis)
 
-    @m.Constraint(m.trays)
+    @m.Constraint(m.trays, 
+                  doc="Temperature decreases (or remains constant) from one tray to the next one down.")
     def monotonoic_temperature(_, t):
         """Temperature decreases (or remains constant) from one tray to the next one down"""
         return m.T[t] >= m.T[t + 1] if t < max_trays else Constraint.Skip
@@ -439,9 +443,9 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         return m.B['toluene'] >= m.bottoms_purity * m.bot
 
 
-    # Define the objective function for optimization. 
-    # The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units, 
-    # and also the number of activated trays, which is obtained by summing up the indicator variables for the trays.
+    """Define the objective function for optimization. 
+    The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units, 
+    and also the number of activated trays, which is obtained by summing up the indicator variables for the trays."""
     m.obj = Objective(
         expr=(m.Qc + m.Qb) * 1E3 + 1E3 * (
             sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1),

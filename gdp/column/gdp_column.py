@@ -297,6 +297,7 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
             - (m.B[c] if t == m.reboil_tray else 0)
             # Subtract liquid flow rate to the tray below if current tray is not the reboiler
             - (m.L[c, t] if t > m.reboil_tray else 0)
+            # Vapor from tray below if not reboiler
             # Include vapor flow rate from the tray below if current tray is not the reboiler
             + (m.V[c, t - 1] if t > m.reboil_tray else 0) == 0)
 

@@ -491,12 +491,12 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     ext_var_2 = x_input[1] # Extract the second external variable from the input value.
 
     if boolean_ref:
-        # Boolean variables and intTrays set definition
-        # Define the set of interior trays by excluding condensation and reboil trays from the total tray set.
+        """Boolean variables and intTrays set definition
+        Define the set of interior trays by excluding condensation and reboil trays from the total tray set."""
         m.intTrays = Set(
             initialize=m.trays - [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
-        # Declare boolean variables for existence of boil-up and reflux flow in each stage, 
-        # as well as another boolean variable associated with tray presence and absence.
+        """Declare boolean variables for existence of boil-up and reflux flow in each stage, 
+        as well as another boolean variable associated with tray presence and absence."""
         m.YB = BooleanVar(
             m.intTrays, doc='Existence of boil-up flow in stage n')
         m.YR = BooleanVar(
@@ -613,8 +613,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             temp = 1-(1-sum(YR_fixed[j] for j in m.trays if j >= n and j <= max_trays-1))-(
                 sum(YB_fixed[j] for j in m.trays if j >= n and j <= max_trays-1)-YB_fixed[n])
         
-            # Fix the indicator variables for the current tray based on the temporary variable, 
-            # except for the feed tray
+            # Fix the indicator variables for the current tray based on the temporary variable, except for the feed tray
             if temp == 1:
                 m.tray[n].indicator_var.fix(True)
                 m.no_tray[n].indicator_var.fix(False)
@@ -622,18 +621,18 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                 m.tray[n].indicator_var.fix(False)
                 m.no_tray[n].indicator_var.fix(True)
             
-        # Apply transformations to the model
-        # Convert logical constraints to linear constraints
-        TransformationFactory('core.logical_to_linear').apply_to(m)
-        # Fix the disjuncts
-        TransformationFactory('gdp.fix_disjuncts').apply_to(m)
-        # Deactivate trivial constraints
-        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
-            m, tmp=False, ignore_infeasible=True)
+    """Apply transformations to the model
+    Convert logical constraints to linear constraints"""
+    TransformationFactory('core.logical_to_linear').apply_to(m)
+    # Fix the disjuncts
+    TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+    # Deactivate trivial constraints
+    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+        m, tmp=False, ignore_infeasible=True)
 
-        # Set the status of the model and initialize an empty dictionary for the model's initialization
-        m.dsda_status = 'Initialized'
-        m.dsda_initialization = {}
+    # Set the status of the model and initialize an empty dictionary for the model's initialization
+    m.dsda_status = 'Initialized'
+    m.dsda_initialization = {}
 
 
     # Check equation feasibility

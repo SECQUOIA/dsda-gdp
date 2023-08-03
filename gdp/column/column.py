@@ -925,7 +925,8 @@ def _build_tray_phase_equilibrium(m, t, tray):
     @tray.Constraint(m.comps)
     def Pvap_X_defn(_, c):
         k = m.pvap_const[c]
-        """The equation uses the critical temperature of the component to relate the temperature variable (X) to the temperature"""
+        """Defines the relationship between the transformed temperature variable (Pvap_X) for each component in a tray, 
+           and the actual temperature of the tray, normalized by the critical temperature of the component (Tc)."""
         return m.Pvap_X[c, t] == 1 - m.T[t] / k['Tc']
 
     # This function calculates the activity coefficient for each component in a tray

@@ -46,7 +46,7 @@ def build_column(min_trays, max_trays, xD, xB):
     m.comps = Set(initialize=['benzene', 'toluene']) # The components in the feed [mol/s]
     min_T, max_T = 300, 400 # Temperatures [K]
     m.T_ref = 298.15 # Reference temperature [K]
-    max_flow = 500
+    max_flow = 500 # Maximum flowrate [mol/s]
     m.max_trays = max_trays
     m.condens_tray = max_trays
     m.feed_tray = math.ceil((max_trays / 2))
@@ -68,7 +68,7 @@ def build_column(min_trays, max_trays, xD, xB):
                     'D': 0, 'E': 0},
         'toluene': {'A': 1.40E5, 'B': -1.52E2, 'C': 6.95E-1,
                     'D': 0, 'E': 0}}
-    m.dH_vap = {'benzene': 33.770E3, 'toluene': 38.262E3}  # J/mol
+    m.dH_vap = {'benzene': 33.770E3, 'toluene': 38.262E3}  # Enthaply for vaporation [J/mol]
 
     m.trays = RangeSet(max_trays, doc='Set of potential trays') # Define a set of trays in the column
     m.conditional_trays = Set(initialize=m.trays - [m.condens_tray, m.feed_tray, m.reboil_tray], doc="Trays that may be turned on and off.") # Define a set of trays that can be turned on and off
@@ -82,16 +82,16 @@ def build_column(min_trays, max_trays, xD, xB):
     m.minimum_num_trays = Constraint(expr=sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1 >= min_trays) # Ensure minimum number of trays
 
     # Define variables
-    m.T_feed = Var(doc='Feed temperature [K]', domain=NonNegativeReals, bounds=(min_T, max_T), initialize=368) # Feed temperature
+    m.T_feed = Var(doc='Feed temperature [K]', domain=NonNegativeReals, bounds=(min_T, max_T), initialize=368) # Feed temperature [K]
     m.feed_vap_frac = Var(doc='Vapor fraction of feed', initialize=0, bounds=(0, 1)) # Vapor fraction of feed
-    m.feed = Var(m.comps, doc='Total component feed flow [mol/s]', initialize=50) # Total component feed flow
+    m.feed = Var(m.comps, doc='Total component feed flow [mol/s]', initialize=50) # Total component feed flow [mol/s]
     m.x = Var(m.comps, m.trays, doc='Liquid mole fraction', bounds=(0, 1), domain=NonNegativeReals, initialize=0.5) # Liquid mole fraction
     m.y = Var(m.comps, m.trays, doc='Vapor mole fraction', bounds=(0, 1), domain=NonNegativeReals, initialize=0.5) # Vapor mole fraction
-    m.L = Var(m.comps, m.trays, doc='component liquid flows from tray in kmol', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component liquid flows from tray
-    m.V = Var(m.comps, m.trays, doc='component vapor flows from tray in kmol', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component vapor flows from tray
-    m.liq = Var(m.trays, domain=NonNegativeReals, doc='liquid flows from tray in kmol', initialize=100, bounds=(0, max_flow)) # Liquid flows from tray
-    m.vap = Var(m.trays, domain=NonNegativeReals, doc='vapor flows from tray in kmol', initialize=100, bounds=(0, max_flow)) # Vapor flows from tray
-    m.B = Var(m.comps, domain=NonNegativeReals, doc='bottoms component flows in kmol', bounds=(0, max_flow), initialize=50) # Bottoms component flows
+    m.L = Var(m.comps, m.trays, doc='component liquid flows from tray in kmol', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component liquid flows from tray [kmol]
+    m.V = Var(m.comps, m.trays, doc='component vapor flows from tray in kmol', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component vapor flows from tray [kmol]
+    m.liq = Var(m.trays, domain=NonNegativeReals, doc='liquid flows from tray in kmol', initialize=100, bounds=(0, max_flow)) # Liquid flows from tray [kmol]
+    m.vap = Var(m.trays, domain=NonNegativeReals, doc='vapor flows from tray in kmol', initialize=100, bounds=(0, max_flow)) # Vapor flows from tray [kmol]
+    m.B = Var(m.comps, domain=NonNegativeReals, doc='bottoms component flows in kmol', bounds=(0, max_flow), initialize=50) # Bottoms component flows [kmol]
     m.D = Var(m.comps, domain=NonNegativeReals, doc='distillate component flows in kmol', bounds=(0, max_flow), initialize=50) # Distillate component flows
     m.bot = Var(domain=NonNegativeReals, initialize=50, bounds=(0, 100), doc='bottoms flow in kmol') # Bottoms flow
     m.dis = Var(domain=NonNegativeReals, initialize=50, doc='distillate flow in kmol', bounds=(0, 100)) # Distillate flow
@@ -106,12 +106,12 @@ def build_column(min_trays, max_trays, xD, xB):
     m.Pvap = Var(m.comps, m.trays, doc='pure component vapor pressure of component on tray in bar', domain=NonNegativeReals, bounds=(1E-3, 5), initialize=0.4) # Pure component vapor pressure [bar]
     m.Pvap_rel = Var(m.comps, m.trays, doc='pure component relative vapor pressure of component on tray in bar (to avoid numerical problems)', domain=NonNegativeReals, bounds=(0, 5), initialize=0.4) # Pure component relative vapor pressure [bar]
     m.Pvap_X = Var(m.comps, m.trays, doc='Related to fraction of critical temperature (1 - T/Tc)', bounds=(0.25, 0.5), initialize=0.4) # Related to fraction of critical temperature [kJ/mol]
-    m.H_L = Var(m.comps, m.trays, bounds=(0.1, 16), doc='Liquid molar enthalpy of component in tray (kJ/mol)') # Liquid molar enthalpy of component in tray
-    m.H_V = Var(m.comps, m.trays, bounds=(30, 16 + 40), doc='Vapor molar enthalpy of component in tray (kJ/mol)') # Vapor molar enthalpy of component in tray
-    m.H_L_spec_feed = Var(m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]', initialize=0, bounds=(0.1, 16)) # Component liquid molar enthalpy in feed
-    m.H_V_spec_feed = Var(m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]', initialize=0, bounds=(30, 16 + 40)) # Component vapor molar enthalpy in feed
-    m.Qb = Var(domain=NonNegativeReals, doc='reboiler duty (MJ/s)', initialize=1, bounds=(0, 8)) # Reboiler duty
-    m.Qc = Var(domain=NonNegativeReals, doc='condenser duty (MJ/s)', initialize=1, bounds=(0, 8)) # Condenser duty
+    m.H_L = Var(m.comps, m.trays, bounds=(0.1, 16), doc='Liquid molar enthalpy of component in tray (kJ/mol)') # Liquid molar enthalpy of component in tray [kJ/mol]
+    m.H_V = Var(m.comps, m.trays, bounds=(30, 16 + 40), doc='Vapor molar enthalpy of component in tray (kJ/mol)') # Vapor molar enthalpy of component in tray [kJ/mol]
+    m.H_L_spec_feed = Var(m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]', initialize=0, bounds=(0.1, 16)) # Component liquid molar enthalpy in feed [kJ/mol]
+    m.H_V_spec_feed = Var(m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]', initialize=0, bounds=(30, 16 + 40)) # Component vapor molar enthalpy in feed [kJ/mol]
+    m.Qb = Var(domain=NonNegativeReals, doc='reboiler duty (MJ/s)', initialize=1, bounds=(0, 8)) # Reboiler duty [MJ/s]
+    m.Qc = Var(domain=NonNegativeReals, doc='condenser duty (MJ/s)', initialize=1, bounds=(0, 8)) # Condenser duty [MJ/s]
 
 
     m.partial_cond = Disjunct()  # Define a partial condenser disjunct

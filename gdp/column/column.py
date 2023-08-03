@@ -47,8 +47,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
     """
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene']) # Initialize component set
-    min_T, max_T = 300, 400  # Define temperature range
-    m.T_ref = 298.15 # Define reference temperature
+    min_T, max_T = 300, 400  # [K] Define temperature range
+    m.T_ref = 298.15 # [K] Define reference temperature
     max_flow = 500 # Define maximum flow rate
     # Define number of trays, condenser and reboiler trays
     m.max_trays = max_trays

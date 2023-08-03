@@ -1,4 +1,5 @@
-"""Distillation column model for 2018 PSE conference"""
+"""Distillation column model for 2018 PSE conference
+References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)"""
 
 # Import division from the future to make it available in Python 2.7 and below
 from __future__ import division

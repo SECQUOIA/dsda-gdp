@@ -249,8 +249,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         # Vapor fraction of the feed, value between 0 and 1
         m.feed_vap_frac = Var(doc='Vapor fraction of feed', initialize=0, bounds=(0, 1))
 
-        # Total component feed flow [mol/s]
-        m.feed = Var(m.comps, doc='Total component feed flow [mol/s]', initialize=50)
+        # Total component feed flow [kmol/s]
+        m.feed = Var(m.comps, doc='Total component feed flow [kmol/s]', initialize=50)
 
         # Liquid mole fraction variable for each component on each tray
         m.x = Var(m.comps, m.trays, doc='Liquid mole fraction',
@@ -621,8 +621,8 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                 m.tray[n].indicator_var.fix(False)
                 m.no_tray[n].indicator_var.fix(True)
             
-    """Apply transformations to the model
-    Convert logical constraints to linear constraints"""
+    # Apply transformations to the model
+    #Convert logical constraints to linear constraints
     TransformationFactory('core.logical_to_linear').apply_to(m)
     # Fix the disjuncts
     TransformationFactory('gdp.fix_disjuncts').apply_to(m)
@@ -662,7 +662,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
                               # symbolic_solver_labels=True,
                               skip_trivial_constraints=True,
                               add_options=[
-                                  'option reslim = 120;'  # Limit the resource usage (time limit)
+                                  'option reslim = 120;'  # Limit the resource usage (time limit) [s]
                                   'option optcr = 0.0;'  # Set the relative optimality tolerance
                                   'option iterLim = 20000;'  # Set the maximum number of iterations
                                   # Uncomment the following lines to setup IIS computation of BARON through option file
@@ -858,6 +858,15 @@ def _build_condenser_mass_balance(m):
         and expressions for the distillation process, such as component flows, liquid 
         and vapor compositions, and energy expressions.
 
+    Constraints:
+        condenser_mass_balance: Ensures the conservation of mass for each component in the tray.
+        condenser_liquid_composition: Relates liquid flow for each component to total liquid flow and mole fraction.
+        condenser_vapor_composition: Relates vapor flow for each component to total vapor flow and mole fraction.
+        no_vapor_flow: Ensures no vapor flow for each component in total condensation.
+        no_total_vapor_flow: Ensures total vapor flow is zero in total condensation.
+        liquid_fraction_pass_through: Ensures liquid mole fractions are equal to vapor phase mole fractions from the tray below in total condensation.
+        condenser_distillate_composition: Defines the flow of each component in the distillate.
+
     Return:
         None: The function adds the constraints directly to the model object and does not 
         return a value.
@@ -918,6 +927,11 @@ def _build_reboiler_mass_balance(m):
         and expressions for the distillation process, such as component flows, liquid 
         and vapor compositions.
 
+    Constraints:
+        reboiler_mass_balance: Ensures the conservation of mass for each component in the tray.
+        reboiler_liquid_composition: Relates liquid flow for each component to total liquid flow and mole fraction.
+        reboiler_vapor_composition: Relates vapor flow for each component to total vapor flow and mole fraction.
+
     Return:
         None: The function adds the constraints directly to the model object and does not 
         return a value.
@@ -961,6 +975,12 @@ def _build_tray_phase_equilibrium(m, t, tray):
         tray (Block): A Pyomo Block object representing the specific tray within the model,
             where constraints related to the tray are to be added.
 
+    Constraints:
+        raoults_law: Defines Raoult's law for each component in the tray.
+        phase_equil_const: Defines the relationship between the phase equilibrium constant and the activity coefficient.
+        vapor_pressure: Defines the relationship between vapor pressure and temperature for each component.
+        activity_coefficient: Calculates the activity coefficient for each component.
+        
     Return:
         None: The function adds constraints directly to the model object and does not 
         return a value.
@@ -1008,7 +1028,34 @@ def _build_tray_phase_equilibrium(m, t, tray):
 
 
 def _build_column_heat_relations(m):
-    """This function calculates the enthalpy of the liquid phase for each component in each tray"""
+    """
+    This function calculates the enthalpy of the liquid phase for each component in each tray.
+    Constructs the enthalpy relations for both liquid and vapor phases in each tray of a distillation column. 
+    It calculates the enthalpy of the liquid and vapor phases based on the heat capacity coefficients and the 
+    temperature difference from a reference temperature. Additionally, it builds energy balances for various 
+    trays including conditional trays, feed tray, condenser, and reboiler.
+
+    Args:
+        m (Model Object): A model object that includes relevant variables, parameters, and expressions for 
+        the distillation process, such as heat capacity coefficients, temperature references, and heat of 
+        vaporization for different components.
+
+    Expressions:
+        liq_enthalpy_expr: Calculates the enthalpy of the liquid phase for each component in each tray based 
+        on heat capacity coefficients and temperature difference [kJ/mol].
+        vap_enthalpy_expr: Calculates the enthalpy of the vapor phase for each component in each tray based 
+        on heat of vaporization, heat capacity coefficients, and temperature difference [kJ/mol].
+
+    Calls:
+        _build_conditional_tray_energy_balance: Constructs energy balance for conditional trays.
+        _build_feed_tray_energy_balance: Constructs energy balance for feed tray.
+        _build_condenser_energy_balance: Constructs energy balance for the condenser.
+        _build_reboiler_energy_balance: Constructs energy balance for the reboiler.
+
+    Return:
+        None: The function adds the expressions and calls the related functions directly to the model object, 
+        and does not return a value.
+    """
     @m.Expression(m.trays, m.comps)
     def liq_enthalpy_expr(_, t, c):
         k = m.liq_Cp_const[c]
@@ -1060,6 +1107,15 @@ def _build_conditional_tray_energy_balance(m, t, tray, no_tray):
         no_tray (Block Object): A block object representing the scenario where the tray is bypassed 
             (pass-through without liquid or vapor contact).
 
+    Constraints:
+        energy_balance: Balances the energy in the tray, accounting for liquid and vapor enthalpies,
+            and also considers cases where the tray is bypassed (no liquid or vapor contact).
+        liquid_enthalpy: Calculates the enthalpy of the liquid phase for each component in each tray
+            based on heat capacity coefficients and temperature difference [kJ/mol].
+        vapor_enthalpy: Calculates the enthalpy of the vapor phase for each component in each tray
+            based on heat of vaporization, heat capacity coefficients, and temperature difference [kJ/mol].
+        
+
     Return:
         None: The function adds constraints directly to the model object and does not return a value.
 
@@ -1110,6 +1166,13 @@ def _build_feed_tray_energy_balance(m):
         m (Model Object): A model object containing the relevant variables, parameters, and expressions 
             for the distillation process, such as liquid and vapor enthalpy expressions, feed vapor fraction, 
             components, feed temperature, and feed tray identifier.
+
+    Constraints:
+        feed_tray_energy_balance: Balances the energy in the feed tray, accounting for liquid and vapor enthalpies.
+        liq_enthalpy_feed: Calculates the enthalpy of the liquid feed based on heat capacity coefficients
+            and temperature difference [kJ/mol].
+        vap_enthalpy_feed: Calculates the enthalpy of the vapor feed based on heat of vaporization, heat capacity
+            coefficients, and temperature difference [kJ/mol].
 
     Return:
         None: The function adds constraints and expressions directly to the model object and does not return a value.
@@ -1195,6 +1258,12 @@ def _build_condenser_energy_balance(m):
             for the distillation process, such as liquid and vapor enthalpy expressions, components, 
             and the condenser tray identifier.
 
+    Constraints:
+        partial_condenser_energy_balance: The partial condenser energy balance is calculated using the enthalpy of
+            the liquid distillate.
+        total_condenser_energy_balance: The total condenser energy balance is calculated using the enthalpy of the
+            vapor distillate.
+        
     Return:
         None: The function adds constraints directly to the model object and does not return a value.
 
@@ -1245,6 +1314,11 @@ def _build_reboiler_energy_balance(m):
             for the distillation process, such as liquid and vapor enthalpy expressions, components, 
             and the reboiler tray identifier.
 
+    Constraints:
+        reboiler_energy_balance: The reboiler energy balance involves conserving energy by balancing input and output enthalpies.
+        reboiler_liq_enthalpy_calc: The enthalpy of liquid from the reboiler is calculated using the liquid Cp constants.
+        reboiler_vap_enthalpy_calc: The enthalpy of vapor from the reboiler is calculated using the vapor Cp constants.
+            
     Return:
         None: The function adds constraints directly to the model object and does not return a value.
 

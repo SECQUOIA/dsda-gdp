@@ -113,7 +113,7 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
             doc='Vapor fraction of feed',
             initialize=init['feed_vap_frac'], bounds=(0, 1))
     
-        # Component feed flow variable (mol/s)
+        # Component feed flow variable [mol/s]
         m.feed = Var(
             m.comps, doc='Total component feed flow [mol/s]', initialize=init['feed'])
     
@@ -125,45 +125,45 @@ def build_column(min_trays, max_trays, xD, xB, x_input, nlp_solver, provide_init
         m.y = Var(m.comps, m.trays, doc='Vapor mole fraction',
                   bounds=(0, 1), domain=NonNegativeReals, initialize=init['y'])
     
-        # Component liquid flows from tray variable [kmol]
+        # Component liquid flows from tray variable [kmol/s]
         m.L = Var(m.comps, m.trays,
-                  doc='component liquid flows from tray [kmol]',
+                  doc='component liquid flows from tray [kmol/s]',
                   domain=NonNegativeReals, bounds=(0, max_flow),
                   initialize=init['L'])
 
-        # Component vapor flows from tray variable [kmol]
+        # Component vapor flows from tray variable [kmol/s]
         m.V = Var(m.comps, m.trays,
-                  doc='component vapor flows from tray [kmol]',
+                  doc='component vapor flows from tray [kmol/s]',
                   domain=NonNegativeReals, bounds=(0, max_flow),
                   initialize=init['V'])
     
-        # Liquid flows from tray variable [kmol]
+        # Liquid flows from tray variable [kmol/s]
         m.liq = Var(m.trays, domain=NonNegativeReals,
-                    doc='liquid flows from tray [kmol]', initialize=init['liq'],
+                    doc='liquid flows from tray [kmol/s]', initialize=init['liq'],
                     bounds=(0, max_flow))
     
-        # Vapor flows from tray variable [kmol]
+        # Vapor flows from tray variable [kmol/s]
         m.vap = Var(m.trays, domain=NonNegativeReals,
-                    doc='vapor flows from tray [kmol]', initialize=init['vap'],
+                    doc='vapor flows from tray [kmol/s]', initialize=init['vap'],
                     bounds=(0, max_flow))
     
-        # Bottoms component flows variable [kmol]
+        # Bottoms component flows variable [kmol/s]
         m.B = Var(m.comps, domain=NonNegativeReals,
-                  doc='bottoms component flows [kmol]',
+                  doc='bottoms component flows [kmol/s]',
                   bounds=(0, max_flow), initialize=init['B'])
     
-        # Distillate component flows variable [kmol]
+        # Distillate component flows variable [kmol/s]
         m.D = Var(m.comps, domain=NonNegativeReals,
-                  doc='distillate component flows [kmol]',
+                  doc='distillate component flows [kmol/s]',
                   bounds=(0, max_flow), initialize=init['D'])
 
-        # Bottoms flow variable [kmol]
+        # Bottoms flow variable [kmol/s]
         m.bot = Var(domain=NonNegativeReals, initialize=init['bot'], bounds=(0, 100),
-                    doc='bottoms flow [kmol]')
+                    doc='bottoms flow [kmol/s]')
 
-        # Distillate flow variable [kmol]
+        # Distillate flow variable [kmol/s]
         m.dis = Var(domain=NonNegativeReals, initialize=init['dis'],
-                    doc='distillate flow [kmol]', bounds=(0, 100))
+                    doc='distillate flow [kmol/s]', bounds=(0, 100))
     
         # Reflux ratio variable
         m.reflux_ratio = Var(domain=NonNegativeReals, bounds=(0.5, 4),

@@ -36,12 +36,7 @@ def build_column(min_trays, max_trays, xD, xB):
         m (ConcreteModel): Pyomo model
     """
     
-
-    # This function defines a model for a benzene-toluene distillation column.
-    # min_trays: Minimum number of trays in the column.
-    # max_trays: Maximum number of trays in the column.
-    # xD: Required distillate purity.
-    # xB: Required bottoms purity.
+    # Define the model
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene']) # The components in the feed [mol/s]
     min_T, max_T = 300, 400 # Temperatures [K]
@@ -87,14 +82,14 @@ def build_column(min_trays, max_trays, xD, xB):
     m.feed = Var(m.comps, doc='Total component feed flow [mol/s]', initialize=50) # Total component feed flow [mol/s]
     m.x = Var(m.comps, m.trays, doc='Liquid mole fraction', bounds=(0, 1), domain=NonNegativeReals, initialize=0.5) # Liquid mole fraction
     m.y = Var(m.comps, m.trays, doc='Vapor mole fraction', bounds=(0, 1), domain=NonNegativeReals, initialize=0.5) # Vapor mole fraction
-    m.L = Var(m.comps, m.trays, doc='component liquid flows from tray in kmol', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component liquid flows from tray [kmol]
-    m.V = Var(m.comps, m.trays, doc='component vapor flows from tray in kmol', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component vapor flows from tray [kmol]
-    m.liq = Var(m.trays, domain=NonNegativeReals, doc='liquid flows from tray in kmol', initialize=100, bounds=(0, max_flow)) # Liquid flows from tray [kmol]
-    m.vap = Var(m.trays, domain=NonNegativeReals, doc='vapor flows from tray in kmol', initialize=100, bounds=(0, max_flow)) # Vapor flows from tray [kmol]
-    m.B = Var(m.comps, domain=NonNegativeReals, doc='bottoms component flows in kmol', bounds=(0, max_flow), initialize=50) # Bottoms component flows [kmol]
-    m.D = Var(m.comps, domain=NonNegativeReals, doc='distillate component flows in kmol', bounds=(0, max_flow), initialize=50) # Distillate component flows
-    m.bot = Var(domain=NonNegativeReals, initialize=50, bounds=(0, 100), doc='bottoms flow in kmol') # Bottoms flow
-    m.dis = Var(domain=NonNegativeReals, initialize=50, doc='distillate flow in kmol', bounds=(0, 100)) # Distillate flow
+    m.L = Var(m.comps, m.trays, doc='component liquid flows from tray in kmol/s', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component liquid flows from tray [kmol/s]
+    m.V = Var(m.comps, m.trays, doc='component vapor flows from tray in kmol/s', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component vapor flows from tray [kmol/s]
+    m.liq = Var(m.trays, domain=NonNegativeReals, doc='liquid flows from tray in kmol/s', initialize=100, bounds=(0, max_flow)) # Liquid flows from tray [kmol/s]
+    m.vap = Var(m.trays, domain=NonNegativeReals, doc='vapor flows from tray in kmol/s', initialize=100, bounds=(0, max_flow)) # Vapor flows from tray [kmol/s]
+    m.B = Var(m.comps, domain=NonNegativeReals, doc='bottoms component flows in kmol/s', bounds=(0, max_flow), initialize=50) # Bottoms component flows [kmol/s]
+    m.D = Var(m.comps, domain=NonNegativeReals, doc='distillate component flows in kmol/s', bounds=(0, max_flow), initialize=50) # Distillate component flows [kmol/s]
+    m.bot = Var(domain=NonNegativeReals, initialize=50, bounds=(0, 100), doc='bottoms flow in kmol/s') # Bottoms flow [kmol/s]
+    m.dis = Var(domain=NonNegativeReals, initialize=50, doc='distillate flow in kmol/s', bounds=(0, 100)) # Distillate flow [kmol/s]
     m.reflux_ratio = Var(domain=NonNegativeReals, bounds=(0.5, 4), doc='reflux ratio', initialize=1.4) # Reflux ratio
     m.reboil_ratio = Var(domain=NonNegativeReals, bounds=(1.3, 4), doc='reboil ratio', initialize=0.9527) # Reboil ratio
     m.reflux_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6), doc='reflux fractions') # Reflux fractions
@@ -255,11 +250,11 @@ def build_column(min_trays, max_trays, xD, xB):
         m.YP[n].associate_binary_var(m.tray[n].indicator_var)
 
     # Fixing feed conditions
-    m.feed['benzene'].fix(50)  # Fixing benzene flow in the feed at 50 mol/s
-    m.feed['toluene'].fix(50)  # Fixing toluene flow in the feed at 50 mol/s
-    m.T_feed.fix(368)  # Fixing feed temperature at 368 K
+    m.feed['benzene'].fix(50)  # Fixing benzene flow in the feed at 50 [kmol/s]
+    m.feed['toluene'].fix(50)  # Fixing toluene flow in the feed at 50 [kmol/s]
+    m.T_feed.fix(368)  # Fixing feed temperature at 368 [K]
     m.feed_vap_frac.fix(0.40395)  # Fixing feed vapor fraction
-    m.P.fix(1.01)  # Fixing pressure at 1.01 bar
+    m.P.fix(1.01)  # Fixing pressure at 1.01 [bar]
 
     # Fixing the system to be a total condenser
     m.partial_cond.deactivate()  # Deactivating partial condenser

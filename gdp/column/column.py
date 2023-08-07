@@ -1059,7 +1059,7 @@ def _build_column_heat_relations(m):
     @m.Expression(m.trays, m.comps)
     def liq_enthalpy_expr(_, t, c):
         k = m.liq_Cp_const[c]
-        """The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature[kJ/mol]""""
+        """The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature[kJ/mol]"""
         return (
             k['A'] * (m.T[t] - m.T_ref) +
             k['B'] * (m.T[t] ** 2 - m.T_ref ** 2) / 2 +

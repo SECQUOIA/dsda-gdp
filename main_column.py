@@ -2,7 +2,7 @@
 References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)"""
 
 # Import division from the future to make it available in Python 2.7 and below
-from __future__ import division
+from __future__ import division6
 
 # Import various modules and functions needed for the script
 import csv  # To handle CSV files
@@ -11,11 +11,30 @@ import os  # To access the OS functionalities for file and directory handling
 from math import ceil, fabs  # Importing ceil and fabs functions from math
 
 import pyomo.environ as pe  # To create and solve optimization models
+
 # Importing specific classes and functions from pyomo.environ
-from pyomo.environ import (Block, BooleanVar, ConcreteModel, Constraint,
-                           NonNegativeReals, Objective, Param, RangeSet, Set,
-                           SolverFactory, Suffix, TransformationFactory, Var,
-                           exactly, land, log, lor, minimize, value)
+from pyomo.environ import (
+    Block,
+    BooleanVar,
+    ConcreteModel,
+    Constraint,
+    NonNegativeReals,
+    Objective,
+    Param,
+    RangeSet,
+    Set,
+    SolverFactory,
+    Suffix,
+    TransformationFactory,
+    Var,
+    exactly,
+    land,
+    log,
+    lor,
+    minimize,
+    value,
+)
+
 # Importing Disjunct and Disjunction classes from pyomo.gdp for creating generalized disjunctive programming models
 from pyomo.gdp import Disjunct, Disjunction
 
@@ -27,13 +46,18 @@ from gdp.column.gdp_column import build_column
 
 # Importing various functions from gdp.dsda.dsda_functions module
 # These functions help in initializing models, solving subproblems, generating initializations, visualizing data etc.
-from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
-                                     get_external_information,
-                                     initialize_model,
-                                     solve_complete_external_enumeration,
-                                     solve_subproblem, solve_with_dsda,
-                                     solve_with_gdpopt, solve_with_minlp,
-                                     visualize_dsda)
+from gdp.dsda.dsda_functions import (
+    external_ref,
+    generate_initialization,
+    get_external_information,
+    initialize_model,
+    solve_complete_external_enumeration,
+    solve_subproblem,
+    solve_with_dsda,
+    solve_with_gdpopt,
+    solve_with_minlp,
+    visualize_dsda,
+)
 
 
 def problem_logic_column(m):
@@ -42,7 +66,7 @@ def problem_logic_column(m):
 
     Args:
         m : The pyomo model for the distillation column.
-    
+
     Returns:
         logic_expr : A list of logic expressions based on the input pyomo model.
     """
@@ -54,34 +78,52 @@ def problem_logic_column(m):
     for n in m.intTrays:
         # Append logic expression for reflux (YR)
         # This checks if all YR[n] for n in the range of reboil tray to feed tray are False (i.e., ~m.YR[n])
-        # If so, the reflux is considered to be down (m.YR_is_down) 
-        logic_expr.append([pe.land(~m.YR[n] for n in range(
-            m.reboil_tray+1, m.feed_tray)), m.YR_is_down])
+        # If so, the reflux is considered to be down (m.YR_is_down)
+        logic_expr.append(
+            [
+                pe.land(~m.YR[n] for n in range(m.reboil_tray + 1, m.feed_tray)),
+                m.YR_is_down,
+            ]
+        )
 
         # Append logic expression for boilup (YB)
         # This checks if all YB[n] for n in the range of feed tray to max trays are False (i.e., ~m.YB[n])
         # If so, the boilup is considered to be up (m.YB_is_up)
-        logic_expr.append([pe.land(~m.YB[n]
-                                   for n in range(m.feed_tray+1, m.max_trays)), m.YB_is_up])
-    
+        logic_expr.append(
+            [pe.land(~m.YB[n] for n in range(m.feed_tray + 1, m.max_trays)), m.YB_is_up]
+        )
+
     # For every conditional tray
     for n in m.conditional_trays:
         # Append logic expression for tray present
-        # This checks if at least one YR[j] is True for j in range n to max_trays (i.e., lor(m.YR[j] for j in range(n, m.max_trays))) 
-        # or if all YB[j] for j in range n to max_trays are False and YB[n] is True (i.e., lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])) 
+        # This checks if at least one YR[j] is True for j in range n to max_trays (i.e., lor(m.YR[j] for j in range(n, m.max_trays)))
+        # or if all YB[j] for j in range n to max_trays are False and YB[n] is True (i.e., lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n]))
         # If so, the tray is considered to be present (m.tray[n].indicator_var)
-        logic_expr.append([pe.land(pe.lor(m.YR[j] for j in range(n, m.max_trays)), pe.lor(
-            pe.land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])), m.tray[n].indicator_var])
-        
+        logic_expr.append(
+            [
+                pe.land(
+                    pe.lor(m.YR[j] for j in range(n, m.max_trays)),
+                    pe.lor(pe.land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n]),
+                ),
+                m.tray[n].indicator_var,
+            ]
+        )
+
         # Append logic expression for tray not present
         # This is the opposite of the above logic
         # If the above condition is False, then the tray is considered to be not present (m.no_tray[n].indicator_var)
-        logic_expr.append([~pe.land(pe.lor(m.YR[j] for j in range(n, m.max_trays)), pe.lor(
-            pe.land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])), m.no_tray[n].indicator_var])
+        logic_expr.append(
+            [
+                ~pe.land(
+                    pe.lor(m.YR[j] for j in range(n, m.max_trays)),
+                    pe.lor(pe.land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n]),
+                ),
+                m.no_tray[n].indicator_var,
+            ]
+        )
 
     # Return the list of logic expressions
     return logic_expr
-
 
 
 if __name__ == "__main__":
@@ -96,13 +138,21 @@ if __name__ == "__main__":
     NT = 17
     timelimit = 900
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
-    starting_point = [NT-2, 1]
+    starting_point = [NT - 2, 1]
     globaltee = True
     logging.basicConfig(level=logging.ERROR)
 
-    # Here the script is setting up the CSV file where the results will be saved. 
+    # Here the script is setting up the CSV file where the results will be saved.
     # The columns of the CSV file are defined, and the path to the file is constructed.
-    csv_columns = ['Method', 'Approach', 'Solver', 'Objective', 'Time', 'Status', 'User_time']
+    csv_columns = [
+        'Method',
+        'Approach',
+        'Solver',
+        'Objective',
+        'Time',
+        'Status',
+        'User_time',
+    ]
     dict_data = []
     dir_path = os.path.dirname(os.path.abspath(__file__))
     csv_file = os.path.join(dir_path, "results", "column_results.csv")
@@ -130,7 +180,7 @@ if __name__ == "__main__":
     strategies = ['LOA', 'GLOA', 'LBB']
 
     # A dictionary is created where the keys are the names of the Non-Linear Programming (NLP) solvers, and the values are empty dictionaries.
-    # These empty dictionaries can later be filled with specific options for each solver. 
+    # These empty dictionaries can later be filled with specific options for each solver.
     nlp_opts = dict((nlp, {}) for nlp in nlps)
     # nlp_opts['msnlp']['add_options'] = [
     #     'GAMS_MODEL.optfile = 1;'
@@ -140,17 +190,17 @@ if __name__ == "__main__":
     #     '$offecho \n'
     # ]
 
-   # A list of the Mixed Integer Non-Linear Programming (MINLP) solvers to be used is defined.
+    # A list of the Mixed Integer Non-Linear Programming (MINLP) solvers to be used is defined.
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
-    # A dictionary is created where the keys are the names of the MINLP solvers, and the values are empty dictionaries. 
+    # A dictionary is created where the keys are the names of the MINLP solvers, and the values are empty dictionaries.
     # These empty dictionaries can later be filled with specific options for each solver.
     minlps_opts = dict((minlp, {}) for minlp in minlps)
 
-    # Specific options are added for the 'dicopt' solver. These options are in GAMS syntax, 
-    # which is a high-level modeling system for mathematical programming problems. 
-    # For instance, 'relaxed 2' is an option for specifying the relaxation strategy for integer variables, 
-    # 'maxcycles 10000' sets the maximum number of cycles to 10000, 
+    # Specific options are added for the 'dicopt' solver. These options are in GAMS syntax,
+    # which is a high-level modeling system for mathematical programming problems.
+    # For instance, 'relaxed 2' is an option for specifying the relaxation strategy for integer variables,
+    # 'maxcycles 10000' sets the maximum number of cycles to 10000,
     # and 'nlpsolver knitro' specifies 'knitro' as the NLP solver.
     minlps_opts['dicopt']['add_options'] = [
         'GAMS_MODEL.optfile = 1;'
@@ -175,21 +225,23 @@ if __name__ == "__main__":
         '$offecho \n'
     ]
 
-    # Possible transformations for the optimization problems are defined. 
+    # Possible transformations for the optimization problems are defined.
     # 'bigm' and 'hull' are two common techniques used to transform a Generalized Disjunctive Programming (GDP) problem into a MINLP problem.
     transformations = ['bigm', 'hull']
 
-    # 'ks' variable is defined, but not used in the provided code. 
+    # 'ks' variable is defined, but not used in the provided code.
     # It might be used later in the code as parameters for certain operations, or as constants.
     ks = ['Infinity', '2']
 
-    # 'strategies' variable is defined, possibly representing the algorithmic strategies for solving the problems. 
+    # 'strategies' variable is defined, possibly representing the algorithmic strategies for solving the problems.
     # LOA stands for 'Line of Action', GLOA for 'Generalized Line of Action' and LBB for 'Logic Based Benders'.
     strategies = ['LOA', 'GLOA', 'LBB']
 
     # The path to a JSON file that would contain initial values for the model is constructed.
     # The filename is constructed using 'column_' and the value of 'NT', which should be an integer.
-    json_file = os.path.join(dir_path, 'gdp/dsda/', 'column_' + str(NT) + '_initialization.json')
+    json_file = os.path.join(
+        dir_path, 'gdp/dsda/', 'column_' + str(NT) + '_initialization.json'
+    )
 
     # Checks if the JSON file already exists.
     if os.path.exists(json_file):
@@ -199,25 +251,39 @@ if __name__ == "__main__":
         # If the file doesn't exist, a new model 'm' is built using the arguments stored in 'model_args'.
         m = build_column(**model_args)
 
-        # 'ext_ref' is a dictionary that contains model components which need to be externally referenced for certain operations. 
+        # 'ext_ref' is a dictionary that contains model components which need to be externally referenced for certain operations.
         # It's possible these components are integer variables in the model.
         ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
 
         # Calls a function to get information about the external variables in the model.
         # This information includes a dictionary for reformulation, the number of external variables, and their lower and upper bounds.
-        reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(m, ext_ref, tee=globaltee)
+        (
+            reformulation_dict,
+            number_of_external_variables,
+            lower_bounds,
+            upper_bounds,
+        ) = get_external_information(m, ext_ref, tee=globaltee)
 
-        # The model 'm' is updated by setting certain variables to the values from 'starting_point' 
+        # The model 'm' is updated by setting certain variables to the values from 'starting_point'
         # and by applying a logic function specified by 'problem_logic_column' to the external variables.
-        m_fixed = external_ref(m=m, x=starting_point, extra_logic_function=problem_logic_column, dict_extvar=reformulation_dict, tee=globaltee)
+        m_fixed = external_ref(
+            m=m,
+            x=starting_point,
+            extra_logic_function=problem_logic_column,
+            dict_extvar=reformulation_dict,
+            tee=globaltee,
+        )
 
         # The fixed model 'm_fixed' is solved with a subproblem solver (in this case, 'baron').
-        m_solved = solve_subproblem(m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee)
+        m_solved = solve_subproblem(
+            m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee
+        )
 
-        # Initialization data is generated from the solved model and saved to a file. 
+        # Initialization data is generated from the solved model and saved to a file.
         # The path to this file is stored in 'init_path'.
-        init_path = generate_initialization(m=m_solved, starting_initialization=True, model_name='column_'+str(NT))
-
+        init_path = generate_initialization(
+            m=m_solved, starting_initialization=True, model_name='column_' + str(NT)
+        )
 
     # MINLP
     # for solver in minlps:
@@ -265,7 +331,7 @@ if __name__ == "__main__":
     ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
     get_external_information(m, ext_ref, tee=globaltee)
 
-    # The model is solved using different combinations of solvers, 'k' values, and transformations. 
+    # The model is solved using different combinations of solvers, 'k' values, and transformations.
     # The 'k' value is a parameter of the D-SDA method and the transformation refers to a reformulation strategy for the MINLP problem.
     # The results are saved in a dictionary and appended to a list 'dict_data'.
     for solver in nlps:
@@ -291,8 +357,15 @@ if __name__ == "__main__":
                     tee=False,
                     global_tee=globaltee,
                 )
-                new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-                    m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}
+                new_result = {
+                    'Method': str('D-SDA_MIP_' + transformation),
+                    'Approach': str('k=' + k),
+                    'Solver': solver,
+                    'Objective': pe.value(m_solved.obj),
+                    'Time': m_solved.dsda_time,
+                    'Status': m_solved.dsda_status,
+                    'User_time': m_solved.dsda_usertime,
+                }
                 dict_data.append(new_result)
                 print(new_result)
 
@@ -306,7 +379,7 @@ if __name__ == "__main__":
     except IOError:
         print("I/O error")
 
-    # The model is built again and the external information is fetched once more. 
+    # The model is built again and the external information is fetched once more.
     # This seems to be done in preparation for subsequent steps in the larger program.
     m = build_column(**model_args)
     ext_ref = {m.YB: m.intTrays, m.YR: m.intTrays}
@@ -324,7 +397,7 @@ if __name__ == "__main__":
     #           (15, 1), (15, 2), (15, 3), (15, 4), (15, 5),
     #           (15, 6), (15, 7), (15, 8), (15, 9), (7, 1),
     #           (8, 1), (9, 1), (9, 2), (10, 3), ]
-    
+
     # for transformation in ['hull']:
     #     for solver in ['knitro']:
     #         m_solved = solve_complete_external_enumeration(

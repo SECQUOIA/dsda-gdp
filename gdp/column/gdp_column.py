@@ -6,22 +6,44 @@ from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 from pyomo.core.base.misc import display
-from pyomo.core.plugins.transform.logical_to_linear import \
-    update_boolean_vars_from_binary  # Transforms logical constraints into binary constraints.
-from pyomo.environ import (Block, BooleanVar, ConcreteModel, Constraint,
-                           NonNegativeReals, Objective, Param, RangeSet, Set,
-                           SolverFactory, TransformationFactory, Var, exactly,
-                           land, log, lor, minimize, value)  # Core components of Pyomo's modeling language.
+from pyomo.core.plugins.transform.logical_to_linear import (
+    update_boolean_vars_from_binary,
+)  # Transforms logical constraints into binary constraints.
+from pyomo.environ import (
+    Block,
+    BooleanVar,
+    ConcreteModel,
+    Constraint,
+    NonNegativeReals,
+    Objective,
+    Param,
+    RangeSet,
+    Set,
+    SolverFactory,
+    TransformationFactory,
+    Var,
+    exactly,
+    land,
+    log,
+    lor,
+    minimize,
+    value,
+)  # Core components of Pyomo's modeling language.
 from pyomo.gdp import Disjunct, Disjunction  # Imports for disjunctive programming.
-from pyomo.opt import SolutionStatus, SolverResults  # Classes to represent solver results.
-from pyomo.opt import TerminationCondition as tc  # Enum of possible termination conditions for solvers.
-from pyomo.opt.base.solvers import SolverFactory # Base class for solver factories.
+from pyomo.opt import (
+    SolutionStatus,
+    SolverResults,
+)  # Classes to represent solver results.
+from pyomo.opt import (
+    TerminationCondition as tc,
+)  # Enum of possible termination conditions for solvers.
+from pyomo.opt.base.solvers import SolverFactory  # Base class for solver factories.
 
 
 def build_column(min_trays, max_trays, xD, xB):
     """Builds the column model.
     References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
-    
+
     Args:
         min_trays (int): Minimum number of trays in the column
         max_trays (int): Maximum number of trays in the column
@@ -35,13 +57,15 @@ def build_column(min_trays, max_trays, xD, xB):
     Returns:
         m (ConcreteModel): Pyomo model
     """
-    
+
     # Define the model
     m = ConcreteModel('benzene-toluene column')
-    m.comps = Set(initialize=['benzene', 'toluene']) # The components in the feed [mol/s]
-    min_T, max_T = 300, 400 # Temperatures [K]
-    m.T_ref = 298.15 # Reference temperature [K]
-    max_flow = 500 # Maximum flowrate [mol/s]
+    m.comps = Set(
+        initialize=['benzene', 'toluene']
+    )  # The components in the feed [mol/s]
+    min_T, max_T = 300, 400  # Temperatures [K]
+    m.T_ref = 298.15  # Reference temperature [K]
+    max_flow = 500  # Maximum flowrate [mol/s]
     m.max_trays = max_trays
     m.condens_tray = max_trays
     m.feed_tray = math.ceil((max_trays / 2))
@@ -49,69 +73,250 @@ def build_column(min_trays, max_trays, xD, xB):
     m.distillate_purity = xD
     m.bottoms_purity = xB
     m.pvap_const = {
-        'benzene': {'A': -6.98273, 'B': 1.33213, 'C': -2.62863,
-                    'D': -3.33399, 'Tc': 562.2, 'Pc': 48.9},
-        'toluene': {'A': -7.28607, 'B': 1.38091, 'C': -2.83433,
-                    'D': -2.79168, 'Tc': 591.8, 'Pc': 41.0}}
+        'benzene': {
+            'A': -6.98273,
+            'B': 1.33213,
+            'C': -2.62863,
+            'D': -3.33399,
+            'Tc': 562.2,
+            'Pc': 48.9,
+        },
+        'toluene': {
+            'A': -7.28607,
+            'B': 1.38091,
+            'C': -2.83433,
+            'D': -2.79168,
+            'Tc': 591.8,
+            'Pc': 41.0,
+        },
+    }
     m.vap_Cp_const = {
-        'benzene': {'A': -3.392E1, 'B': 4.739E-1, 'C': -3.017E-4,
-                    'D': 7.130E-8, 'E': 0},
-        'toluene': {'A': -2.435E1, 'B': 5.125E-1, 'C': -2.765E-4,
-                    'D': 4.911E-8, 'E': 0}}
+        'benzene': {
+            'A': -3.392e1,
+            'B': 4.739e-1,
+            'C': -3.017e-4,
+            'D': 7.130e-8,
+            'E': 0,
+        },
+        'toluene': {
+            'A': -2.435e1,
+            'B': 5.125e-1,
+            'C': -2.765e-4,
+            'D': 4.911e-8,
+            'E': 0,
+        },
+    }
     m.liq_Cp_const = {
-        'benzene': {'A': 1.29E5, 'B': -1.7E2, 'C': 6.48E-1,
-                    'D': 0, 'E': 0},
-        'toluene': {'A': 1.40E5, 'B': -1.52E2, 'C': 6.95E-1,
-                    'D': 0, 'E': 0}}
-    m.dH_vap = {'benzene': 33.770E3, 'toluene': 38.262E3}  # Enthaply for vaporation [J/mol]
+        'benzene': {'A': 1.29e5, 'B': -1.7e2, 'C': 6.48e-1, 'D': 0, 'E': 0},
+        'toluene': {'A': 1.40e5, 'B': -1.52e2, 'C': 6.95e-1, 'D': 0, 'E': 0},
+    }
+    m.dH_vap = {
+        'benzene': 33.770e3,
+        'toluene': 38.262e3,
+    }  # Enthaply for vaporation [J/mol]
 
-    m.trays = RangeSet(max_trays, doc='Set of potential trays') # Define a set of trays in the column
-    m.conditional_trays = Set(initialize=m.trays - [m.condens_tray, m.feed_tray, m.reboil_tray], doc="Trays that may be turned on and off.") # Define a set of trays that can be turned on and off
-    m.tray = Disjunct(m.conditional_trays, doc='Disjunct for tray existence') # Define a disjunction for tray existence
-    m.no_tray = Disjunct(m.conditional_trays, doc='Disjunct for tray absence') # Define a disjunction for tray absence
+    m.trays = RangeSet(
+        max_trays, doc='Set of potential trays'
+    )  # Define a set of trays in the column
+    m.conditional_trays = Set(
+        initialize=m.trays - [m.condens_tray, m.feed_tray, m.reboil_tray],
+        doc="Trays that may be turned on and off.",
+    )  # Define a set of trays that can be turned on and off
+    m.tray = Disjunct(
+        m.conditional_trays, doc='Disjunct for tray existence'
+    )  # Define a disjunction for tray existence
+    m.no_tray = Disjunct(
+        m.conditional_trays, doc='Disjunct for tray absence'
+    )  # Define a disjunction for tray absence
 
     # Define a disjunction function that can toggle between tray existence and absence
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not')
     def tray_no_tray(b, t):
         return [b.tray[t], b.no_tray[t]]
-    m.minimum_num_trays = Constraint(expr=sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1 >= min_trays) # Ensure minimum number of trays
+
+    m.minimum_num_trays = Constraint(
+        expr=sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1 >= min_trays
+    )  # Ensure minimum number of trays
 
     # Define variables
-    m.T_feed = Var(doc='Feed temperature [K]', domain=NonNegativeReals, bounds=(min_T, max_T), initialize=368) # Feed temperature [K]
-    m.feed_vap_frac = Var(doc='Vapor fraction of feed', initialize=0, bounds=(0, 1)) # Vapor fraction of feed
-    m.feed = Var(m.comps, doc='Total component feed flow [mol/s]', initialize=50) # Total component feed flow [mol/s]
-    m.x = Var(m.comps, m.trays, doc='Liquid mole fraction', bounds=(0, 1), domain=NonNegativeReals, initialize=0.5) # Liquid mole fraction
-    m.y = Var(m.comps, m.trays, doc='Vapor mole fraction', bounds=(0, 1), domain=NonNegativeReals, initialize=0.5) # Vapor mole fraction
-    m.L = Var(m.comps, m.trays, doc='component liquid flows from tray in kmol/s', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component liquid flows from tray [kmol/s]
-    m.V = Var(m.comps, m.trays, doc='component vapor flows from tray in kmol/s', domain=NonNegativeReals, bounds=(0, max_flow), initialize=50) # Component vapor flows from tray [kmol/s]
-    m.liq = Var(m.trays, domain=NonNegativeReals, doc='liquid flows from tray in kmol/s', initialize=100, bounds=(0, max_flow)) # Liquid flows from tray [kmol/s]
-    m.vap = Var(m.trays, domain=NonNegativeReals, doc='vapor flows from tray in kmol/s', initialize=100, bounds=(0, max_flow)) # Vapor flows from tray [kmol/s]
-    m.B = Var(m.comps, domain=NonNegativeReals, doc='bottoms component flows in kmol/s', bounds=(0, max_flow), initialize=50) # Bottoms component flows [kmol/s]
-    m.D = Var(m.comps, domain=NonNegativeReals, doc='distillate component flows in kmol/s', bounds=(0, max_flow), initialize=50) # Distillate component flows [kmol/s]
-    m.bot = Var(domain=NonNegativeReals, initialize=50, bounds=(0, 100), doc='bottoms flow in kmol/s') # Bottoms flow [kmol/s]
-    m.dis = Var(domain=NonNegativeReals, initialize=50, doc='distillate flow in kmol/s', bounds=(0, 100)) # Distillate flow [kmol/s]
-    m.reflux_ratio = Var(domain=NonNegativeReals, bounds=(0.5, 4), doc='reflux ratio', initialize=1.4) # Reflux ratio
-    m.reboil_ratio = Var(domain=NonNegativeReals, bounds=(1.3, 4), doc='reboil ratio', initialize=0.9527) # Reboil ratio
-    m.reflux_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6), doc='reflux fractions') # Reflux fractions
-    m.boilup_frac = Var(domain=NonNegativeReals, bounds=(0, 1 - 1E-6), doc='boilup fraction') # Boilup fraction
-    m.Kc = Var(m.comps, m.trays, doc='Phase equilibrium constant', domain=NonNegativeReals, initialize=1, bounds=(0, 1000)) # Phase equilibrium constant
-    m.T = Var(m.trays, doc='Temperature [K]', domain=NonNegativeReals, bounds=(min_T, max_T)) # Tray temperature [K]
-    m.P = Var(doc='Pressure [bar]', bounds=(0, 5)) # Pressure [bar]
-    m.gamma = Var(m.comps, m.trays, doc='liquid activity coefficent of component on tray', domain=NonNegativeReals, bounds=(0, 10), initialize=1) # Liquid activity coefficient
-    m.Pvap = Var(m.comps, m.trays, doc='pure component vapor pressure of component on tray in bar', domain=NonNegativeReals, bounds=(1E-3, 5), initialize=0.4) # Pure component vapor pressure [bar]
-    m.Pvap_rel = Var(m.comps, m.trays, doc='pure component relative vapor pressure of component on tray in bar (to avoid numerical problems)', domain=NonNegativeReals, bounds=(0, 5), initialize=0.4) # Pure component relative vapor pressure [bar]
-    m.Pvap_X = Var(m.comps, m.trays, doc='Related to fraction of critical temperature (1 - T/Tc)', bounds=(0.25, 0.5), initialize=0.4) # Related to fraction of critical temperature [kJ/mol]
-    m.H_L = Var(m.comps, m.trays, bounds=(0.1, 16), doc='Liquid molar enthalpy of component in tray (kJ/mol)') # Liquid molar enthalpy of component in tray [kJ/mol]
-    m.H_V = Var(m.comps, m.trays, bounds=(30, 16 + 40), doc='Vapor molar enthalpy of component in tray (kJ/mol)') # Vapor molar enthalpy of component in tray [kJ/mol]
-    m.H_L_spec_feed = Var(m.comps, doc='Component liquid molar enthalpy in feed [kJ/mol]', initialize=0, bounds=(0.1, 16)) # Component liquid molar enthalpy in feed [kJ/mol]
-    m.H_V_spec_feed = Var(m.comps, doc='Component vapor molar enthalpy in feed [kJ/mol]', initialize=0, bounds=(30, 16 + 40)) # Component vapor molar enthalpy in feed [kJ/mol]
-    m.Qb = Var(domain=NonNegativeReals, doc='reboiler duty (MJ/s)', initialize=1, bounds=(0, 8)) # Reboiler duty [MJ/s]
-    m.Qc = Var(domain=NonNegativeReals, doc='condenser duty (MJ/s)', initialize=1, bounds=(0, 8)) # Condenser duty [MJ/s]
-
+    m.T_feed = Var(
+        doc='Feed temperature [K]',
+        domain=NonNegativeReals,
+        bounds=(min_T, max_T),
+        initialize=368,
+    )  # Feed temperature [K]
+    m.feed_vap_frac = Var(
+        doc='Vapor fraction of feed', initialize=0, bounds=(0, 1)
+    )  # Vapor fraction of feed
+    m.feed = Var(
+        m.comps, doc='Total component feed flow [mol/s]', initialize=50
+    )  # Total component feed flow [mol/s]
+    m.x = Var(
+        m.comps,
+        m.trays,
+        doc='Liquid mole fraction',
+        bounds=(0, 1),
+        domain=NonNegativeReals,
+        initialize=0.5,
+    )  # Liquid mole fraction
+    m.y = Var(
+        m.comps,
+        m.trays,
+        doc='Vapor mole fraction',
+        bounds=(0, 1),
+        domain=NonNegativeReals,
+        initialize=0.5,
+    )  # Vapor mole fraction
+    m.L = Var(
+        m.comps,
+        m.trays,
+        doc='component liquid flows from tray in kmol/s',
+        domain=NonNegativeReals,
+        bounds=(0, max_flow),
+        initialize=50,
+    )  # Component liquid flows from tray [kmol/s]
+    m.V = Var(
+        m.comps,
+        m.trays,
+        doc='component vapor flows from tray in kmol/s',
+        domain=NonNegativeReals,
+        bounds=(0, max_flow),
+        initialize=50,
+    )  # Component vapor flows from tray [kmol/s]
+    m.liq = Var(
+        m.trays,
+        domain=NonNegativeReals,
+        doc='liquid flows from tray in kmol/s',
+        initialize=100,
+        bounds=(0, max_flow),
+    )  # Liquid flows from tray [kmol/s]
+    m.vap = Var(
+        m.trays,
+        domain=NonNegativeReals,
+        doc='vapor flows from tray in kmol/s',
+        initialize=100,
+        bounds=(0, max_flow),
+    )  # Vapor flows from tray [kmol/s]
+    m.B = Var(
+        m.comps,
+        domain=NonNegativeReals,
+        doc='bottoms component flows in kmol/s',
+        bounds=(0, max_flow),
+        initialize=50,
+    )  # Bottoms component flows [kmol/s]
+    m.D = Var(
+        m.comps,
+        domain=NonNegativeReals,
+        doc='distillate component flows in kmol/s',
+        bounds=(0, max_flow),
+        initialize=50,
+    )  # Distillate component flows [kmol/s]
+    m.bot = Var(
+        domain=NonNegativeReals,
+        initialize=50,
+        bounds=(0, 100),
+        doc='bottoms flow in kmol/s',
+    )  # Bottoms flow [kmol/s]
+    m.dis = Var(
+        domain=NonNegativeReals,
+        initialize=50,
+        doc='distillate flow in kmol/s',
+        bounds=(0, 100),
+    )  # Distillate flow [kmol/s]
+    m.reflux_ratio = Var(
+        domain=NonNegativeReals, bounds=(0.5, 4), doc='reflux ratio', initialize=1.4
+    )  # Reflux ratio
+    m.reboil_ratio = Var(
+        domain=NonNegativeReals, bounds=(1.3, 4), doc='reboil ratio', initialize=0.9527
+    )  # Reboil ratio
+    m.reflux_frac = Var(
+        domain=NonNegativeReals, bounds=(0, 1 - 1e-6), doc='reflux fractions'
+    )  # Reflux fractions
+    m.boilup_frac = Var(
+        domain=NonNegativeReals, bounds=(0, 1 - 1e-6), doc='boilup fraction'
+    )  # Boilup fraction
+    m.Kc = Var(
+        m.comps,
+        m.trays,
+        doc='Phase equilibrium constant',
+        domain=NonNegativeReals,
+        initialize=1,
+        bounds=(0, 1000),
+    )  # Phase equilibrium constant
+    m.T = Var(
+        m.trays, doc='Temperature [K]', domain=NonNegativeReals, bounds=(min_T, max_T)
+    )  # Tray temperature [K]
+    m.P = Var(doc='Pressure [bar]', bounds=(0, 5))  # Pressure [bar]
+    m.gamma = Var(
+        m.comps,
+        m.trays,
+        doc='liquid activity coefficent of component on tray',
+        domain=NonNegativeReals,
+        bounds=(0, 10),
+        initialize=1,
+    )  # Liquid activity coefficient
+    m.Pvap = Var(
+        m.comps,
+        m.trays,
+        doc='pure component vapor pressure of component on tray in bar',
+        domain=NonNegativeReals,
+        bounds=(1e-3, 5),
+        initialize=0.4,
+    )  # Pure component vapor pressure [bar]
+    m.Pvap_rel = Var(
+        m.comps,
+        m.trays,
+        doc='pure component relative vapor pressure of component on tray in bar (to avoid numerical problems)',
+        domain=NonNegativeReals,
+        bounds=(0, 5),
+        initialize=0.4,
+    )  # Pure component relative vapor pressure [bar]
+    m.Pvap_X = Var(
+        m.comps,
+        m.trays,
+        doc='Related to fraction of critical temperature (1 - T/Tc)',
+        bounds=(0.25, 0.5),
+        initialize=0.4,
+    )  # Related to fraction of critical temperature [kJ/mol]
+    m.H_L = Var(
+        m.comps,
+        m.trays,
+        bounds=(0.1, 16),
+        doc='Liquid molar enthalpy of component in tray (kJ/mol)',
+    )  # Liquid molar enthalpy of component in tray [kJ/mol]
+    m.H_V = Var(
+        m.comps,
+        m.trays,
+        bounds=(30, 16 + 40),
+        doc='Vapor molar enthalpy of component in tray (kJ/mol)',
+    )  # Vapor molar enthalpy of component in tray [kJ/mol]
+    m.H_L_spec_feed = Var(
+        m.comps,
+        doc='Component liquid molar enthalpy in feed [kJ/mol]',
+        initialize=0,
+        bounds=(0.1, 16),
+    )  # Component liquid molar enthalpy in feed [kJ/mol]
+    m.H_V_spec_feed = Var(
+        m.comps,
+        doc='Component vapor molar enthalpy in feed [kJ/mol]',
+        initialize=0,
+        bounds=(30, 16 + 40),
+    )  # Component vapor molar enthalpy in feed [kJ/mol]
+    m.Qb = Var(
+        domain=NonNegativeReals, doc='reboiler duty (MJ/s)', initialize=1, bounds=(0, 8)
+    )  # Reboiler duty [MJ/s]
+    m.Qc = Var(
+        domain=NonNegativeReals,
+        doc='condenser duty (MJ/s)',
+        initialize=1,
+        bounds=(0, 8),
+    )  # Condenser duty [MJ/s]
 
     m.partial_cond = Disjunct()  # Define a partial condenser disjunct
     m.total_cond = Disjunct()  # Define a total condenser disjunct
-    m.condenser_choice = Disjunction(expr=[m.partial_cond, m.total_cond])  # Condenser choice: partial or total condenser
+    m.condenser_choice = Disjunction(
+        expr=[m.partial_cond, m.total_cond]
+    )  # Condenser choice: partial or total condenser
 
     # Build mass balance for conditional trays
     for t in m.conditional_trays:
@@ -139,7 +344,9 @@ def build_column(min_trays, max_trays, xD, xB):
     # Constraint to define reflux fraction
     @m.Constraint()
     def reflux_frac_defn(m):
-        return m.dis == (1 - m.reflux_frac) * (m.vap[m.condens_tray - 1] - m.vap[m.condens_tray])
+        return m.dis == (1 - m.reflux_frac) * (
+            m.vap[m.condens_tray - 1] - m.vap[m.condens_tray]
+        )
 
     # Constraint to ensure the sum of component liquid flows from each tray equals the total liquid flow from that tray
     @m.Constraint(m.trays)
@@ -162,7 +369,6 @@ def build_column(min_trays, max_trays, xD, xB):
     def monotonoic_temperature(_, t):
         return m.T[t] >= m.T[t + 1] if t < max_trays else Constraint.Skip
 
-
     # Building phase equilibrium for each conditional tray
     for t in m.conditional_trays:
         _build_tray_phase_equilibrium(m, t, m.tray[t])
@@ -173,9 +379,15 @@ def build_column(min_trays, max_trays, xD, xB):
     m.condenser_phase_eq = Block()
 
     # Building phase equilibrium for feed tray, reboiler and condenser
-    _build_tray_phase_equilibrium(m, m.feed_tray, m.feed_tray_phase_eq) # Building phase equilibrium for feed tray
-    _build_tray_phase_equilibrium(m, m.reboil_tray, m.reboiler_phase_eq) # Building phase equilibrium for reboiler
-    _build_tray_phase_equilibrium(m, m.condens_tray, m.condenser_phase_eq) # Building phase equilibrium for condenser
+    _build_tray_phase_equilibrium(
+        m, m.feed_tray, m.feed_tray_phase_eq
+    )  # Building phase equilibrium for feed tray
+    _build_tray_phase_equilibrium(
+        m, m.reboil_tray, m.reboiler_phase_eq
+    )  # Building phase equilibrium for reboiler
+    _build_tray_phase_equilibrium(
+        m, m.condens_tray, m.condenser_phase_eq
+    )  # Building phase equilibrium for condenser
 
     # Building heat relations for the column
     _build_column_heat_relations(m)
@@ -190,8 +402,12 @@ def build_column(min_trays, max_trays, xD, xB):
     def bottoms_req(m):
         return m.B['toluene'] >= m.bottoms_purity * m.bot
 
-    # Define the objective function as the sum of reboiler and condenser duty plus an indicator for tray activation 
-    m.obj = Objective(expr=(m.Qc + m.Qb) * 1E3 + 1E3 * (sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1), sense=minimize)
+    # Define the objective function as the sum of reboiler and condenser duty plus an indicator for tray activation
+    m.obj = Objective(
+        expr=(m.Qc + m.Qb) * 1e3
+        + 1e3 * (sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1),
+        sense=minimize,
+    )
 
     # Constraint to calculate the reflux ratio
     @m.Constraint()
@@ -214,22 +430,32 @@ def build_column(min_trays, max_trays, xD, xB):
         else:
             return Constraint.NoConstraint
 
-
     # Defining set of interior trays in the column (excluding condenser and reboiler trays)
-    m.intTrays = Set(initialize=m.trays - [m.condens_tray, m.reboil_tray], doc='Interior trays of the column')
+    m.intTrays = Set(
+        initialize=m.trays - [m.condens_tray, m.reboil_tray],
+        doc='Interior trays of the column',
+    )
 
     # Defining Boolean variables to denote existence of boil-up flow and reflux flow in each interior tray
-    m.YB = BooleanVar(m.intTrays, initialize=False, doc='Existence of boil-up flow in stage n')
-    m.YR = BooleanVar(m.intTrays, initialize=False, doc='Existence of reflux flow in stage n')
+    m.YB = BooleanVar(
+        m.intTrays, initialize=False, doc='Existence of boil-up flow in stage n'
+    )
+    m.YR = BooleanVar(
+        m.intTrays, initialize=False, doc='Existence of reflux flow in stage n'
+    )
 
     # Initializing at least one reflux and boilup tray to avoid errors in Mixed-Integer Nonlinear Programming (MINLP) solvers
-    m.YB[m.reboil_tray+1].set_value(True)
-    m.YR[m.max_trays-1].set_value(True)
+    m.YB[m.reboil_tray + 1].set_value(True)
+    m.YR[m.max_trays - 1].set_value(True)
 
     # Defining additional Boolean variables for logical constraints
     m.YP = BooleanVar(m.intTrays, doc='Boolean var associated with tray and no_tray')
-    m.YB_is_up = BooleanVar(doc='Boolean var for intermediate sum determining if Boilup is above the feed')
-    m.YR_is_down = BooleanVar(doc='Boolean var for intermediate sum determining if Reflux is below the feed')
+    m.YB_is_up = BooleanVar(
+        doc='Boolean var for intermediate sum determining if Boilup is above the feed'
+    )
+    m.YR_is_down = BooleanVar(
+        doc='Boolean var for intermediate sum determining if Reflux is below the feed'
+    )
 
     # Defining logical constraints to ensure only one reflux and one boilup
     @m.LogicalConstraint()
@@ -243,7 +469,12 @@ def build_column(min_trays, max_trays, xD, xB):
     # Defining logical constraint for YP Boolean variable
     @m.LogicalConstraint(m.conditional_trays)
     def YP_or_notYP(m, n):
-        return m.YP[n].equivalent_to(land(lor(m.YR[j] for j in range(n, m.max_trays)), lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n])))
+        return m.YP[n].equivalent_to(
+            land(
+                lor(m.YR[j] for j in range(n, m.max_trays)),
+                lor(land(~m.YB[j] for j in range(n, m.max_trays)), m.YB[n]),
+            )
+        )
 
     # Associating YP Boolean variable with tray activation
     for n in m.conditional_trays:
@@ -271,9 +502,9 @@ def build_column(min_trays, max_trays, xD, xB):
 # This function builds the constraints for mass balance, liquid and vapor composition for a given tray (t) in the column
 def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     """
-    Builds the constraints for mass balance, liquid and vapor composition for a given tray (t) in the distillation column. 
-    The constraints model the behavior of the mass balance for different components on a tray, accounting for feed, vapor, and liquid flows, 
-    as well as special conditions for the feed tray, condenser, and reboiler. Additional constraints define the liquid and vapor composition 
+    Builds the constraints for mass balance, liquid and vapor composition for a given tray (t) in the distillation column.
+    The constraints model the behavior of the mass balance for different components on a tray, accounting for feed, vapor, and liquid flows,
+    as well as special conditions for the feed tray, condenser, and reboiler. Additional constraints define the liquid and vapor composition
     on the tray, as well as conditions for when the tray does not exist.
 
     Args:
@@ -285,7 +516,7 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     Return:
         None. The function adds constraints to the model but does not return a value.
     """
-    
+
     # Define mass balance constraint for each component in the tray
     @tray.Constraint(m.comps)
     def mass_balance(_, c):
@@ -304,7 +535,9 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
             - (m.L[c, t] if t > m.reboil_tray else 0)
             # Vapor from tray below if not reboiler
             # Include vapor flow rate from the tray below if current tray is not the reboiler
-            + (m.V[c, t - 1] if t > m.reboil_tray else 0) == 0)
+            + (m.V[c, t - 1] if t > m.reboil_tray else 0)
+            == 0
+        )
 
     # Define constraints for liquid composition on the tray
     @tray.Constraint(m.comps)
@@ -345,12 +578,13 @@ def _build_feed_tray_mass_balance(m):
     @m.Constraint(m.comps)
     def feed_mass_balance(_, c):
         return (
-            m.feed[c]        # Feed to the tray
-            - m.V[c, t]      # Vapor from the tray
+            m.feed[c]  # Feed to the tray
+            - m.V[c, t]  # Vapor from the tray
             + m.L[c, t + 1]  # Liquid from the tray above
-            - m.L[c, t]      # Liquid to the tray below
+            - m.L[c, t]  # Liquid to the tray below
             + m.V[c, t - 1]  # Vapor from the tray below
-            == 0)
+            == 0
+        )
 
     # Liquid composition constraint for each component on the feed tray
     @m.Constraint(m.comps)
@@ -362,26 +596,27 @@ def _build_feed_tray_mass_balance(m):
     def feed_tray_vapor_composition(_, c):
         return m.V[c, t] == m.vap[t] * m.y[c, t]
 
+
 # This function constructs the mass balance and composition constraints for the condenser
 def _build_condenser_mass_balance(m):
     """
-    Constructs the mass balance and composition constraints for the feed tray in the distillation column. 
-    This function specifically models the feed tray behavior, taking into account the mass balance 
+    Constructs the mass balance and composition constraints for the feed tray in the distillation column.
+    This function specifically models the feed tray behavior, taking into account the mass balance
     and liquid and vapor composition constraints.
 
     Args:
-        m: The model object containing the relevant variables and parameters. It must include information 
+        m: The model object containing the relevant variables and parameters. It must include information
            related to the feed tray, such as feed flow rates, vapor and liquid flows, and component compositions.
 
     Return:
         None. The function adds constraints to the model but does not return a value.
 
     Constraints:
-        - feed_mass_balance: Ensures that the mass balance is satisfied for each component on the feed tray, considering 
+        - feed_mass_balance: Ensures that the mass balance is satisfied for each component on the feed tray, considering
           the feed, vapor, and liquid flows to and from the tray.
-        - feed_tray_liquid_composition: Models the relationship between the liquid flow rate and composition for each 
+        - feed_tray_liquid_composition: Models the relationship between the liquid flow rate and composition for each
           component on the feed tray.
-        - feed_tray_vapor_composition: Models the relationship between the vapor flow rate and composition for each 
+        - feed_tray_vapor_composition: Models the relationship between the vapor flow rate and composition for each
           component on the feed tray.
     """
     t = m.condens_tray  # The condenser tray number
@@ -390,11 +625,12 @@ def _build_condenser_mass_balance(m):
     @m.Constraint(m.comps)
     def condenser_mass_balance(_, c):
         return (
-            - m.V[c, t]      # Vapor from the tray
-            - m.D[c]         # Loss to distillate
-            - m.L[c, t]      # Liquid to the tray below
+            -m.V[c, t]  # Vapor from the tray
+            - m.D[c]  # Loss to distillate
+            - m.L[c, t]  # Liquid to the tray below
             + m.V[c, t - 1]  # Vapor from the tray below
-            == 0)
+            == 0
+        )
 
     # For a partial condenser:
     @m.partial_cond.Constraint(m.comps)
@@ -416,17 +652,20 @@ def _build_condenser_mass_balance(m):
 
     @m.total_cond.Constraint(m.comps)
     def liquid_fraction_pass_through(_, c):
-        return m.x[c, t] == m.y[c, t - 1]  # Liquid composition is the same as vapor composition from the tray below
+        return (
+            m.x[c, t] == m.y[c, t - 1]
+        )  # Liquid composition is the same as vapor composition from the tray below
 
     @m.Constraint(m.comps)
     def condenser_distillate_composition(_, c):
         return m.D[c] == m.dis * m.x[c, t]  # Define distillate composition
 
+
 # This function constructs the mass balance and composition constraints for the reboiler
 def _build_reboiler_mass_balance(m):
     """
     Constructs the mass balance and composition constraints for the reboiler in the distillation column.
-    This function defines the reboiler's behavior, taking into account the mass balance and liquid 
+    This function defines the reboiler's behavior, taking into account the mass balance and liquid
     and vapor composition constraints.
 
     Args:
@@ -437,11 +676,11 @@ def _build_reboiler_mass_balance(m):
         None. The function adds constraints to the model but does not return a value.
 
     Constraints:
-        - reboiler_mass_balance: Ensures that the mass balance is satisfied for each component in the reboiler, 
+        - reboiler_mass_balance: Ensures that the mass balance is satisfied for each component in the reboiler,
           considering the vapor flows from the tray, liquid flows from the tray above, and loss to bottoms.
-        - reboiler_liquid_composition: Models the relationship between the liquid flow rate and composition for each 
+        - reboiler_liquid_composition: Models the relationship between the liquid flow rate and composition for each
           component in the reboiler.
-        - reboiler_vapor_composition: Models the relationship between the vapor flow rate and composition for each 
+        - reboiler_vapor_composition: Models the relationship between the vapor flow rate and composition for each
           component in the reboiler.
     """
     t = m.reboil_tray  # The reboiler tray number
@@ -451,10 +690,11 @@ def _build_reboiler_mass_balance(m):
     def reboiler_mass_balance(_, c):
         t = m.reboil_tray
         return (
-            - m.V[c, t]      # Vapor from the tray
+            -m.V[c, t]  # Vapor from the tray
             + m.L[c, t + 1]  # Liquid from the tray above
-            - m.B[c]         # Loss to bottoms
-            == 0)
+            - m.B[c]  # Loss to bottoms
+            == 0
+        )
 
     # Liquid composition constraint for each component in the reboiler
     @m.Constraint(m.comps)
@@ -495,6 +735,7 @@ def _build_tray_phase_equilibrium(m, t, tray):
           tray.
         - gamma_calc: Assumes an ideal solution (activity coefficient, gamma = 1) for each component on the tray.
     """
+
     # Raoult's law for each component on the tray
     @tray.Constraint(m.comps)
     def raoults_law(_, c):
@@ -516,7 +757,8 @@ def _build_tray_phase_equilibrium(m, t, tray):
         k = m.pvap_const[c]
         x = m.Pvap_X[c, t]
         return (log(m.Pvap_rel[c, t] + m.Pvap[c, t].lb) - log(k['Pc'])) * (1 - x) == (
-            k['A'] * x + k['B'] * x ** 1.5 + k['C'] * x ** 3 + k['D'] * x ** 6)
+            k['A'] * x + k['B'] * x**1.5 + k['C'] * x**3 + k['D'] * x**6
+        )
 
     # Definition of the temperature-dependent part of the relative vapor pressure for each component on the tray
     @tray.Constraint(m.comps)
@@ -528,6 +770,7 @@ def _build_tray_phase_equilibrium(m, t, tray):
     @tray.Constraint(m.comps)
     def gamma_calc(_, c):
         return m.gamma[c, t] == 1
+
 
 # This function constructs the expressions for liquid and vapor enthalpy and the energy balance constraints for each tray
 def _build_column_heat_relations(m):
@@ -554,23 +797,31 @@ def _build_column_heat_relations(m):
         - _build_condenser_energy_balance: Constructs energy balance constraints for the condenser.
         - _build_reboiler_energy_balance: Constructs energy balance constraints for the reboiler.
     """
+
     # Liquid enthalpy expression for each component on each tray
     @m.Expression(m.trays, m.comps)
     def liq_enthalpy_expr(_, t, c):
         k = m.liq_Cp_const[c]
         return (
-            k['A'] * (m.T[t] - m.T_ref) + k['B'] * (m.T[t] ** 2 - m.T_ref ** 2) / 2 +
-            k['C'] * (m.T[t] ** 3 - m.T_ref ** 3) / 3 + k['D'] * (m.T[t] ** 4 - m.T_ref ** 4) / 4 +
-            k['E'] * (m.T[t] ** 5 - m.T_ref ** 5) / 5) * 1E-6
+            k['A'] * (m.T[t] - m.T_ref)
+            + k['B'] * (m.T[t] ** 2 - m.T_ref**2) / 2
+            + k['C'] * (m.T[t] ** 3 - m.T_ref**3) / 3
+            + k['D'] * (m.T[t] ** 4 - m.T_ref**4) / 4
+            + k['E'] * (m.T[t] ** 5 - m.T_ref**5) / 5
+        ) * 1e-6
 
     # Vapor enthalpy expression for each component on each tray
     @m.Expression(m.trays, m.comps)
     def vap_enthalpy_expr(_, t, c):
         k = m.vap_Cp_const[c]
         return (
-            m.dH_vap[c] + k['A'] * (m.T[t] - m.T_ref) +
-            k['B'] * (m.T[t] ** 2 - m.T_ref ** 2) / 2 + k['C'] * (m.T[t] ** 3 - m.T_ref ** 3) / 3 +
-            k['D'] * (m.T[t] ** 4 - m.T_ref ** 4) / 4 + k['E'] * (m.T[t] ** 5 - m.T_ref ** 5) / 5) * 1E-3
+            m.dH_vap[c]
+            + k['A'] * (m.T[t] - m.T_ref)
+            + k['B'] * (m.T[t] ** 2 - m.T_ref**2) / 2
+            + k['C'] * (m.T[t] ** 3 - m.T_ref**3) / 3
+            + k['D'] * (m.T[t] ** 4 - m.T_ref**4) / 4
+            + k['E'] * (m.T[t] ** 5 - m.T_ref**5) / 5
+        ) * 1e-3
 
     # Energy balance constraints for each tray
     for t in m.conditional_trays:
@@ -605,24 +856,34 @@ def _build_conditional_tray_energy_balance(m, t, tray, no_tray):
         - liq_enthalpy_pass_through: Passes through the liquid enthalpy values to the next tray if the tray does not exist.
         - vap_enthalpy_pass_through: Passes through the vapor enthalpy values to the next tray if the tray does not exist.
     """
+
     # Energy balance constraint for each tray
     @tray.Constraint()
     def energy_balance(_):
-        return sum(
-            m.L[c, t + 1] * m.H_L[c, t + 1]  # heat of liquid from tray above
-            - m.L[c, t] * m.H_L[c, t]  # heat of liquid to tray below
-            + m.V[c, t - 1] * m.H_V[c, t - 1]  # heat of vapor from tray below
-            - m.V[c, t] * m.H_V[c, t]  # heat of vapor to tray above
-            for c in m.comps) * 1E-3 == 0  # Ensuring net heat in tray is zero (equilibrium)
+        return (
+            sum(
+                m.L[c, t + 1] * m.H_L[c, t + 1]  # heat of liquid from tray above
+                - m.L[c, t] * m.H_L[c, t]  # heat of liquid to tray below
+                + m.V[c, t - 1] * m.H_V[c, t - 1]  # heat of vapor from tray below
+                - m.V[c, t] * m.H_V[c, t]  # heat of vapor to tray above
+                for c in m.comps
+            )
+            * 1e-3
+            == 0
+        )  # Ensuring net heat in tray is zero (equilibrium)
 
     # Constraints to calculate enthalpy for liquid and vapor based on temperature for each tray
     @tray.Constraint(m.comps)
     def liq_enthalpy_calc(_, c):
-        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy as the function of Temperature
+        return (
+            m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
+        )  # Liquid enthalpy as the function of Temperature
 
     @tray.Constraint(m.comps)
     def vap_enthalpy_calc(_, c):
-        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy as the function of Temperature
+        return (
+            m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
+        )  # Vapor enthalpy as the function of Temperature
 
     # In case the tray does not exist, pass the enthalpy values through to the next tray
     @no_tray.Constraint(m.comps)
@@ -665,81 +926,96 @@ def _build_feed_tray_energy_balance(m):
     @m.Constraint()
     def feed_tray_energy_balance(_):
         return (
-            sum(m.feed[c] * (
-                m.H_L_spec_feed[c] * (1 - m.feed_vap_frac) +  # Heat of feed liquid
-                m.H_V_spec_feed[c] * m.feed_vap_frac)  # Heat of feed vapor
-                for c in m.comps) +
             sum(
+                m.feed[c]
+                * (
+                    m.H_L_spec_feed[c] * (1 - m.feed_vap_frac)
+                    + m.H_V_spec_feed[c] * m.feed_vap_frac  # Heat of feed liquid
+                )  # Heat of feed vapor
+                for c in m.comps
+            )
+            + sum(
                 m.L[c, t + 1] * m.H_L[c, t + 1]  # Heat of liquid from tray above
                 - m.L[c, t] * m.H_L[c, t]  # Heat of liquid to tray below
                 + m.V[c, t - 1] * m.H_V[c, t - 1]  # Heat of vapor from tray below
                 - m.V[c, t] * m.H_V[c, t]  # Heat of vapor to tray above
-                for c in m.comps)) * 1E-3 == 0  # Ensuring net heat in feed tray is zero (equilibrium)
+                for c in m.comps
+            )
+        ) * 1e-3 == 0  # Ensuring net heat in feed tray is zero (equilibrium)
 
     # Constraints to calculate enthalpy for liquid and vapor based on temperature for feed tray
     @m.Constraint(m.comps)
     def feed_tray_liq_enthalpy_calc(_, c):
-        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy as the fucntion of temperature
+        return (
+            m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
+        )  # Liquid enthalpy as the fucntion of temperature
 
     @m.Constraint(m.comps)
     def feed_tray_vap_enthalpy_calc(_, c):
-        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy as the fucntion of temperature
+        return (
+            m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
+        )  # Vapor enthalpy as the fucntion of temperature
 
     # Expressions to calculate feed liquid and vapor enthalpy based on feed temperature
     @m.Expression(m.comps)
     def feed_liq_enthalpy_expr(_, c):
         k = m.liq_Cp_const[c]
         return (
-            k['A'] * (m.T_feed - m.T_ref) +
-            k['B'] * (m.T_feed ** 2 - m.T_ref ** 2) / 2 +
-            k['C'] * (m.T_feed ** 3 - m.T_ref ** 3) / 3 +
-            k['D'] * (m.T_feed ** 4 - m.T_ref ** 4) / 4 +
-            k['E'] * (m.T_feed ** 5 - m.T_ref ** 5) / 5) * 1E-6  # Feed liquid enthalpy, the function of feed temperature
+            k['A'] * (m.T_feed - m.T_ref)
+            + k['B'] * (m.T_feed**2 - m.T_ref**2) / 2
+            + k['C'] * (m.T_feed**3 - m.T_ref**3) / 3
+            + k['D'] * (m.T_feed**4 - m.T_ref**4) / 4
+            + k['E'] * (m.T_feed**5 - m.T_ref**5) / 5
+        ) * 1e-6  # Feed liquid enthalpy, the function of feed temperature
 
     @m.Constraint(m.comps)
     def feed_liq_enthalpy_calc(_, c):
-        return m.H_L_spec_feed[c] == m.feed_liq_enthalpy_expr[c]  # Constraint for feed liquid enthalpy
+        return (
+            m.H_L_spec_feed[c] == m.feed_liq_enthalpy_expr[c]
+        )  # Constraint for feed liquid enthalpy
 
     @m.Expression(m.comps)
     def feed_vap_enthalpy_expr(_, c):
         k = m.vap_Cp_const[c]
         return (
-            m.dH_vap[c] +
-            k['A'] * (m.T_feed - m.T_ref) +
-            k['B'] * (m.T_feed ** 2 - m.T_ref ** 2) / 2 +
-            k['C'] * (m.T_feed ** 3 - m.T_ref ** 3) / 3 +
-            k['D'] * (m.T_feed ** 4 - m.T_ref ** 4) / 4 +
-            k['E'] * (m.T_feed ** 5 - m.T_ref ** 5) / 5) * 1E-3  # m.H_V_spec_feed[c]
+            m.dH_vap[c]
+            + k['A'] * (m.T_feed - m.T_ref)
+            + k['B'] * (m.T_feed**2 - m.T_ref**2) / 2
+            + k['C'] * (m.T_feed**3 - m.T_ref**3) / 3
+            + k['D'] * (m.T_feed**4 - m.T_ref**4) / 4
+            + k['E'] * (m.T_feed**5 - m.T_ref**5) / 5
+        ) * 1e-3  # m.H_V_spec_feed[c]
 
     @m.Constraint(m.comps)
     def feed_vap_enthalpy_calc(_, c):
-        return m.H_V_spec_feed[c] == m.feed_vap_enthalpy_expr[c]  # Constraint for feed vapor enthalpy
-
+        return (
+            m.H_V_spec_feed[c] == m.feed_vap_enthalpy_expr[c]
+        )  # Constraint for feed vapor enthalpy
 
 
 def _build_condenser_energy_balance(m):
     """
     Constructs the energy balance constraints for the condenser in the distillation column.
 
-    This function calculates the energy balance for both partial and total condensers. It includes the heat from 
+    This function calculates the energy balance for both partial and total condensers. It includes the heat from
     the liquid distillate, liquid to the tray below, vapor from the tray below, and vapor from the partial condenser.
     It also calculates the liquid and vapor enthalpies for the condenser based on the temperature.
 
     Args:
-        m: The model object containing variables and parameters related to the condenser, components, enthalpy, temperature, 
+        m: The model object containing variables and parameters related to the condenser, components, enthalpy, temperature,
         and condenser types (partial or total).
 
     Return:
         None. The function adds constraints to the model but does not return a value.
 
     Constraints:
-        - partial_condenser_energy_balance: Ensures that the net heat in the partial condenser is zero, considering 
-          the heat contributions of liquid distillate, liquid to the tray below, vapor from the tray below, and vapor 
+        - partial_condenser_energy_balance: Ensures that the net heat in the partial condenser is zero, considering
+          the heat contributions of liquid distillate, liquid to the tray below, vapor from the tray below, and vapor
           from the partial condenser.
-        - total_condenser_energy_balance: Ensures that the net heat in the total condenser is zero, considering the 
+        - total_condenser_energy_balance: Ensures that the net heat in the total condenser is zero, considering the
           heat contributions of liquid distillate, liquid to the tray below, and vapor from the tray below.
         - condenser_liq_enthalpy_calc: Calculates liquid enthalpy in the condenser based on temperature.
-        - vap_enthalpy_calc: Calculates vapor enthalpy in the condenser based on temperature (only in the case of 
+        - vap_enthalpy_calc: Calculates vapor enthalpy in the condenser based on temperature (only in the case of
           a partial condenser).
 
     """
@@ -748,38 +1024,54 @@ def _build_condenser_energy_balance(m):
     # Energy balance for partial condenser
     @m.partial_cond.Constraint()
     def partial_condenser_energy_balance(_):
-        return -m.Qc + sum(
-            - m.D[c] * m.H_L[c, t]  # heat of liquid distillate
-            - m.L[c, t] * m.H_L[c, t]  # heat of liquid to tray below
-            + m.V[c, t - 1] * m.H_V[c, t - 1]  # heat of vapor from tray below
-            - m.V[c, t] * m.H_V[c, t]  # heat of vapor from partial condenser
-            for c in m.comps) * 1E-3 == 0  # Ensuring net heat in partial condenser is zero (equilibrium)
+        return (
+            -m.Qc
+            + sum(
+                -m.D[c] * m.H_L[c, t]  # heat of liquid distillate
+                - m.L[c, t] * m.H_L[c, t]  # heat of liquid to tray below
+                + m.V[c, t - 1] * m.H_V[c, t - 1]  # heat of vapor from tray below
+                - m.V[c, t] * m.H_V[c, t]  # heat of vapor from partial condenser
+                for c in m.comps
+            )
+            * 1e-3
+            == 0
+        )  # Ensuring net heat in partial condenser is zero (equilibrium)
 
     # Energy balance for total condenser
     @m.total_cond.Constraint()
     def total_condenser_energy_balance(_):
-        return -m.Qc + sum(
-            - m.D[c] * m.H_L[c, t]  # heat of liquid distillate
-            - m.L[c, t] * m.H_L[c, t]  # heat of liquid to tray below
-            + m.V[c, t - 1] * m.H_V[c, t - 1]  # heat of vapor from tray below
-            for c in m.comps) * 1E-3 == 0  # Ensuring net heat in total condenser is zero (equilibrium)
+        return (
+            -m.Qc
+            + sum(
+                -m.D[c] * m.H_L[c, t]  # heat of liquid distillate
+                - m.L[c, t] * m.H_L[c, t]  # heat of liquid to tray below
+                + m.V[c, t - 1] * m.H_V[c, t - 1]  # heat of vapor from tray below
+                for c in m.comps
+            )
+            * 1e-3
+            == 0
+        )  # Ensuring net heat in total condenser is zero (equilibrium)
 
     # Constraints to calculate enthalpy for liquid and vapor based on temperature for condenser
     @m.Constraint(m.comps)
     def condenser_liq_enthalpy_calc(_, c):
-        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy as the function of temperature
+        return (
+            m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
+        )  # Liquid enthalpy as the function of temperature
 
     @m.partial_cond.Constraint(m.comps)
     def vap_enthalpy_calc(_, c):
-        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy as the function of temperature
+        return (
+            m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
+        )  # Vapor enthalpy as the function of temperature
 
 
 def _build_reboiler_energy_balance(m):
     """
     Constructs the energy balance constraints for the reboiler in the distillation column.
 
-    This function calculates the energy balance for the reboiler, including the heat from the liquid from the tray above, 
-    liquid bottoms, and vapor to the tray above. It also calculates the liquid and vapor enthalpies for the reboiler based 
+    This function calculates the energy balance for the reboiler, including the heat from the liquid from the tray above,
+    liquid bottoms, and vapor to the tray above. It also calculates the liquid and vapor enthalpies for the reboiler based
     on the temperature.
 
     Args:
@@ -789,7 +1081,7 @@ def _build_reboiler_energy_balance(m):
         None. The function adds constraints to the model but does not return a value.
 
     Constraints:
-        - reboiler_energy_balance: Ensures that the net heat in the reboiler is zero (equilibrium), considering the heat 
+        - reboiler_energy_balance: Ensures that the net heat in the reboiler is zero (equilibrium), considering the heat
           contributions from the liquid from the tray above, liquid bottoms, and vapor to the tray above.
         - reboiler_liq_enthalpy_calc: Calculates liquid enthalpy in the reboiler based on temperature.
         - reboiler_vap_enthalpy_calc: Calculates vapor enthalpy in the reboiler based on temperature.
@@ -800,25 +1092,39 @@ def _build_reboiler_energy_balance(m):
     # Energy balance for reboiler
     @m.Constraint()
     def reboiler_energy_balance(_):
-        return m.Qb + sum(
-            m.L[c, t + 1] * m.H_L[c, t + 1]  # Heat of liquid from tray above
-            - m.B[c] * m.H_L[c, t]  # heat of liquid bottoms if reboiler
-            - m.V[c, t] * m.H_V[c, t]  # heat of vapor to tray above
-            for c in m.comps) * 1E-3 == 0  # Ensuring net heat in reboiler is zero (equilibrium)
+        return (
+            m.Qb
+            + sum(
+                m.L[c, t + 1] * m.H_L[c, t + 1]  # Heat of liquid from tray above
+                - m.B[c] * m.H_L[c, t]  # heat of liquid bottoms if reboiler
+                - m.V[c, t] * m.H_V[c, t]  # heat of vapor to tray above
+                for c in m.comps
+            )
+            * 1e-3
+            == 0
+        )  # Ensuring net heat in reboiler is zero (equilibrium)
 
     # Constraints to calculate enthalpy for liquid and vapor based on temperature for reboiler
     @m.Constraint(m.comps)
     def reboiler_liq_enthalpy_calc(_, c):
-        return m.H_L[c, t] == m.liq_enthalpy_expr[t, c]  # Liquid enthalpy as the function of temperature
+        return (
+            m.H_L[c, t] == m.liq_enthalpy_expr[t, c]
+        )  # Liquid enthalpy as the function of temperature
 
     @m.Constraint(m.comps)
     def reboiler_vap_enthalpy_calc(_, c):
-        return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]  # Vapor enthalpy as the function of temperature
+        return (
+            m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
+        )  # Vapor enthalpy as the function of temperature
 
 
 if __name__ == "__main__":
     # Inputs
     NT = 17  # Total number of trays
-    model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}  # Model arguments
+    model_args = {
+        'min_trays': 8,
+        'max_trays': NT,
+        'xD': 0.95,
+        'xB': 0.95,
+    }  # Model arguments
     m = build_column(**model_args)  # Building the column model
-

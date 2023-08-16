@@ -4,6 +4,7 @@ References:
 - Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
 - Bernal, David E., et al. "Process Superstructure Optimization through Discrete Steepest Descent Optimization: a GDP Analysis and Applications in Process Intensification." Computer Aided Chemical Engineering. Vol. 49. Elsevier, 2022. 1279-1284.
 """
+# TODO The column.py formulates the build column model, state the energy and the mass balances for every part of the column.
 
 from __future__ import division
 
@@ -194,75 +195,75 @@ def build_column(
             initialize=init['y'],
         )
 
-        # Component liquid flows from tray variable [kmol/s]
+        # Component liquid flows from tray variable [mol/s]
         m.L = Var(
             m.comps,
             m.trays,
-            doc='component liquid flows from tray [kmol/s]',
+            doc='component liquid flows from tray [mol/s]',
             domain=NonNegativeReals,
             bounds=(0, max_flow),
             initialize=init['L'],
         )
 
-        # Component vapor flows from tray variable [kmol/s]
+        # Component vapor flows from tray variable [mol/s]
         m.V = Var(
             m.comps,
             m.trays,
-            doc='component vapor flows from tray [kmol/s]',
+            doc='component vapor flows from tray [mol/s]',
             domain=NonNegativeReals,
             bounds=(0, max_flow),
             initialize=init['V'],
         )
 
-        # Liquid flows from tray variable [kmol/s]
+        # Liquid flows from tray variable [mol/s]
         m.liq = Var(
             m.trays,
             domain=NonNegativeReals,
-            doc='liquid flows from tray [kmol/s]',
+            doc='liquid flows from tray [mol/s]',
             initialize=init['liq'],
             bounds=(0, max_flow),
         )
 
-        # Vapor flows from tray variable [kmol/s]
+        # Vapor flows from tray variable [mol/s]
         m.vap = Var(
             m.trays,
             domain=NonNegativeReals,
-            doc='vapor flows from tray [kmol/s]',
+            doc='vapor flows from tray [mol/s]',
             initialize=init['vap'],
             bounds=(0, max_flow),
         )
 
-        # Bottoms component flows variable [kmol/s]
+        # Bottoms component flows variable [mol/s]
         m.B = Var(
             m.comps,
             domain=NonNegativeReals,
-            doc='bottoms component flows [kmol/s]',
+            doc='bottoms component flows [mol/s]',
             bounds=(0, max_flow),
             initialize=init['B'],
         )
 
-        # Distillate component flows variable [kmol/s]
+        # Distillate component flows variable [mol/s]
         m.D = Var(
             m.comps,
             domain=NonNegativeReals,
-            doc='distillate component flows [kmol/s]',
+            doc='distillate component flows [mol/s]',
             bounds=(0, max_flow),
             initialize=init['D'],
         )
 
-        # Bottoms flow variable [kmol/s]
+        # Bottoms flow variable [mol/s]
         m.bot = Var(
             domain=NonNegativeReals,
             initialize=init['bot'],
             bounds=(0, 100),
-            doc='bottoms flow [kmol/s]',
+            doc='bottoms flow [mol/s]',
         )
 
-        # Distillate flow variable [kmol/s]
+        # Distillate flow variable [mol/s]
         m.dis = Var(
             domain=NonNegativeReals,
             initialize=init['dis'],
-            doc='distillate flow [kmol/s]',
+            doc='distillate flow [mol/s]',
             bounds=(0, 100),
         )
 
@@ -434,75 +435,75 @@ def build_column(
             initialize=0.5,
         )
 
-        # Component liquid flows from tray [kmol]
+        # Component liquid flows from tray [mol/s]
         m.L = Var(
             m.comps,
             m.trays,
-            doc='component liquid flows from tray [kmol]',
+            doc='component liquid flows from tray in mol/s',
             domain=NonNegativeReals,
             bounds=(0, max_flow),
             initialize=50,
         )
 
-        # Component vapor flows from tray [kmol]
+        # Component vapor flows from tray [mol/s]
         m.V = Var(
             m.comps,
             m.trays,
-            doc='component vapor flows from tray [kmol]',
+            doc='component vapor flows from tray in mol/s',
             domain=NonNegativeReals,
             bounds=(0, max_flow),
             initialize=50,
         )
 
-        # Liquid flows from each tray [kmol]
+        # Liquid flows from each tray [mol/s]
         m.liq = Var(
             m.trays,
             domain=NonNegativeReals,
-            doc='liquid flows from tray [kmol]',
+            doc='liquid flows from tray mol/s',
             initialize=100,
             bounds=(0, max_flow),
         )
 
-        # Vapor flows from each tray [kmol]
+        # Vapor flows from each tray [mol/s]
         m.vap = Var(
             m.trays,
             domain=NonNegativeReals,
-            doc='vapor flows from tray [kmol]',
+            doc='vapor flows from tray in mol/s',
             initialize=100,
             bounds=(0, max_flow),
         )
 
-        # Bottoms component flows [kmol]
+        # Bottoms component flows [mol/s]
         m.B = Var(
             m.comps,
             domain=NonNegativeReals,
-            doc='bottoms component flows [kmol]',
+            doc='bottoms component flows in mol/s',
             bounds=(0, max_flow),
             initialize=50,
         )
 
-        # Distillate component flows [kmol]
+        # Distillate component flows [mol/s]
         m.D = Var(
             m.comps,
             domain=NonNegativeReals,
-            doc='distillate component flows [kmol]',
+            doc='distillate component flows in mol/s',
             bounds=(0, max_flow),
             initialize=50,
         )
 
-        # Bottoms flow [kmol]
+        # Bottoms flow [mol/s]
         m.bot = Var(
             domain=NonNegativeReals,
             initialize=50,
             bounds=(0, 100),
-            doc='bottoms flow [kmol]',
+            doc='bottoms flow in mol/s',
         )
 
-        # Distillate flow [kmol]
+        # Distillate flow [mol/s]
         m.dis = Var(
             domain=NonNegativeReals,
             initialize=50,
-            doc='distillate flow [kmol]',
+            doc='distillate flow in mol/s',
             bounds=(0, 100),
         )
 
@@ -725,7 +726,8 @@ def build_column(
     # m.obj = Objective(expr=(m.Qc + m.Qb) * 1E-3, sense=minimize)
 
     # The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units,
-    # and also the number of activated trays, which is obtained by summing up the indicator variables for the trays.
+    # and also the number of activated trays, which is obtained by summing up the indicator variables for the trays by 1E3 [$/No. of Trays].
+    # TODO Add comment regarding the factors
     m.obj = Objective(
         expr=(m.Qc + m.Qb) * 1e3
         + (sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1) * 1e3,
@@ -772,15 +774,14 @@ def build_column(
     ext_var_2 = x_input[1]  # Extract the second external variable from the input value.
 
     if boolean_ref:
-        """Boolean variables and intTrays set definition
-        Define the set of interior trays by excluding condensation and reboil trays from the total tray set.
-        """
+        # Boolean variables and intTrays set definition
+        # Define the set of interior trays by excluding condensation and reboil trays from the total tray set.
         m.intTrays = Set(
             initialize=m.trays - [m.condens_tray, m.reboil_tray],
             doc='Interior trays of the column',
         )
-        """Declare boolean variables for existence of boil-up and reflux flow in each stage, 
-        as well as another boolean variable associated with tray presence and absence."""
+        # Declare boolean variables for existence of boil-up and reflux flow in each stage,
+        # as well as another boolean variable associated with tray presence and absence.
         m.YB = BooleanVar(m.intTrays, doc='Existence of boil-up flow in stage n')
         m.YR = BooleanVar(m.intTrays, doc='Existence of reflux flow in stage n')
         m.YP = BooleanVar(
@@ -828,12 +829,14 @@ def build_column(
 
         for n in m.intTrays:
             # Fix the existence of reflux flow in stage n based on comparison with ext_var_1
+            # ext_var_1 denotes the tray stage where reflux flow occurs.
             if n == ext_var_1:
                 m.YR[n].fix(True)
             else:
                 m.YR[n].fix(False)
 
             # Fix the existence of boil-up flow in stage n based on comparison with ext_var_2
+            # ext_var_2 denotes the tray stage where boil-up flow occurs.
             if n == ext_var_2:
                 m.YB[n].fix(True)
             else:
@@ -1393,18 +1396,21 @@ def _build_tray_phase_equilibrium(m, t, tray):
     # This function defines the relationship between vapor pressure and temperature for each component in a tray
     @tray.Constraint(m.comps)
     def Pvap_relation(_, c):
+        """The equation uses the Antoine equation to relate the vapor pressure to one minus the reduced temperature (represented by the variable x)"""
         k = m.pvap_const[c]
         x = m.Pvap_X[c, t]
-        """ The equation uses the Antoine equation to relate the vapor pressure to the composition (represented by the variable x)"""
         return (log(m.Pvap[c, t]) - log(k['Pc'])) * (1 - x) == (
             k['A'] * x + k['B'] * x**1.5 + k['C'] * x**3 + k['D'] * x**6
         )
 
     @tray.Constraint(m.comps)
     def Pvap_X_defn(_, c):
+        """Defines the relationship between the one minus the reduced temperature variable (Pvap_X) for each component in a tray,
+        and the actual temperature of the tray, normalized by the critical temperature of the component (Tc).
+        Pvap_X is defined as the difference between 1 and the ratio of the tray temperature to
+        the critical temperature of the component, representing the deviation from the critical temperature.
+        """
         k = m.pvap_const[c]
-        """Defines the relationship between the transformed temperature variable (Pvap_X) for each component in a tray, 
-           and the actual temperature of the tray, normalized by the critical temperature of the component (Tc)."""
         return m.Pvap_X[c, t] == 1 - m.T[t] / k['Tc']
 
     # This function calculates the activity coefficient for each component in a tray
@@ -1469,7 +1475,7 @@ def _build_column_heat_relations(m):
             + k['C'] * (m.T[t] ** 3 - m.T_ref**3) / 3
             + k['D'] * (m.T[t] ** 4 - m.T_ref**4) / 4
             + k['E'] * (m.T[t] ** 5 - m.T_ref**5) / 5
-        ) * 1e-3
+        ) * 1e-3  # Convert the result from joules per mole [J/mol] to kilojoules [kJ/mol]
 
     # This loop creates energy balances for all trays
     for t in m.conditional_trays:
@@ -1526,7 +1532,7 @@ def _build_conditional_tray_energy_balance(m, t, tray, no_tray):
                 - m.V[c, t] * m.H_V[c, t]  # heat of vapor to tray above
                 for c in m.comps
             )
-            * 1e-3
+            * 1e-3  # Convert the result from joules per mole [J/mol] to kilojoules [kJ/mol]
             == 0
         )
 
@@ -1689,7 +1695,7 @@ def _build_condenser_energy_balance(m):
                 - m.V[c, t] * m.H_V[c, t]  # Enthalpy of vapor from partial condenser
                 for c in m.comps
             )
-            * 1e-3
+            * 1e-3  # TODO # Convert [kJ/s] into [MJ/s]
             == 0
         )
 
@@ -1704,7 +1710,7 @@ def _build_condenser_energy_balance(m):
                 + m.V[c, t - 1] * m.H_V[c, t - 1]  # Enthalpy of vapor from tray below
                 for c in m.comps
             )
-            * 1e-3
+            * 1e-3  # Convert [kJ/s] into [MJ/s]
             == 0
         )
 
@@ -1754,7 +1760,7 @@ def _build_reboiler_energy_balance(m):
                 - m.V[c, t] * m.H_V[c, t]  # Enthalpy of vapor to tray above
                 for c in m.comps
             )
-            * 1e-3
+            * 1e-3  # Convert the result from joules per mole [J/mol] to kilojoules [kJ/mol]
             == 0
         )
 

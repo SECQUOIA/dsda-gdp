@@ -75,7 +75,7 @@ def build_column(
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene'])  # Initialize component set
     min_T, max_T = 300, 400  # [K] Define temperature range
-    m.T_ref = 298.15  # [K] Define reference temperature
+    m.T_ref = 298.15  # Reference temperature [K]
     max_flow = 500  # Define maximum flow rate [mol/s]
     # Define number of trays, condenser and reboiler trays
     m.max_trays = max_trays

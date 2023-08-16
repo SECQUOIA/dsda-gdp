@@ -99,6 +99,7 @@ def build_column(min_trays, max_trays, xD, xB):
             'Pc': 41.0,
         },
     }
+    # Heat capacity constants for vapor phase and liquid phase
     m.vap_Cp_const = {
         'benzene': {
             'A': -3.392e1,
@@ -119,33 +120,33 @@ def build_column(min_trays, max_trays, xD, xB):
         'benzene': {'A': 1.29e5, 'B': -1.7e2, 'C': 6.48e-1, 'D': 0, 'E': 0},
         'toluene': {'A': 1.40e5, 'B': -1.52e2, 'C': 6.95e-1, 'D': 0, 'E': 0},
     }
-    m.dH_vap = {
-        'benzene': 33.770e3,
-        'toluene': 38.262e3,
-    }  # Enthaply for vaporation [J/mol]
+    # Heat of vaporization for each component [J/mol]
+    m.dH_vap = {'benzene': 33.770e3, 'toluene': 38.262e3}
 
-    m.trays = RangeSet(
-        max_trays, doc='Set of potential trays'
-    )  # Define a set of trays in the column
+    # Define set of potential trays
+    m.trays = RangeSet(max_trays, doc='Set of potential trays')
+    # Define set of trays that can be turned on and off
     m.conditional_trays = Set(
         initialize=m.trays - [m.condens_tray, m.feed_tray, m.reboil_tray],
         doc="Trays that may be turned on and off.",
-    )  # Define a set of trays that can be turned on and off
-    m.tray = Disjunct(
-        m.conditional_trays, doc='Disjunct for tray existence'
-    )  # Define a disjunction for tray existence
-    m.no_tray = Disjunct(
-        m.conditional_trays, doc='Disjunct for tray absence'
-    )  # Define a disjunction for tray absence
+    )
+    # Disjunct for tray existence
+    m.tray = Disjunct(m.conditional_trays, doc='Disjunct for tray existence')
+    # Disjunct for tray absence
+    m.no_tray = Disjunct(m.conditional_trays, doc='Disjunct for tray absence')
 
-    # Define a disjunction function that can toggle between tray existence and absence
+    # Disjunction statement defining whether a tray exists or not
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not')
     def tray_no_tray(b, t):
+        """Disjunction statement defining whether a tray exists or not""" ""
         return [b.tray[t], b.no_tray[t]]
 
+    # Constraint for minimum number of trays, adding 1 for feed tray
     m.minimum_num_trays = Constraint(
-        expr=sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1 >= min_trays
-    )  # Ensure minimum number of trays
+        expr=sum(m.tray[t].indicator_var for t in m.conditional_trays)
+        + 1  # for feed tray
+        >= min_trays
+    )
 
     # Define variables
     m.T_feed = Var(
@@ -877,7 +878,7 @@ def _build_column_heat_relations(m):
             + k['C'] * (m.T[t] ** 3 - m.T_ref**3) / 3
             + k['D'] * (m.T[t] ** 4 - m.T_ref**4) / 4
             + k['E'] * (m.T[t] ** 5 - m.T_ref**5) / 5
-        ) * 1e-6 # Convert from J/mol to MJ/mol
+        ) * 1e-6  # Convert from J/mol to MJ/mol
 
     # Vapor enthalpy expression for each component on each tray
     @m.Expression(m.trays, m.comps)
@@ -890,7 +891,7 @@ def _build_column_heat_relations(m):
             + k['C'] * (m.T[t] ** 3 - m.T_ref**3) / 3
             + k['D'] * (m.T[t] ** 4 - m.T_ref**4) / 4
             + k['E'] * (m.T[t] ** 5 - m.T_ref**5) / 5
-        ) * 1e-3 # Convert from J/mol to kJ/mol
+        ) * 1e-3  # Convert from J/mol to kJ/mol
 
     # Energy balance constraints for each tray
     for t in m.conditional_trays:
@@ -1114,7 +1115,7 @@ def _build_condenser_energy_balance(m):
                 - m.V[c, t] * m.H_V[c, t]  # heat of vapor from partial condenser
                 for c in m.comps
             )
-            * 1e-3 # TODO Converts [kJ/s] into [MJ/s]
+            * 1e-3  # TODO Converts [kJ/s] into [MJ/s]
             == 0
         )  # Ensuring net heat in partial condenser is zero (equilibrium)
 
@@ -1130,7 +1131,7 @@ def _build_condenser_energy_balance(m):
                 + m.V[c, t - 1] * m.H_V[c, t - 1]  # heat of vapor from tray below
                 for c in m.comps
             )
-            * 1e-3 # TODO Converts [kJ/s] into [MJ/s]
+            * 1e-3  # TODO Converts [kJ/s] into [MJ/s]
             == 0
         )  # Ensuring net heat in total condenser is zero (equilibrium)
 

@@ -7,7 +7,7 @@ References:
 # The column.py formulates the build column model, state the energy and the mass balances for every part of the column.
 # If the initial value for the varaible is given the model will use the initial value as the initial guess for the solver.
 # If the initial value is not given the model will use the default value for the initial guess.
-# There exist the code dealing activation or deactivation of trays in a distillation column based on the existence of specific flows, 
+# There exist the code dealing activation or deactivation of trays in a distillation column based on the existence of specific flows,
 # and it then applies several transformations to ensure the model can be solved using dsda.
 
 from __future__ import division
@@ -146,7 +146,7 @@ def build_column(
     # Disjunction statement defining whether a tray exists or not
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not')
     def tray_no_tray(b, t):
-        """Disjunction statement defining whether a tray exists or not""" ""
+        """Disjunction statement defining whether a tray exists or not"""
         return [b.tray[t], b.no_tray[t]]
 
     # Constraint for minimum number of trays, adding 1 for feed tray
@@ -794,7 +794,7 @@ def build_column(
         # Logical constraints
         @m.LogicalConstraint()
         def one_reflux(m):
-            """Ensure that only one reflux flow exists.""""""Ensure that only one reflux flow exists."""
+            """Ensure that only one reflux flow exists.""" """Ensure that only one reflux flow exists."""
             return exactly(1, m.YR)
 
         @m.LogicalConstraint()
@@ -1137,7 +1137,7 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
         t: Tray number for which the constraints are being defined (integer).
         tray: Disjunct object representing the case when the tray exists in the column.
         no_tray: Disjunct object representing the case when the tray is absent in the column.
-    
+
     Return:
         None. The function adds constraints to the model but does not return a value.
     """
@@ -1281,7 +1281,7 @@ def _build_condenser_mass_balance(m):
     """
     t = m.condens_tray  # The condenser tray number
 
-    #     # Mass balance for each component in the condenser tray
+    # Mass balance for each component in the condenser tray
     @m.Constraint(m.comps)
     def condenser_mass_balance(_, c):
         """Mass balance for each component in the condenser tray."""
@@ -1470,7 +1470,7 @@ def _build_column_heat_relations(m):
     @m.Expression(m.trays, m.comps)
     def liq_enthalpy_expr(_, t, c):
         k = m.liq_Cp_const[c]
-        """The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature[kJ/mol]"""
+        """The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature [kJ/mol]"""
         return (
             k['A'] * (m.T[t] - m.T_ref)
             + k['B'] * (m.T[t] ** 2 - m.T_ref**2) / 2
@@ -1627,7 +1627,9 @@ def _build_feed_tray_energy_balance(m):
                 - m.V[c, t] * m.H_V[c, t]  # Heat of vapor to tray above
                 for c in m.comps
             )
-        ) * 1e-3 == 0 # Convert the result from [kJ/mol] to [MJ/mol]
+        ) * (
+            1e-3  # Convert the result from [kJ/mol] to [MJ/mol]
+        ) == 0
 
     @m.Constraint(m.comps)
     def feed_tray_liq_enthalpy_calc(_, c):
@@ -1649,7 +1651,7 @@ def _build_feed_tray_energy_balance(m):
             + k['C'] * (m.T_feed**3 - m.T_ref**3) / 3
             + k['D'] * (m.T_feed**4 - m.T_ref**4) / 4
             + k['E'] * (m.T_feed**5 - m.T_ref**5) / 5
-        ) * 1e-6 # Convert the result from [J/mol] to [MJ/mol]
+        ) * 1e-6  # Convert the result from [J/mol] to [MJ/mol]
 
     @m.Constraint(m.comps)
     def feed_liq_enthalpy_calc(_, c):

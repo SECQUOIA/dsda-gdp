@@ -50,22 +50,17 @@ from pyomo.opt import (
 from pyomo.opt.base.solvers import SolverFactory  # Base class for solver factories.
 
 
-def build_column(
-        min_trays,
-        max_trays,
-        xD,
-        xB
-):
+def build_column(min_trays, max_trays, xD, xB):
     """
     Builds the column model.
     References: Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
-    
+
     Args:
         min_trays (int): Minimum number of trays in the column
         max_trays (int): Maximum number of trays in the column
         xD (float): Distillate purity
         xB (float): Bottoms purity
-        
+
     Returns:
         m (ConcreteModel): Pyomo model
     """
@@ -139,7 +134,7 @@ def build_column(
     # Disjunction statement defining whether a tray exists or not
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not')
     def tray_no_tray(b, t):
-        """Disjunction statement defining whether a tray exists or not""" ""
+        """Disjunction statement defining whether a tray exists or not"""
         return [b.tray[t], b.no_tray[t]]
 
     # Constraint for minimum number of trays, adding 1 for feed tray
@@ -269,7 +264,7 @@ def build_column(
     m.Pvap = Var(
         m.comps,
         m.trays,
-        doc='pure component vapor pressure of component on tray in bar',
+        doc='pure component vapor pressure of component on tray [bar]',
         domain=NonNegativeReals,
         bounds=(1e-3, 5),
         initialize=0.4,
@@ -293,13 +288,13 @@ def build_column(
         m.comps,
         m.trays,
         bounds=(0.1, 16),
-        doc='Liquid molar enthalpy of component in tray (kJ/mol)',
+        doc='Liquid molar enthalpy of component in tray [kJ/mol]',
     )  # Liquid molar enthalpy of component in tray [kJ/mol]
     m.H_V = Var(
         m.comps,
         m.trays,
         bounds=(30, 16 + 40),
-        doc='Vapor molar enthalpy of component in tray (kJ/mol)',
+        doc='Vapor molar enthalpy of component in tray [kJ/mol]',
     )  # Vapor molar enthalpy of component in tray [kJ/mol]
     m.H_L_spec_feed = Var(
         m.comps,
@@ -528,7 +523,7 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
         t: Tray number for which the constraints are being defined (integer).
         tray: Disjunct object representing the case when the tray exists in the column.
         no_tray: Disjunct object representing the case when the tray is absent in the column.
-    
+
     Return:
         None. The function adds constraints to the model but does not return a value.
     """
@@ -672,7 +667,7 @@ def _build_condenser_mass_balance(m):
     """
     t = m.condens_tray  # The condenser tray number
 
-    #     # Mass balance for each component in the condenser tray
+    # Mass balance for each component in the condenser tray
     @m.Constraint(m.comps)
     def condenser_mass_balance(_, c):
         """Mass balance for each component in the condenser tray."""
@@ -772,7 +767,7 @@ def _build_tray_phase_equilibrium(m, t, tray):
            phase equilibrium constants, relative vapor pressure, and temperature-dependent factors.
         t: The specific tray number for which the phase equilibrium is being modeled.
         tray: A container object within the model representing the tray for which the constraints are being built.
-    
+
     Constraints:
         - raoults_law: Models the relationship between vapor and liquid composition for each component on the tray
           using Raoult's law.
@@ -782,8 +777,8 @@ def _build_tray_phase_equilibrium(m, t, tray):
           component on the tray using the Antoine equation.
         - Pvap_X_defn: Defines the temperature-dependent part of the relative vapor pressure for each component on the
           tray.
-        - gamma_calc: Assumes an ideal solution (activity coefficient, gamma = 1) for each component on the tray.    
-    
+        - gamma_calc: Assumes an ideal solution (activity coefficient, gamma = 1) for each component on the tray.
+
     Return:
         None: The function adds constraints directly to the model object and does not
         return a value.
@@ -868,7 +863,7 @@ def _build_column_heat_relations(m):
     @m.Expression(m.trays, m.comps)
     def liq_enthalpy_expr(_, t, c):
         k = m.liq_Cp_const[c]
-        """The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature[kJ/mol]"""
+        """The equation calculates the enthalpy based on the heat capacity coefficients and the temperature difference from a reference temperature [kJ/mol]"""
         return (
             k['A'] * (m.T[t] - m.T_ref)
             + k['B'] * (m.T[t] ** 2 - m.T_ref**2) / 2
@@ -1025,7 +1020,9 @@ def _build_feed_tray_energy_balance(m):
                 - m.V[c, t] * m.H_V[c, t]  # Heat of vapor to tray above
                 for c in m.comps
             )
-        ) * 1e-3 == 0 # Convert the result from [kJ/mol] to [MJ/mol]
+        ) * (
+            1e-3  # Convert the result from [kJ/mol] to [MJ/mol]
+        ) == 0
 
     @m.Constraint(m.comps)
     def feed_tray_liq_enthalpy_calc(_, c):
@@ -1047,7 +1044,7 @@ def _build_feed_tray_energy_balance(m):
             + k['C'] * (m.T_feed**3 - m.T_ref**3) / 3
             + k['D'] * (m.T_feed**4 - m.T_ref**4) / 4
             + k['E'] * (m.T_feed**5 - m.T_ref**5) / 5
-        ) * 1e-6 # Convert the result from [J/mol] to [MJ/mol]
+        ) * 1e-6  # Convert the result from [J/mol] to [MJ/mol]
 
     @m.Constraint(m.comps)
     def feed_liq_enthalpy_calc(_, c):

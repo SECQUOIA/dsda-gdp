@@ -2,7 +2,7 @@
 Distillation column model for 2018 PSE conference
 References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
 """
-# TODO The code imports the functions from the column.py and gdp_column.py. 
+# The code imports the functions from the column.py and gdp_column.py. 
 # a script for solving Generalized Disjunctive Programming (GDP) problems using a variety of methods, 
 # specifically the Mixed Integer Non-Linear Programming (MINLP) and GDPopt methods, 
 # and a particular method called D-SDA MINLP. 

@@ -8,7 +8,7 @@ References: A comparative study between GDP and NLP formulations for conceptual 
 # and a particular method called D-SDA MINLP.
 
 # Import division from the future to make it available in Python 2.7 and below
-from __future__ import division6
+from __future__ import division
 
 # Import various modules and functions needed for the script
 import csv  # To handle CSV files

@@ -1,169 +1,148 @@
 from __future__ import division
-"""
 
-"""
-# Imports for various utilities
-import csv  # To work with csv files
-import json  # To work with json files
-import os  # To interact with the operating system
-from math import ceil, fabs  # Importing ceil and fabs functions from math module
+import csv
+import json
+import os
+from math import ceil, fabs
 
-# Imports for visualization and graph operations
-import matplotlib.pyplot as plt  # Used for creating static, animated, and interactive visualizations in Python
-import networkx as nx  # Allows the creation, manipulation, and study of the structure, dynamics, and functions of complex networks.
+import matplotlib.pyplot as plt
+import networkx as nx
+import pyomo.environ as pe
+import logging
+from pyomo.environ import SolverFactory, Suffix, value
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.util.infeasible import log_infeasible_constraints
 
-# Imports for optimization
-import pyomo.environ as pe  # Importing the Pyomo module
-import logging  # Logging module to log messages
-from pyomo.environ import SolverFactory, Suffix, value  # SolverFactory is a factory class for creating solver plugins. Suffix and value are for accessing solver related information.
-from pyomo.gdp import Disjunct, Disjunction  # Imports for GDP model
-from pyomo.util.infeasible import log_infeasible_constraints  # Logging infeasible constraints
-
-# Imports for modules in the project
-from gdp.cstr.gdp_reactor import build_cstrs  # Module to build the CSTRs
-from gdp.dsda.dsda_functions import (  # Importing various functions from dsda_functions module
-                                    external_ref,
-                                    extvars_gdp_to_mip,
-                                    generate_initialization,
-                                    get_external_information,
-                                    initialize_model,
-                                    solve_complete_external_enumeration,
-                                    solve_subproblem, solve_with_dsda,
-                                    solve_with_gdpopt, solve_with_minlp,
-                                    visualize_dsda)
-
+from gdp.cstr.gdp_reactor import build_cstrs
+from gdp.dsda.dsda_functions import (external_ref,
+                                     extvars_gdp_to_mip,
+                                     generate_initialization,
+                                     get_external_information,
+                                     initialize_model,
+                                     solve_complete_external_enumeration,
+                                     solve_subproblem, solve_with_dsda,
+                                     solve_with_gdpopt, solve_with_minlp,
+                                     visualize_dsda)
 
 
 def visualize_cstr_superstructure(m, NT):
-    x = list((range(1, NT+1)))  # Creates a list of integers from 1 to NT+1
+    x = list((range(1, NT+1)))
 
-    # Initialize lists for bypasses (b) and reactors(r) and variable for recycle
-    xb = []  # Stores the bypasses
-    xr = []  # Stores the reactors
-    recycle = 0  # Indicates if recycling is in use
+    # Initialize bypasses (b), reactors(r) and recycle
+    xb = []
+    xr = []
+    recycle = 0
 
-    yp = {}  # Dictionary to store reactor (or not) information
-    yr = {}  # Dictionary to store recycle (or not) information
+    yp = {}
+    yr = {}
 
-    # Populates yp and yr with binary indicator variable values from the model
+    # Use information from solved model
     for n in m.N:
         yp[n] = pe.value(pe.value(m.YP[n].get_associated_binary()))
         yr[n] = pe.value(pe.value(m.YR[n].get_associated_binary()))
 
-    # Classifies units as bypasses (b) or reactors(r) and determines recycle status
+    # Classify units in bypasses (b) or reactors(r) and determine recycle
     for i in x:
-        if yp[i] > 0.5:  # If the unit is a reactor
+        if yp[i] > 0.5:
             xr.append(i)
-        else:  # If the unit is a bypass
+        else:
             xb.append(i)
-        if yr[i] > 0.5:  # If the unit is a recycle
+        if yr[i] > 0.5:
             recycle = i
 
-    # Creates labels for bypasses (b), reactors(r), input/output (f) and recycle(recy)
+    # Create labels for bypasses (b), reactors(r), input/output (f) and recycle(recy)
     blabels = dict(zip(range(1, len(xb)+1), xb[::-1]))
     rlabels = dict(zip(range(len(xb)+1, len(xb)+1+len(xr)), xr[::-1]))
     flabels = {0: '', NT+1: ''}
     recylabels = {'r1': '', 'r2': '', 'r3': '', 'r4': ''}
 
-    # Creates positions (pos) for bypasses (b), reactors(r), input/output(f) and recycle(recy)
-    posb = {i: (i, 0) for i in range(1, len(xb)+1)}
-    posr = {i: (i, 0) for i in range(len(xb)+1, len(xb)+1+len(xr))}
+    # Create posicions (pos) for bypasses (b), reactors(r), input/output(f) and recycle(recy)
+    posb = {}
+    posr = {}
     posf = {0: (0.2, 0), NT+1: (NT+1, 0)}
-    posrecy = {'r1': (NT+0.5, -0.0009), 'r2': (NT+0.5, 0.008), 'r3': (NT-recycle+0.5, 0.007), 'r4': (NT-recycle+0.5, -0.0009)}
+    posrecy = {'r1': (NT+0.5, -0.0009), 'r2': (NT+0.5, 0.008),
+               'r3': (NT-recycle+0.5, 0.007), 'r4': (NT-recycle+0.5, -0.0009)}
 
-    # Creates flow arrow from input to output
+    for i in range(1, len(xb)+1):
+        posb[i] = (i, 0)
+
+    for i in range(len(xb)+1, len(xb)+1+len(xr)):
+        posr[i] = (i, 0)
+
+    # Create flow arrow from input to output
     arcsf = [(0, NT+1)]
 
-    # Declare a directed graph
+    # Declare graph
     graph = nx.DiGraph()
 
-    # Draws labels, nodes and edges for input/output
+    # Graph input/out(f)
     nx.draw_networkx_labels(graph, posf, flabels)
     nx.draw_networkx_edges(graph, posf, arcsf, width=1, arrowsize=10)
-    nx.draw_networkx(graph, posf, node_size=1, node_color='black', nodelist=flabels, with_labels=True, node_shape='', edgecolors='black')
+    nx.draw_networkx(graph, posf, node_size=1, node_color='black',
+                     nodelist=flabels, with_labels=True, node_shape='', edgecolors='black')
 
-    # Draws labels and nodes for bypasses
+    # Graph bypasses(b)
     nx.draw_networkx_labels(graph, posb, blabels)
-    nx.draw_networkx(graph, posb, node_size=900, node_color='whitesmoke', width=1.5, nodelist=blabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=0.2)
+    nx.draw_networkx(graph, posb, node_size=900, node_color='whitesmoke', width=1.5,
+                     nodelist=blabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=0.2)
 
-    # Draws labels and nodes for reactors
+    # Graph reactors(r)
     nx.draw_networkx_labels(graph, posr, rlabels)
-    nx.draw_networkx(graph, posr, node_size=900, node_color='lightslategray', width=1.5, nodelist=rlabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=1.5)
+    nx.draw_networkx(graph, posr, node_size=900, node_color='lightslategray', width=1.5,
+                     nodelist=rlabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=1.5)
 
-    # Draws labels, nodes and edges for recycle if it exists
+    # Graph recycle(recy) if it exists
     if recycle != 0:
         arcsrecy = [('r1', 'r2'), ('r3', 'r4')]
         pairs = list(zip(list(arcsrecy), ['R', 'R']))
         edgelabels = dict(pairs)
         nx.draw_networkx_labels(graph, posrecy, recylabels)
-        nx.draw_networkx_edges(graph, posrecy, arcsrecy, width=1, arrowsize=10)
-        nx.draw_networkx(graph, posrecy, node_size=0, node_color='white', nodelist=recylabels, node_shape='', edgecolors='black')
-        nx.draw_networkx_edge_labels(graph, posrecy, edge_labels=edgelabels)
+        nx.draw_networkx_edges(
+            graph, posrecy, arcsrecy, width=1, arrowsize=10)
+        nx.draw_networkx(graph, posrecy, node_size=0, node_color='white',
+                         nodelist=recylabels, node_shape='', edgecolors='black')
+        nx.draw_networkx_edge_labels(
+            graph, posrecy, edge_labels=edgelabels)
 
-    plt.show()  # Shows the graph
-
+    plt.show()
 
 
 def problem_logic_cstr(m):
-    # Initialize the list of logical expressions
     logic_expr = []
-    
-    # Loop through each unit operation
     for n in m.N:
-        
-        # If recycling is active at a given stage, then the indicator variable 
-        # for the recycle disjunct must be active
         logic_expr.append([m.YR[n], m.YR_is_recycle[n].indicator_var])
-        
-        # If recycling is not active at a given stage, then the indicator variable 
-        # for the "no recycle" disjunct must be active
         logic_expr.append([~m.YR[n], m.YR_is_not_recycle[n].indicator_var])
-        
-        # The reactor can only be a CSTR if there is no unreacted feed in the 
-        # previous stages or if there is unreacted feed in the current stage
-        logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]), m.YP_is_cstr[n].indicator_var])
-        
-        # If the reactor is not a CSTR, then it must be a bypass
-        logic_expr.append([~pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]), m.YP_is_bypass[n].indicator_var])
-        
-        # The reactor can only operate if there is no unreacted feed in the previous stages 
-        # or if there is unreacted feed in the current stage
-        logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]), m.YP[n]])
-    
-    # Return the list of logical expressions
+        logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(
+            1, n)), m.YF[n]), m.YP_is_cstr[n].indicator_var])
+        logic_expr.append([~pe.lor(pe.land(~m.YF[n2] for n2 in range(
+            1, n)), m.YF[n]), m.YP_is_bypass[n].indicator_var])
+        logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(
+            1, n)), m.YF[n]), m.YP[n]])
     return logic_expr
-
 
 
 if __name__ == "__main__":
 
-    # Number of stages to try for the model
+    # Results
     NTs = range(5, 26, 1)
-
-    # Maximum time allowed for solving each instance
+    # NTs = [5]
     timelimit = 900
-
-    # Starting point for D-SDA
     starting_point = [1, 1]
 
-    # Enable verbose output
     globaltee = True
-
-    # Setup logging to only show errors
+    # Setting logging level to ERROR to avoid printing FBBT warning of some constraints not implemented
     logging.basicConfig(level=logging.ERROR)
 
-    # Setup columns for csv output
-    csv_columns = ['Method', 'Approach', 'Solver', 'Objective', 'Time', 'Status', 'User_time', 'NT']
+    csv_columns = ['Method', 'Approach', 'Solver',
+                   'Objective', 'Time', 'Status', 'User_time', 'NT']
     dict_data = []
 
-    # Setup file paths
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    csv_file = os.path.join(dir_path, "results", "cstr_results.csv")
+    csv_file = os.path.join(
+        dir_path, "results", "cstr_results.csv")
 
-    # List of NLP solvers to try
-    nlps = ['knitro', 'baron'] # , 'msnlp']
+    nlps = ['knitro', 'baron']# , 'msnlp']
 
-    # Setup options for each NLP solver
     nlp_opts = dict((nlp, {}) for nlp in nlps)
     # nlp_opts['msnlp']['add_options'] = [
     #     'GAMS_MODEL.optfile = 1;'
@@ -173,10 +152,8 @@ if __name__ == "__main__":
     #     '$offecho \n'
     # ]
 
-    # List of MINLP solvers to try
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
-    # Setup options for each MINLP solver
     minlps_opts = dict((minlp, {}) for minlp in minlps)
     minlps_opts['dicopt']['add_options'] = [
         'GAMS_MODEL.optfile = 1;'
@@ -196,41 +173,32 @@ if __name__ == "__main__":
         'subsolver knitro \n'
         '$offecho \n'
     ]
-
-    # List of transformations to try
     transformations = ['bigm', 'hull']
-
-    # List of k-values to try for D-SDA
     ks = ['Infinity', '2']
-
-    # List of strategies to try for GDPopt
     strategies = ['LOA', 'GLOA', 'LBB']
 
-    # Loop over each number of stages
     for NT in NTs:
-        # Check if initialization exists for this number of stages
+        # Create initialization for all methods starting with a single reactor
         json_file = os.path.join(
             dir_path, 'gdp/dsda/', 'cstr_' + str(NT) + '_initialization.json')
         if os.path.exists(json_file):
             init_path = json_file
         else:
-            # If not, create an initial solution
             m = build_cstrs(NT)
             ext_ref = {m.YF: m.N, m.YR: m.N}
             reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
                 m, ext_ref, tee=globaltee)
             m_fixed = external_ref(
-                m=m, 
-                x=[1, 1], 
-                extra_logic_function=problem_logic_cstr, 
-                dict_extvar=reformulation_dict, 
-                tee=globaltee
-                )
+                m=m,
+                x=[1, 1],
+                extra_logic_function=problem_logic_cstr,
+                dict_extvar=reformulation_dict,
+                tee=globaltee,
+            )
             m_solved = solve_subproblem(
                 m=m_fixed, subproblem_solver='baron', timelimit=100, tee=True)
             init_path = generate_initialization(
                 m=m_solved, starting_initialization=True, model_name='cstr_'+str(NT))
-
 
         # # MINLP
         # for solver in minlps:
@@ -272,19 +240,15 @@ if __name__ == "__main__":
         #         dict_data.append(new_result)
         #         print(new_result)
 
-         # Setup for D-SDA algorithm
+        # D-SDA
         m = build_cstrs(NT)
         ext_ref = {m.YF: m.N, m.YR: m.N}
         get_external_information(m, ext_ref, tee=False)
 
-        # Loop over each NLP solver
         for solver in nlps:
-            # Loop over each k-value
             for k in ks:
-                # Loop over each transformation
                 for transformation in ['hull','bigm']:
                     new_result = {}
-                    # Run the D-SDA algorithm
                     m_solved, _, _ = solve_with_dsda(
                         model_function=build_cstrs,
                         model_args={'NT': NT},
@@ -304,13 +268,11 @@ if __name__ == "__main__":
                         tee=False,
                         global_tee=False,
                     )
-                    # Store the result
                     new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
                         m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime, 'NT': NT}
                     dict_data.append(new_result)
                     print(new_result)
 
-        # Try to write the results to a csv file
         try:
             with open(csv_file, 'w') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=csv_columns)

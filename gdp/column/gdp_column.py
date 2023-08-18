@@ -413,8 +413,8 @@ def build_column(min_trays, max_trays, xD, xB):
     # The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units,
     # and also the number of activated trays, which is obtained by summing up the indicator variables for the trays by 1E3 [$/No. of Trays].
     m.obj = Objective(
-        expr=(m.Qc + m.Qb) * 1e3
-        + (sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1) * 1e3,
+        expr=(m.Qc + m.Qb) * 1e3 # [MJ/s] to [$]
+        + (sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1) * 1e3 # [No. of Trays] to [$],
         sense=minimize,
     )
 

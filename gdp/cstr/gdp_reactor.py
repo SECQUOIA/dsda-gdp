@@ -4,9 +4,13 @@ import matplotlib.pyplot as plt  # Library for creating plots and visualizations
 import networkx as nx  # Python package for working with complex networks
 import pyomo.environ as pe  # Main entry point for using the Pyomo optimization modeling language
 from pyomo.core.base.misc import display  # Function for printing Pyomo model components
-from pyomo.gdp import Disjunct, Disjunction  # Classes for modeling disjunctive constraints in Pyomo's GDP framework
-from pyomo.opt.base.solvers import SolverFactory  # Class for creating solver objects for optimization
-
+from pyomo.gdp import (
+    Disjunct,
+    Disjunction,
+)  # Classes for modeling disjunctive constraints in Pyomo's GDP framework
+from pyomo.opt.base.solvers import (
+    SolverFactory,
+)  # Class for creating solver objects for optimization
 
 
 def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
@@ -26,8 +30,12 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     m = pe.ConcreteModel(name='gdp_reactors')
 
     # SETS
-    m.I = pe.Set(initialize=['A', 'B'], doc='Set of components')  # Set of components 'A' and 'B'
-    m.N = pe.RangeSet(1, NT, doc='Set of units in the superstructure')  # Set of units in the superstructure, ranging from 1 to NT
+    m.I = pe.Set(
+        initialize=['A', 'B'], doc='Set of components'
+    )  # Set of components 'A' and 'B'
+    m.N = pe.RangeSet(
+        1, NT, doc='Set of units in the superstructure'
+    )  # Set of units in the superstructure, ranging from 1 to NT
 
     # PARAMETERS
     m.k = pe.Param(initialize=2)  # Kinetic constant [L/(mol*s)]
@@ -38,25 +46,22 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Initial concentration of reagents [mol/L]
     m.C0 = pe.Param(m.I, initialize=C0_Def)
 
-
     # Inlet molar flow [mol/s]
     def F0_Def(m, i):
-    
-    # Function to calculate the inlet molar flow for each component i in the set m.I.
-    # The calculation is done by multiplying the initial concentration of the component m.C0[i]
-    # with the inlet volumetric flow m.QF0. The result is the inlet molar flow for component i.
+        # Function to calculate the inlet molar flow for each component i in the set m.I.
+        # The calculation is done by multiplying the initial concentration of the component m.C0[i]
+        # with the inlet volumetric flow m.QF0. The result is the inlet molar flow for component i.
 
-    # Args:
-    #     m: Pyomo model object
-    #     i: Component index
+        # Args:
+        #     m: Pyomo model object
+        #     i: Component index
 
-    # Returns:
-    #     Inlet molar flow for component i
+        # Returns:
+        #     Inlet molar flow for component i
 
         return m.C0[i] * m.QF0
 
     m.F0 = pe.Param(m.I, initialize=F0_Def)
-
 
     # BOOLEAN VARIABLES
 
@@ -76,16 +81,13 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     m.Q = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
 
     # Outlet flow rate recycle activation of the superstructure unit [L/s]
-    m.QFR = pe.Var(m.N, initialize=0,
-                   within=pe.NonNegativeReals, bounds=(0, 10))
+    m.QFR = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
 
     # Molar flow [mol/s]
-    m.F = pe.Var(m.I, m.N, initialize=0,
-                 within=pe.NonNegativeReals, bounds=(0, 10))
+    m.F = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
 
     # Molar flow  recycle activation [mol/s]
-    m.FR = pe.Var(m.I, m.N, initialize=0,
-                  within=pe.NonNegativeReals, bounds=(0, 10))
+    m.FR = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
 
     # Reaction rate [mol/(L*s)]
     m.rate = pe.Var(m.I, m.N, initialize=0, within=pe.Reals, bounds=(-10, 10))
@@ -116,7 +118,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     def unreact_mole_rule(m, i, n):
         if n == NT:
-            return m.F0[i] + m.FR[i, n] - m.F[i, n] + m.rate[i, n]*m.V[n] == 0
+            return m.F0[i] + m.FR[i, n] - m.F[i, n] + m.rate[i, n] * m.V[n] == 0
         else:
             return pe.Constraint.Skip
 
@@ -146,9 +148,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     def react_cont_rule(m, n):
         if n != NT:
-            return m.Q[n+1] + m.QFR[n] - m.Q[n] == 0
+            return m.Q[n + 1] + m.QFR[n] - m.Q[n] == 0
         else:
-            return pe.Constraint.Skip # Skip if n = NT
+            return pe.Constraint.Skip  # Skip if n = NT
 
     m.react_cont = pe.Constraint(m.N, rule=react_cont_rule)
 
@@ -170,48 +172,58 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Splitting point additional constraints: Additional constraints at the splitting point
 
     def split_add_rule(m, i):
-        return m.P[i]*m.Q[1] - m.F[i, 1]*m.QP == 0
+        return m.P[i] * m.Q[1] - m.F[i, 1] * m.QP == 0
 
     m.split_add = pe.Constraint(m.I, rule=split_add_rule)
 
     # Product Specification
 
     def prod_spec_rule(m):
-    # This function defines the product specification rule. 
-    # It sets the product 'B' to be equal to 95% of QP.
-        return m.QP*0.95 - m.P['B'] == 0
+        # This function defines the product specification rule.
+        # It sets the product 'B' to be equal to 95% of QP.
+        return m.QP * 0.95 - m.P['B'] == 0
 
-    m.prod_spec = pe.Constraint(rule=prod_spec_rule)  # Sets the product specification rule as a constraint in the model.
+    m.prod_spec = pe.Constraint(
+        rule=prod_spec_rule
+    )  # Sets the product specification rule as a constraint in the model.
 
     # Volume Constraint
 
     def vol_cons_rule(m, n):
-        # This function defines the volume constraint rule. 
+        # This function defines the volume constraint rule.
         # It ensures the volume at each time step is equal to the volume at the previous time step.
         # However, for the first step, the constraint does not apply.
         if n != 1:
-            return m.V[n] - m.V[n-1] == 0
+            return m.V[n] - m.V[n - 1] == 0
         else:
-            return pe.Constraint.Skip  # If n equals 1, the function returns 'Constraint.Skip' which means no constraint is added for this case.
+            return (
+                pe.Constraint.Skip
+            )  # If n equals 1, the function returns 'Constraint.Skip' which means no constraint is added for this case.
 
-    m.vol_cons = pe.Constraint(m.N, rule=vol_cons_rule)  # Sets the volume constraint rule as a constraint in the model.
+    m.vol_cons = pe.Constraint(
+        m.N, rule=vol_cons_rule
+    )  # Sets the volume constraint rule as a constraint in the model.
 
     # YD Disjunction block equation definition
 
     def build_cstr_equations(disjunct, n):
-    # This function builds the equations for the YD disjunction block.
+        # This function builds the equations for the YD disjunction block.
         m = disjunct.model()  # Accesses the underlying model from the disjunct.
 
         # Reaction rates calculation
         @disjunct.Constraint()
         def YPD_rate_calc(disjunct):
-        # Defines the reaction rate equation based on the power-law rate equation.
-            return m.rate['A', n]*((m.Q[n])**m.order1)*((m.Q[n])**m.order2)+m.k*((m.F['A', n])**m.order1)*((m.F['B', n])**m.order2) == 0
+            # Defines the reaction rate equation based on the power-law rate equation.
+            return (
+                m.rate['A', n] * ((m.Q[n]) ** m.order1) * ((m.Q[n]) ** m.order2)
+                + m.k * ((m.F['A', n]) ** m.order1) * ((m.F['B', n]) ** m.order2)
+                == 0
+            )
 
         # Reaction rate relation
         @disjunct.Constraint()
         def YPD_rate_rel(disjunct):
-        # Defines the reaction rate relation, stating the rate of 'A' plus the rate of 'B' should be zero.
+            # Defines the reaction rate relation, stating the rate of 'A' plus the rate of 'B' should be zero.
             return m.rate['B', n] + m.rate['A', n] == 0
 
         # Volume activation
@@ -249,7 +261,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
             args:
                 disjunct: pyomo block with disjunct to include the constraint
                 n: pyomo set with reactor index
-            return: 
+            return:
                 return constraint
             '''
             # Defines the constraint for deactivating the volume 'c' in the bypass scenario.
@@ -273,14 +285,13 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
             # Defines the constraint for activating the flow rate 'QFR' in the recycle scenario.
             return m.QFR[n] - m.QR == 0
 
-
     def build_no_recycle_equations(disjunct, n):
         m = disjunct.model()  # Accesses the underlying model from the disjunct.
 
         # FR deactivation
         @disjunct.Constraint(m.I)
         def neg_YRD_FR_desact(disjunct, i):
-        # Defines the constraint for deactivating the flow rate 'FR' in the non-recycle scenario.
+            # Defines the constraint for deactivating the flow rate 'FR' in the non-recycle scenario.
             return m.FR[i, n] == 0
 
         # QFR deactivation
@@ -290,11 +301,19 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
             return m.QFR[n] == 0
 
     # Create disjunction blocks
-    m.YR_is_recycle = Disjunct(m.N, rule=build_recycle_equations)  # Creates a disjunct that represents the equations for the recycle scenario.
-    m.YR_is_not_recycle = Disjunct(m.N, rule=build_no_recycle_equations)  # Creates a disjunct that represents the equations for the non-recycle scenario.
+    m.YR_is_recycle = Disjunct(
+        m.N, rule=build_recycle_equations
+    )  # Creates a disjunct that represents the equations for the recycle scenario.
+    m.YR_is_not_recycle = Disjunct(
+        m.N, rule=build_no_recycle_equations
+    )  # Creates a disjunct that represents the equations for the non-recycle scenario.
 
-    m.YP_is_cstr = Disjunct(m.N, rule=build_cstr_equations)  # Creates a disjunct that represents the equations for the reactor operation.
-    m.YP_is_bypass = Disjunct(m.N, rule=build_bypass_equations)  # Creates a disjunct that represents the equations for the bypass operation.
+    m.YP_is_cstr = Disjunct(
+        m.N, rule=build_cstr_equations
+    )  # Creates a disjunct that represents the equations for the reactor operation.
+    m.YP_is_bypass = Disjunct(
+        m.N, rule=build_bypass_equations
+    )  # Creates a disjunct that represents the equations for the bypass operation.
 
     # Create disjunctions
     # These disjunctions model the logic that one and only one scenario can be active at each time step.
@@ -318,7 +337,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     # Unit must be a CSTR to include a recycle
     def cstr_if_recycle_rule(m, n):
-        return m.YR[n].implies(m.YP[n])  # If the recycle scenario is active, then the reactor operation must also be active.
+        return m.YR[n].implies(
+            m.YP[n]
+        )  # If the recycle scenario is active, then the reactor operation must also be active.
 
     m.cstr_if_recycle = pe.LogicalConstraint(m.N, rule=cstr_if_recycle_rule)
 
@@ -330,19 +351,25 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     # There is only one recycle stream
     def one_recycle_rule(m):
-        return pe.exactly(1, m.YR)  # Exactly one of the recycle variables can be active.
+        return pe.exactly(
+            1, m.YR
+        )  # Exactly one of the recycle variables can be active.
 
     m.one_recycle = pe.LogicalConstraint(rule=one_recycle_rule)
 
     # Unit operation in n constraint
     def unit_in_n_rule(m, n):
         if n == 1:
-            return m.YP[n].equivalent_to(True)  # The reactor operation is always active at the first step.
+            return m.YP[n].equivalent_to(
+                True
+            )  # The reactor operation is always active at the first step.
         else:
             # For subsequent steps, the reactor operation is active if either of the following conditions is true:
             # - None of the feed variables in the previous steps is active.
             # - The feed variable at the current step is active.
-            return m.YP[n].equivalent_to(pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]))
+            return m.YP[n].equivalent_to(
+                pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n])
+            )
 
     m.unit_in_n = pe.LogicalConstraint(m.N, rule=unit_in_n_rule)
 
@@ -351,7 +378,8 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def obj_rule(m):
         return sum(m.c[n] for n in m.N)
 
-    m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize)  # Defines the objective function.
+    m.obj = pe.Objective(
+        rule=obj_rule, sense=pe.minimize
+    )  # Defines the objective function.
 
     return m  # Returns the fully defined Pyomo model.
-

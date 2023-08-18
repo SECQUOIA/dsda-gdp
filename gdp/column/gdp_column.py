@@ -176,7 +176,7 @@ def build_column(min_trays, max_trays, xD, xB):
     m.L = Var(
         m.comps,
         m.trays,
-        doc='component liquid flows from tray in mol/s',
+        doc='component liquid flows from tray [mol/s]',
         domain=NonNegativeReals,
         bounds=(0, max_flow),
         initialize=50,
@@ -184,7 +184,7 @@ def build_column(min_trays, max_trays, xD, xB):
     m.V = Var(
         m.comps,
         m.trays,
-        doc='component vapor flows from tray in mol/s',
+        doc='component vapor flows from tray [mol/s]',
         domain=NonNegativeReals,
         bounds=(0, max_flow),
         initialize=50,
@@ -192,14 +192,14 @@ def build_column(min_trays, max_trays, xD, xB):
     m.liq = Var(
         m.trays,
         domain=NonNegativeReals,
-        doc='liquid flows from tray in mol/s',
+        doc='liquid flows from tray [mol/s]',
         initialize=100,
         bounds=(0, max_flow),
     )  # Liquid flows from tray [mol/s]
     m.vap = Var(
         m.trays,
         domain=NonNegativeReals,
-        doc='vapor flows from tray in mol/s',
+        doc='vapor flows from tray [mol/s]',
         initialize=100,
         bounds=(0, max_flow),
     )  # Vapor flows from tray [mol/s]
@@ -213,7 +213,7 @@ def build_column(min_trays, max_trays, xD, xB):
     m.D = Var(
         m.comps,
         domain=NonNegativeReals,
-        doc='distillate component flows in mol/s',
+        doc='distillate component flows [mol/s]',
         bounds=(0, max_flow),
         initialize=50,
     )  # Distillate component flows [mol/s]
@@ -221,12 +221,12 @@ def build_column(min_trays, max_trays, xD, xB):
         domain=NonNegativeReals,
         initialize=50,
         bounds=(0, 100),
-        doc='bottoms flow in mol/s',
+        doc='bottoms flow [mol/s]',
     )  # Bottoms flow [mol/s]
     m.dis = Var(
         domain=NonNegativeReals,
         initialize=50,
-        doc='distillate flow in mol/s',
+        doc='distillate flow [mol/s]',
         bounds=(0, 100),
     )  # Distillate flow [mol/s]
     m.reflux_ratio = Var(
@@ -309,11 +309,11 @@ def build_column(min_trays, max_trays, xD, xB):
         bounds=(30, 16 + 40),
     )  # Component vapor molar enthalpy in feed [kJ/mol]
     m.Qb = Var(
-        domain=NonNegativeReals, doc='reboiler duty (MJ/s)', initialize=1, bounds=(0, 8)
+        domain=NonNegativeReals, doc='reboiler duty [MJ/s]', initialize=1, bounds=(0, 8)
     )  # Reboiler duty [MJ/s]
     m.Qc = Var(
         domain=NonNegativeReals,
-        doc='condenser duty (MJ/s)',
+        doc='condenser duty [MJ/s]',
         initialize=1,
         bounds=(0, 8),
     )  # Condenser duty [MJ/s]
@@ -410,18 +410,18 @@ def build_column(min_trays, max_trays, xD, xB):
         return m.B['toluene'] >= m.bottoms_purity * m.bot
 
     # Define the objective function as the sum of reboiler and condenser duty plus an indicator for tray activation
+    # The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units,
+    # and also the number of activated trays, which is obtained by summing up the indicator variables for the trays by 1E3 [$/No. of Trays].
     m.obj = Objective(
         expr=(m.Qc + m.Qb) * 1e3
         + (sum(m.tray[t].indicator_var for t in m.conditional_trays) + 1) * 1e3,
         sense=minimize,
     )
-    # The objective is to minimize the sum of condenser and reboiler duties, Qc and Qb, multiplied by 1E3 to convert units,
-    # and also the number of activated trays, which is obtained by summing up the indicator variables for the trays.
 
     # Constraint to calculate the reflux ratio
     @m.Constraint()
     def reflux_ratio_calc(m):
-        """Reflux ratio is defined as the ratio of liquid leaving the condenser to the liquid returned to the column."""
+        """Reflux ratio is the ratio between the distillate flow and the difference in vapor flow in the condenser tray."""
         return m.reflux_frac * (m.reflux_ratio + 1) == m.reflux_ratio
 
     @m.Constraint()

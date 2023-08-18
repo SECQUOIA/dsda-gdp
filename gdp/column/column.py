@@ -462,7 +462,7 @@ def build_column(
         m.liq = Var(
             m.trays,
             domain=NonNegativeReals,
-            doc='liquid flows from tray mol/s',
+            doc='liquid flows from tray [mol/s]',
             initialize=100,
             bounds=(0, max_flow),
         )
@@ -471,7 +471,7 @@ def build_column(
         m.vap = Var(
             m.trays,
             domain=NonNegativeReals,
-            doc='vapor flows from tray in mol/s',
+            doc='vapor flows from tray [mol/s]',
             initialize=100,
             bounds=(0, max_flow),
         )
@@ -480,7 +480,7 @@ def build_column(
         m.B = Var(
             m.comps,
             domain=NonNegativeReals,
-            doc='bottoms component flows in mol/s',
+            doc='bottoms component flows [mol/s]',
             bounds=(0, max_flow),
             initialize=50,
         )
@@ -489,7 +489,7 @@ def build_column(
         m.D = Var(
             m.comps,
             domain=NonNegativeReals,
-            doc='distillate component flows in mol/s',
+            doc='distillate component flows [mol/s]',
             bounds=(0, max_flow),
             initialize=50,
         )
@@ -499,14 +499,14 @@ def build_column(
             domain=NonNegativeReals,
             initialize=50,
             bounds=(0, 100),
-            doc='bottoms flow in mol/s',
+            doc='bottoms flow [mol/s]',
         )
 
         # Distillate flow [mol/s]
         m.dis = Var(
             domain=NonNegativeReals,
             initialize=50,
-            doc='distillate flow in mol/s',
+            doc='distillate flow [mol/s]',
             bounds=(0, 100),
         )
 
@@ -794,7 +794,7 @@ def build_column(
         # Logical constraints
         @m.LogicalConstraint()
         def one_reflux(m):
-            """Ensure that only one reflux flow exists.""" """Ensure that only one reflux flow exists."""
+            """Ensure that only one reflux flow exists."""
             return exactly(1, m.YR)
 
         @m.LogicalConstraint()
@@ -924,10 +924,10 @@ def build_column(
             )
 
             # Fix the indicator variables for the current tray based on the temporary variable, except for the feed tray
-            if temp == 1:
+            if temp == 1 and n != m.feed_tray:
                 m.tray[n].indicator_var.fix(True)
                 m.no_tray[n].indicator_var.fix(False)
-            elif temp == 0:
+            elif temp == 0 and n != m.feed_tray:
                 m.tray[n].indicator_var.fix(False)
                 m.no_tray[n].indicator_var.fix(True)
 

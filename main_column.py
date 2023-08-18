@@ -2,10 +2,10 @@
 Distillation column model for 2018 PSE conference
 References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
 """
-# The code imports the functions from the column.py and gdp_column.py. 
-# a script for solving Generalized Disjunctive Programming (GDP) problems using a variety of methods, 
-# specifically the Mixed Integer Non-Linear Programming (MINLP) and GDPopt methods, 
-# and a particular method called D-SDA MINLP. 
+# The code imports the functions from the column.py and gdp_column.py.
+# a script for solving Generalized Disjunctive Programming (GDP) problems using a variety of methods,
+# specifically the Mixed Integer Non-Linear Programming (MINLP) and GDPopt methods,
+# and a particular method called D-SDA MINLP.
 
 # Import division from the future to make it available in Python 2.7 and below
 from __future__ import division6
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     # logging: Configuring the logging level to ERROR. This will avoid printing out warning messages.
 
     NT = 17
-    timelimit = 900
+    timelimit = 900  # [s]
     model_args = {'min_trays': 8, 'max_trays': NT, 'xD': 0.95, 'xB': 0.95}
     starting_point = [NT - 2, 1]
     globaltee = True
@@ -219,7 +219,7 @@ if __name__ == "__main__":
         '$offecho \n'
     ]
 
-    # There is a note here that using DICOPT with the Hull reformulation might not return the correct results, as per the content of the .lst file.
+    # NOTE: using DICOPT with the Hull reformulation might not return the correct results, as per the content of the .lst file. This is due to initialization.
 
     # For the 'sbb' solver, options are added to specify 'knitro' as both the root solver and the subsolver.
     minlps_opts['sbb']['add_options'] = [
@@ -235,8 +235,7 @@ if __name__ == "__main__":
     # 'bigm' and 'hull' are two common techniques used to transform a Generalized Disjunctive Programming (GDP) problem into a MINLP problem.
     transformations = ['bigm', 'hull']
 
-    # 'ks' variable is defined, but not used in the provided code.
-    # It might be used later in the code as parameters for certain operations, or as constants.
+    # Possible values for the neighborhood search
     ks = ['Infinity', '2']
 
     # 'strategies' variable is defined, possibly representing the algorithmic strategies for solving the problems.
@@ -282,7 +281,7 @@ if __name__ == "__main__":
 
         # The fixed model 'm_fixed' is solved with a subproblem solver (in this case, 'baron').
         m_solved = solve_subproblem(
-            m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee
+            m=m_fixed, subproblem_solver='baron', timelimit=100, tee=globaltee  # [s]
         )
 
         # Initialization data is generated from the solved model and saved to a file.

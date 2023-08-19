@@ -168,6 +168,18 @@ if __name__ == "__main__":
 
     # Dictionary containing options for the NLP solvers
     nlp_opts = dict((nlp, {}) for nlp in nlps)
+    
+    # A dictionary is created where the keys are the names of the Non-Linear Programming (NLP) solvers, and the values are empty dictionaries.
+    # These empty dictionaries can later be filled with specific options for each solver.
+    nlp_opts = dict((nlp, {}) for nlp in nlps)
+    if 'msnlp' in nlps:
+        nlp_opts['msnlp']['add_options'] = [
+            'GAMS_MODEL.optfile = 1;'
+            '\n'
+            '$onecho > msnlp.opt \n'
+            'nlpsolver knitro \n'
+            '$offecho \n'
+        ]
 
     # List of solvers that are going to be used for mixed integer non-linear programming problems
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
@@ -182,20 +194,6 @@ if __name__ == "__main__":
     # Defining possible transformations for the optimization problems
     transformations = ['bigm', 'hull']
 
-    # Defining possible strategies for the GDPopt solver
-    strategies = ['LOA', 'GLOA', 'LBB']
-
-    # A dictionary is created where the keys are the names of the Non-Linear Programming (NLP) solvers, and the values are empty dictionaries.
-    # These empty dictionaries can later be filled with specific options for each solver.
-    nlp_opts = dict((nlp, {}) for nlp in nlps)
-    # nlp_opts['msnlp']['add_options'] = [
-    #     'GAMS_MODEL.optfile = 1;'
-    #     '\n'
-    #     '$onecho > msnlp.opt \n'
-    #     'nlpsolver knitro \n'
-    #     '$offecho \n'
-    # ]
-
     # A list of the Mixed Integer Non-Linear Programming (MINLP) solvers to be used is defined.
     minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
 
@@ -208,28 +206,30 @@ if __name__ == "__main__":
     # For instance, 'relaxed 2' is an option for specifying the relaxation strategy for integer variables,
     # 'maxcycles 10000' sets the maximum number of cycles to 10000,
     # and 'nlpsolver knitro' specifies 'knitro' as the NLP solver.
-    minlps_opts['dicopt']['add_options'] = [
-        'GAMS_MODEL.optfile = 1;'
-        '\n'
-        '$onecho > dicopt.opt \n'
-        'stop 0 \n'
-        'relaxed 2 \n'
-        'maxcycles 10000 \n'
-        'nlpsolver knitro \n'
-        '$offecho \n'
-    ]
+    if 'dicopt' in minlps:
+        minlps_opts['dicopt']['add_options'] = [
+            'GAMS_MODEL.optfile = 1;'
+            '\n'
+            '$onecho > dicopt.opt \n'
+            'stop 0 \n'
+            'relaxed 2 \n'
+            'maxcycles 10000 \n'
+            'nlpsolver knitro \n'
+            '$offecho \n'
+        ]
 
     # NOTE: using DICOPT with the Hull reformulation might not return the correct results, as per the content of the .lst file. This is due to initialization.
 
+    if 'sbb' in minlps:
     # For the 'sbb' solver, options are added to specify 'knitro' as both the root solver and the subsolver.
-    minlps_opts['sbb']['add_options'] = [
-        'GAMS_MODEL.optfile = 1;'
-        '\n'
-        '$onecho > sbb.opt \n'
-        'rootsolver knitro \n'
-        'subsolver knitro \n'
-        '$offecho \n'
-    ]
+        minlps_opts['sbb']['add_options'] = [
+            'GAMS_MODEL.optfile = 1;'
+            '\n'
+            '$onecho > sbb.opt \n'
+            'rootsolver knitro \n'
+            'subsolver knitro \n'
+            '$offecho \n'
+        ]
 
     # Possible transformations for the optimization problems are defined.
     # 'bigm' and 'hull' are two common techniques used to transform a Generalized Disjunctive Programming (GDP) problem into a MINLP problem.
@@ -238,8 +238,8 @@ if __name__ == "__main__":
     # Possible values for the neighborhood search
     ks = ['Infinity', '2']
 
-    # 'strategies' variable is defined, possibly representing the algorithmic strategies for solving the problems.
-    # LOA stands for 'Line of Action', GLOA for 'Generalized Line of Action' and LBB for 'Logic Based Benders'.
+    # Defining possible strategies for the GDPopt solver
+    # LOA stands for 'Logic-based Outer Approximation', GLOA for 'Global Logic-based Outer-Approximation' and LBB for 'Logic-based Branch and Bound'.
     strategies = ['LOA', 'GLOA', 'LBB']
 
     # The path to a JSON file that would contain initial values for the model is constructed.
@@ -291,44 +291,44 @@ if __name__ == "__main__":
         )
 
     # MINLP
-    # for solver in minlps:
-    #     for transformation in transformations:
-    #         new_result = {}
-    #         m = build_column(**model_args)
-    #         m_init = initialize_model(m, json_path=init_path)
-    #         m_solved = solve_with_minlp(
-    #             m_init,
-    #             transformation=transformation,
-    #             minlp=solver,
-    #             minlp_options=minlps_opts[solver],
-    #             timelimit=timelimit,
-    #             gams_output=False,
-    #             tee=globaltee,
-    #         )
-    #         new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
-    #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
-    #         dict_data.append(new_result)
-    #         print(new_result)
+    for solver in minlps:
+        for transformation in transformations:
+            new_result = {}
+            m = build_column(**model_args)
+            m_init = initialize_model(m, json_path=init_path)
+            m_solved = solve_with_minlp(
+                m_init,
+                transformation=transformation,
+                minlp=solver,
+                minlp_options=minlps_opts[solver],
+                timelimit=timelimit,
+                gams_output=False,
+                tee=globaltee,
+            )
+            new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
+                m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
+            dict_data.append(new_result)
+            print(new_result)
 
-    # # GDPopt
-    # for solver in nlps:
-    #     for strategy in strategies:
-    #         new_result = {}
-    #         m = build_column(**model_args)
-    #         m_init = initialize_model(m, json_path=init_path)
-    #         m_solved = solve_with_gdpopt(
-    #             m_init,
-    #             mip='cplex',
-    #             nlp=solver,
-    #             nlp_options=nlp_opts[solver],
-    #             timelimit=timelimit,
-    #             strategy=strategy,
-    #             tee=globaltee,
-    #         )
-    #         new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
-    #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
-    #         dict_data.append(new_result)
-    #         print(new_result)
+    # GDPopt
+    for solver in nlps:
+        for strategy in strategies:
+            new_result = {}
+            m = build_column(**model_args)
+            m_init = initialize_model(m, json_path=init_path)
+            m_solved = solve_with_gdpopt(
+                m_init,
+                mip='cplex',
+                nlp=solver,
+                nlp_options=nlp_opts[solver],
+                timelimit=timelimit,
+                strategy=strategy,
+                tee=globaltee,
+            )
+            new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
+                m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
+            dict_data.append(new_result)
+            print(new_result)
 
     # D-SDA MINLP
     # The model is built and external references are set.
@@ -403,6 +403,7 @@ if __name__ == "__main__":
     #           (15, 6), (15, 7), (15, 8), (15, 9), (7, 1),
     #           (8, 1), (9, 1), (9, 2), (10, 3), ]
 
+    # # Complete enumeration
     # for transformation in ['hull']:
     #     for solver in ['knitro']:
     #         m_solved = solve_complete_external_enumeration(

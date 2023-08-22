@@ -60,7 +60,7 @@ def build_column(
 ):
     t_start = time.process_time()
     """
-    Builds the column model.
+    Builds the column model  which is a Generalized Disjunctive Program (GDP)
     References: Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
     
     Args:
@@ -145,7 +145,7 @@ def build_column(
 
     # Disjunction statement defining whether a tray exists or not
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not')
-    def tray_no_tray(b, t):
+    def tray_no_tray(b, t): # NOTE: This function is not accesed
         """Disjunction statement defining whether a tray exists or not"""
         return [b.tray[t], b.no_tray[t]]
 
@@ -409,7 +409,7 @@ def build_column(
             doc='Feed temperature [K]',
             domain=NonNegativeReals,
             bounds=(min_T, max_T),
-            initialize=368,
+            initialize=368, # Inlet temperature (95 C)
         )
 
         # Vapor fraction of the feed, value between 0 and 1

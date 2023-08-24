@@ -33,6 +33,7 @@ from pyomo.environ import (
     TransformationFactory,
     Var,
     exactly,
+    exp,
     land,
     log,
     lor,
@@ -43,8 +44,206 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolutionStatus, SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.util.infeasible import log_infeasible_constraints
+import pandas as pd
 
-from .initialize import initialize
+
+def initialize(m):
+    m.reflux_frac.set_value(value(m.reflux_ratio / (1 + m.reflux_ratio)))
+    m.boilup_frac.set_value(value(m.reboil_ratio / (1 + m.reboil_ratio)))
+
+    _excel_sheets = pd.read_excel('init.xlsx', sheet_name=None, engine='openpyxl')
+
+    def set_value_if_not_fixed(var, val):
+        """Set variable to the value if it is not fixed."""
+        if not var.fixed:
+            var.set_value(val)
+
+    active_trays = [
+        t
+        for t in m.trays
+        if t not in m.conditional_trays
+        or math.fabs(value(m.tray[t].indicator_var - 1)) <= 1e-3
+    ]
+    num_active_trays = len(active_trays)
+
+    feed_tray = m.feed_tray
+
+    tray_indexed_data = _excel_sheets['trays']
+    tray_indexed_data.sort_values(by=['tray'], inplace=True)
+    tray_indexed_data.set_index('tray', inplace=True)
+
+    comp_and_tray_indexed_data = _excel_sheets['comps_and_trays']
+    comp_and_tray_indexed_data.sort_values(by=['comp', 'tray'], inplace=True)
+    comp_and_tray_indexed_data.set_index(['comp', 'tray'], inplace=True)
+    comp_slices = {c: comp_and_tray_indexed_data.loc[c, :] for c in m.comps}
+
+    num_data_trays = tray_indexed_data.index.size
+    if num_active_trays < num_data_trays:
+        # Number of model trays is less than number of trays in data. Need to
+        # do averaging
+        new_indices = [1] + [
+            1 + (num_data_trays - 1) / (num_active_trays - 1) * i
+            for i in range(1, num_active_trays)
+        ]
+        for tray in range(2, num_active_trays):
+            indx = new_indices[tray - 1]
+            lower = math.floor(indx)
+            frac_above = indx - lower
+            # Take linear combination of values
+            tray_indexed_data.loc[tray] = (
+                tray_indexed_data.loc[lower] * (1 - frac_above)
+                + tray_indexed_data.loc[lower + 1] * frac_above
+            )
+            for c in m.comps:
+                comp_slices[c].loc[tray] = (
+                    comp_slices[c].loc[lower] * (1 - frac_above)
+                    + comp_slices[c].loc[lower + 1] * frac_above
+                )
+        tray_indexed_data.loc[num_active_trays] = tray_indexed_data.loc[num_data_trays]
+        tray_indexed_data = tray_indexed_data.head(num_active_trays)
+        for c in m.comps:
+            comp_slices[c].loc[num_active_trays] = comp_slices[c].loc[num_data_trays]
+            comp_slices[c] = comp_slices[c].head(num_active_trays)
+    else:
+        # Stretch the data out and do interpolation
+        tray_indexed_data.index = pd.Index(
+            [1]
+            + [
+                int(round(num_active_trays / num_data_trays * i))
+                for i in range(2, num_data_trays + 1)
+            ],
+            name='tray',
+        )
+        tray_indexed_data = tray_indexed_data.reindex(
+            [i for i in range(1, num_active_trays + 1)]
+        ).interpolate()
+        for c in m.comps:
+            comp_slices[c].index = pd.Index(
+                [1]
+                + [
+                    int(round(num_active_trays / num_data_trays * i))
+                    for i in range(2, num_data_trays + 1)
+                ],
+                name='tray',
+            )
+            # special handling necessary for V near top of column and L
+            # near column bottom. Do not want to interpolate with one end
+            # being potentially 0. (ie. V from total condenser). Instead,
+            # use back fill and forward fill.
+            comp_slices[c] = comp_slices[c].reindex(
+                [i for i in range(1, num_active_trays + 1)]
+            )
+            tray_below_condenser = sorted(active_trays, reverse=True)[1]
+            if pd.isna(comp_slices[c]['V'][tray_below_condenser]):
+                # V of the tray below the condenser is N/A. Find a valid
+                # value lower down to use.
+                val = next(
+                    comp_slices[c]['V'][t]
+                    for t in reversed(list(m.trays))
+                    if pd.notna(comp_slices[c]['V'][t]) and not t == m.condens_tray
+                )
+                comp_slices[c]['V'][tray_below_condenser] = val
+            if pd.isna(comp_slices[c]['L'][m.reboil_tray + 1]):
+                # L of the tray above the reboiler is N/A. Find a valid
+                # value higher up to use.
+                val = next(
+                    comp_slices[c]['L'][t]
+                    for t in m.trays
+                    if pd.notna(comp_slices[c]['L'][t]) and not t == m.reboil_tray
+                )
+                comp_slices[c]['L'][m.reboil_tray + 1] = val
+            comp_slices[c] = comp_slices[c].interpolate()
+
+    tray_indexed_data.index = pd.Index(sorted(active_trays), name='tray')
+    tray_indexed_data = tray_indexed_data.reindex(sorted(m.trays), method='bfill')
+
+    for t in m.trays:
+        set_value_if_not_fixed(m.T[t], tray_indexed_data['T [K]'][t])
+
+    for c in m.comps:
+        comp_slices[c].index = pd.Index(sorted(active_trays), name='tray')
+        comp_slices[c] = comp_slices[c].reindex(sorted(m.trays))
+        comp_slices[c][['L', 'x']] = comp_slices[c][['L', 'x']].bfill()
+        comp_slices[c][['V', 'y']] = comp_slices[c][['V', 'y']].ffill()
+
+    comp_and_tray_indexed_data = pd.concat(comp_slices)
+
+    for c, t in m.comps * m.trays:
+        set_value_if_not_fixed(m.L[c, t], comp_and_tray_indexed_data['L'][c, t])
+        set_value_if_not_fixed(m.V[c, t], comp_and_tray_indexed_data['V'][c, t])
+        set_value_if_not_fixed(m.x[c, t], comp_and_tray_indexed_data['x'][c, t])
+        set_value_if_not_fixed(m.y[c, t], comp_and_tray_indexed_data['y'][c, t])
+
+    for c in m.comps:
+        m.H_L_spec_feed[c].set_value(value(m.feed_liq_enthalpy_expr[c]))
+        m.H_V_spec_feed[c].set_value(value(m.feed_vap_enthalpy_expr[c]))
+
+    for t in m.trays:
+        for c in m.comps:
+            k = m.pvap_const[c]
+            x = m.Pvap_X[c, t]
+
+            x.set_value(value(1 - m.T[t] / k['Tc']))
+
+            m.Pvap[c, t].set_value(
+                value(
+                    exp(
+                        (
+                            k['A'] * x
+                            + k['B'] * x**1.5
+                            + k['C'] * x**3
+                            + k['D'] * x**6
+                        )
+                        / (1 - x)
+                    )
+                    * k['Pc']
+                )
+            )
+
+            m.Kc[c, t].set_value(value(m.gamma[c, t] * m.Pvap[c, t] / m.P))
+
+            m.H_L[c, t].set_value(value(m.liq_enthalpy_expr[t, c]))
+            m.H_V[c, t].set_value(value(m.vap_enthalpy_expr[t, c]))
+
+    m.D['benzene'].set_value(42.3152714)
+    m.D['toluene'].set_value(5.4446286)
+    m.B['benzene'].set_value(7.67928)
+    m.B['toluene'].set_value(44.56072)
+    m.L['benzene', m.reboil_tray].set_value(7.67928)
+    m.L['toluene', m.reboil_tray].set_value(44.56072)
+    m.V['benzene', m.reboil_tray].set_value(
+        value(m.L['benzene', m.reboil_tray + 1] - m.L['benzene', m.reboil_tray])
+    )
+    m.V['toluene', m.reboil_tray].set_value(
+        value(m.L['toluene', m.reboil_tray + 1] - m.L['toluene', m.reboil_tray])
+    )
+    m.L['benzene', m.condens_tray].set_value(
+        value(m.V['benzene', m.condens_tray - 1] - m.D['benzene'])
+    )
+    m.L['toluene', m.condens_tray].set_value(
+        value(m.V['toluene', m.condens_tray - 1] - m.D['toluene'])
+    )
+
+    for t in m.trays:
+        m.liq[t].set_value(value(sum(m.L[c, t] for c in m.comps)))
+        m.vap[t].set_value(value(sum(m.V[c, t] for c in m.comps)))
+    m.bot.set_value(52.24)
+    m.dis.set_value(47.7599)
+    for c in m.comps:
+        m.x[c, m.reboil_tray].set_value(
+            value(m.L[c, m.reboil_tray] / m.liq[m.reboil_tray])
+        )
+        m.y[c, m.reboil_tray].set_value(
+            value(m.V[c, m.reboil_tray] / m.vap[m.reboil_tray])
+        )
+        m.x[c, m.condens_tray].set_value(
+            value(m.L[c, m.condens_tray] / m.liq[m.condens_tray])
+        )
+        m.y[c, m.condens_tray].set_value(
+            value(m.x[c, m.condens_tray] * m.Kc[c, m.condens_tray])
+        )
+    m.Qb.set_value(2.307873115)
+    m.Qc.set_value(3.62641882)
 
 
 def build_column(
@@ -68,7 +267,7 @@ def build_column(
         max_trays (int): Maximum number of trays in the column
         xD (float): Distillate purity
         xB (float): Bottoms purity
-        x_input (dict): Dictionary of component mole fractions in the feed
+        x_input (list): List of the external variable values with the reflex position and the boilup position in the column
         nlp_solver (str): Name of the NLP solver to use
         provide_init (bool): Whether to provide initialization values
         init (dict): Dictionary of initialization values
@@ -145,7 +344,7 @@ def build_column(
 
     # Disjunction statement defining whether a tray exists or not
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not')
-    def tray_no_tray(b, t): # NOTE: This function is not accesed
+    def tray_no_tray(b, t):  # NOTE: This function is not accesed
         """Disjunction statement defining whether a tray exists or not"""
         return [b.tray[t], b.no_tray[t]]
 
@@ -409,7 +608,7 @@ def build_column(
             doc='Feed temperature [K]',
             domain=NonNegativeReals,
             bounds=(min_T, max_T),
-            initialize=368, # Inlet temperature (95 C)
+            initialize=368,  # Inlet temperature (95 C)
         )
 
         # Vapor fraction of the feed, value between 0 and 1
@@ -788,8 +987,12 @@ def build_column(
         m.YP = BooleanVar(
             m.intTrays, doc='Boolean var associated with tray and no_tray'
         )
-        m.YB_is_up = BooleanVar()
-        m.YR_is_down = BooleanVar()
+        m.YB_is_up = BooleanVar(
+            doc='Ensure that there is no boil-up flow above the feed tray'
+        )
+        m.YR_is_down = BooleanVar(
+            doc='Ensure that there is no reflux flow below the feed tray'
+        )
 
         # Logical constraints
         @m.LogicalConstraint()
@@ -805,12 +1008,16 @@ def build_column(
         @m.LogicalConstraint()
         def boilup_fix(m):
             """Ensure that only one boil-up is happening."""
-            return exactly(1, m.YB_is_up)
+            return exactly(
+                1, m.YB_is_up
+            )  # NOTE: These are the one-dimensional Boolean variables, so it would have been enough to fix them to 1
 
         @m.LogicalConstraint()
         def reflux_fix(m):
             """Ensure that only one reflux is happening."""
-            return exactly(1, m.YR_is_down)
+            return exactly(
+                1, m.YR_is_down
+            )  # NOTE: These are the one-dimensional Boolean variables, so it would have been enough to fix them to 1
 
         @m.LogicalConstraint()
         def no_reflux_down(m):
@@ -845,12 +1052,14 @@ def build_column(
         # Check if the condition for all trays above the reboil tray holds,
         # and fix YR_is_down based on this
         temp = value(land(~m.YR[n] for n in range(m.reboil_tray + 1, m.feed_tray)))
+        # temp is a temporary variable that stores the outcome of the logical condition for YR_is_down
         if temp == True:
             m.YR_is_down.fix(True)
 
         # Check if the condition for all trays above the feed tray holds,
         # and fix YB_is_up based on this
         temp = value(land(~m.YB[n] for n in range(m.feed_tray + 1, m.max_trays)))
+        # temp is a temporary variable that stores the outcome of the logical condition for YB_is_up
         if temp == True:
             m.YB_is_up.fix(True)
 
@@ -872,6 +1081,7 @@ def build_column(
         # Loop over conditional trays again
         for n in m.conditional_trays:
             # Check the logical condition (similar to the one in YP_or_notYP)
+            # temp is a temporary variable that stores the outcome of the logical condition for the current tray
             temp = value(
                 land(
                     lor(m.YR[j] for j in range(n, m.max_trays)),
@@ -888,7 +1098,7 @@ def build_column(
                 m.no_tray[n].indicator_var.fix(True)
 
     else:
-        # We are using a using of a boolean formulation because we know boolean and relationships take longer for GAMS to write
+        # We are using a Boolean formulation because we know the Boolean variables and their relationships take longer for GAMS to write
 
         # Dictionaries to store the fixed values of YR and YB for each tray
         YR_fixed = {}
@@ -956,6 +1166,7 @@ def build_column(
         # SOLVE
         # Get the path of the current file and the path where GAMS files will be stored
         dir_path = os.path.dirname(os.path.abspath(__file__))
+        # Specify the path where GAMS files will be stored
         gams_path = os.path.join(dir_path, "gamsfiles/")
         if not (os.path.exists(gams_path)):
             print(
@@ -970,7 +1181,7 @@ def build_column(
         opt = SolverFactory(solvername, solver=nlp_solver)
         m.results = opt.solve(
             m,
-            tee=False,
+            tee=True,
             # Uncomment the following lines if you want to save GAMS models
             # keepfiles=True,
             # tmpdir=gams_path,
@@ -1145,21 +1356,29 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     @tray.Constraint(m.comps)
     def mass_balance(_, c):
         """Mass balance on each component on a tray."""
+
+        # Compute mass balance components
         return (
-            m.feed[c] if t == m.feed_tray else 0
-        ) - m.V[  # Total feed to the tray if it's a feed tray
-            c, t
-        ] - (  # Total vapor flow from the tray
-            m.D[c] if t == m.condens_tray else 0
-        ) + (  # Total distillate if it's a condenser tray
-            m.L[c, t + 1] if t < m.condens_tray else 0
-        ) - (  # Liquid flow from the tray above if it's not a condenser
-            m.B[c] if t == m.reboil_tray else 0
-        ) - (  # Total bottoms if it's a reboiler tray
-            m.L[c, t] if t > m.reboil_tray else 0
-        ) + (  # Liquid flow to the tray below if it's not a reboiler
-            m.V[c, t - 1] if t > m.reboil_tray else 0
-        ) == 0  # Vapor flow from the tray below if it's not a reboiler
+            (
+                m.feed[c] if t == m.feed_tray else 0
+            )  # Total feed to the tray if it's a feed tray
+            - m.V[c, t]  # Total vapor flow from the tray
+            - (
+                m.D[c] if t == m.condens_tray else 0
+            )  # Total distillate if it's a condenser tray
+            + (
+                m.L[c, t + 1] if t < m.condens_tray else 0
+            )  # Liquid flow from the tray above if it's not a condenser
+            - (
+                m.B[c] if t == m.reboil_tray else 0
+            )  # Total bottoms if it's a reboiler tray
+            - (
+                m.L[c, t] if t > m.reboil_tray else 0
+            )  # Liquid flow to the tray below if it's not a reboiler
+            + (
+                m.V[c, t - 1] if t > m.reboil_tray else 0
+            )  # Vapor flow from the tray below if it's not a reboiler
+        ) == 0
 
     @tray.Constraint(m.comps)
     def tray_liquid_composition(_, c):
@@ -1799,3 +2018,17 @@ def _build_reboiler_energy_balance(m):
     def reboiler_vap_enthalpy_calc(_, c):
         """Constraint sets the vapor enthalpy on the reboiler tray equal to the calculated vapor enthalpy from a given expression."""
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
+
+
+if __name__ == "__main__":
+    # Inputs
+    NT = 17  # Total number of trays
+    model_args = {
+        'min_trays': 8,
+        'max_trays': NT,
+        'xD': 0.95,
+        'xB': 0.95,
+        'x_input': [15, 4],
+        'nlp_solver': 'ipopth',
+    }  # Model arguments
+    m = build_column(**model_args)  # Building the column model

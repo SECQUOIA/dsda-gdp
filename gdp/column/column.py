@@ -48,13 +48,34 @@ import pandas as pd
 
 
 def initialize(m):
+    """
+    Initializes the values of the distillation model using provided data from an Excel sheet 'init.xlsx'
+    and other model-related calculations.
+
+    Parameters:
+    - m: Model object representing the distillation column.
+
+    Returns:
+    None. The function modifies the model 'm' in-place.
+    """
     m.reflux_frac.set_value(value(m.reflux_ratio / (1 + m.reflux_ratio)))
     m.boilup_frac.set_value(value(m.reboil_ratio / (1 + m.reboil_ratio)))
 
+    # Import the Excel Sheet
     _excel_sheets = pd.read_excel('init.xlsx', sheet_name=None, engine='openpyxl')
 
     def set_value_if_not_fixed(var, val):
-        """Set variable to the value if it is not fixed."""
+        """
+        Set variable to the value if it is not fixed.
+        Checks if the given variable is fixed. If not, sets its value to the provided value.
+
+        Parameters:
+        - var: A variable, typically part of a mathematical model.
+        - val: The value to be set for the variable if it's not fixed.
+
+        Returns:
+            None. The function modifies the variable 'var' in-place if it's not fixed.
+        """
         if not var.fixed:
             var.set_value(val)
 
@@ -68,16 +89,21 @@ def initialize(m):
 
     feed_tray = m.feed_tray
 
+    # Process 'trays' data from Excel
     tray_indexed_data = _excel_sheets['trays']
     tray_indexed_data.sort_values(by=['tray'], inplace=True)
     tray_indexed_data.set_index('tray', inplace=True)
 
+    # Process 'comps_and_trays' data from Excel and set multi-index
     comp_and_tray_indexed_data = _excel_sheets['comps_and_trays']
     comp_and_tray_indexed_data.sort_values(by=['comp', 'tray'], inplace=True)
     comp_and_tray_indexed_data.set_index(['comp', 'tray'], inplace=True)
-    comp_slices = {c: comp_and_tray_indexed_data.loc[c, :] for c in m.comps}
+    comp_slices = {
+        c: comp_and_tray_indexed_data.loc[c, :] for c in m.comps
+    }  # Create dictionary of data slices per component
 
     num_data_trays = tray_indexed_data.index.size
+    # If there are fewer active trays than data trays, average the data.
     if num_active_trays < num_data_trays:
         # Number of model trays is less than number of trays in data. Need to
         # do averaging
@@ -85,6 +111,7 @@ def initialize(m):
             1 + (num_data_trays - 1) / (num_active_trays - 1) * i
             for i in range(1, num_active_trays)
         ]
+        # Combine data from adjacent trays based on linear combination.
         for tray in range(2, num_active_trays):
             indx = new_indices[tray - 1]
             lower = math.floor(indx)
@@ -100,10 +127,12 @@ def initialize(m):
                     + comp_slices[c].loc[lower + 1] * frac_above
                 )
         tray_indexed_data.loc[num_active_trays] = tray_indexed_data.loc[num_data_trays]
+        # Trim data to match the number of active trays.
         tray_indexed_data = tray_indexed_data.head(num_active_trays)
         for c in m.comps:
             comp_slices[c].loc[num_active_trays] = comp_slices[c].loc[num_data_trays]
             comp_slices[c] = comp_slices[c].head(num_active_trays)
+    # If there are more or equal active trays than data trays, interpolate the data.
     else:
         # Stretch the data out and do interpolation
         tray_indexed_data.index = pd.Index(
@@ -117,6 +146,7 @@ def initialize(m):
         tray_indexed_data = tray_indexed_data.reindex(
             [i for i in range(1, num_active_trays + 1)]
         ).interpolate()
+        # Stretch component data, handle potential N/A values, and interpolate
         for c in m.comps:
             comp_slices[c].index = pd.Index(
                 [1]
@@ -154,12 +184,15 @@ def initialize(m):
                 comp_slices[c]['L'][m.reboil_tray + 1] = val
             comp_slices[c] = comp_slices[c].interpolate()
 
+    # Reindex the tray data and fill any missing values using back-fill method.
     tray_indexed_data.index = pd.Index(sorted(active_trays), name='tray')
     tray_indexed_data = tray_indexed_data.reindex(sorted(m.trays), method='bfill')
 
+    # Set the temperature values for trays, if not fixed.
     for t in m.trays:
         set_value_if_not_fixed(m.T[t], tray_indexed_data['T [K]'][t])
 
+    # Reindex and fill component data. Use back-fill for 'L' and 'x', and forward-fill for 'V' and 'y'
     for c in m.comps:
         comp_slices[c].index = pd.Index(sorted(active_trays), name='tray')
         comp_slices[c] = comp_slices[c].reindex(sorted(m.trays))
@@ -168,16 +201,19 @@ def initialize(m):
 
     comp_and_tray_indexed_data = pd.concat(comp_slices)
 
+    # Set component values for each tray if they are not fixed.
     for c, t in m.comps * m.trays:
         set_value_if_not_fixed(m.L[c, t], comp_and_tray_indexed_data['L'][c, t])
         set_value_if_not_fixed(m.V[c, t], comp_and_tray_indexed_data['V'][c, t])
         set_value_if_not_fixed(m.x[c, t], comp_and_tray_indexed_data['x'][c, t])
         set_value_if_not_fixed(m.y[c, t], comp_and_tray_indexed_data['y'][c, t])
 
+    # Set enthalpy specifications for each component in the feed.
     for c in m.comps:
         m.H_L_spec_feed[c].set_value(value(m.feed_liq_enthalpy_expr[c]))
         m.H_V_spec_feed[c].set_value(value(m.feed_vap_enthalpy_expr[c]))
 
+    # Compute and set several values for each component in each tray.
     for t in m.trays:
         for c in m.comps:
             k = m.pvap_const[c]
@@ -205,18 +241,23 @@ def initialize(m):
             m.H_L[c, t].set_value(value(m.liq_enthalpy_expr[t, c]))
             m.H_V[c, t].set_value(value(m.vap_enthalpy_expr[t, c]))
 
+    # Setting initial values for distillate (D) and bottoms (B) for benzene and toluene.
     m.D['benzene'].set_value(42.3152714)
     m.D['toluene'].set_value(5.4446286)
     m.B['benzene'].set_value(7.67928)
     m.B['toluene'].set_value(44.56072)
     m.L['benzene', m.reboil_tray].set_value(7.67928)
     m.L['toluene', m.reboil_tray].set_value(44.56072)
+
+    # Calculating and setting the vapor values (V) for benzene and toluene at the reboil tray.
     m.V['benzene', m.reboil_tray].set_value(
         value(m.L['benzene', m.reboil_tray + 1] - m.L['benzene', m.reboil_tray])
     )
     m.V['toluene', m.reboil_tray].set_value(
         value(m.L['toluene', m.reboil_tray + 1] - m.L['toluene', m.reboil_tray])
     )
+
+    # Calculating and setting the liquid values (L) for benzene and toluene at the condensate tray.
     m.L['benzene', m.condens_tray].set_value(
         value(m.V['benzene', m.condens_tray - 1] - m.D['benzene'])
     )
@@ -224,11 +265,16 @@ def initialize(m):
         value(m.V['toluene', m.condens_tray - 1] - m.D['toluene'])
     )
 
+    # Calculating and setting total liquid (liq) and vapor (vap) values for each tray
     for t in m.trays:
         m.liq[t].set_value(value(sum(m.L[c, t] for c in m.comps)))
         m.vap[t].set_value(value(sum(m.V[c, t] for c in m.comps)))
+
+    # Setting the bottom and distillate values.
     m.bot.set_value(52.24)
     m.dis.set_value(47.7599)
+
+    # Calculating and setting mole fraction values (x and y) for components in the reboil and condensate trays.
     for c in m.comps:
         m.x[c, m.reboil_tray].set_value(
             value(m.L[c, m.reboil_tray] / m.liq[m.reboil_tray])
@@ -242,6 +288,8 @@ def initialize(m):
         m.y[c, m.condens_tray].set_value(
             value(m.x[c, m.condens_tray] * m.Kc[c, m.condens_tray])
         )
+
+    # Setting heat values for the boiler and condenser.
     m.Qb.set_value(2.307873115)
     m.Qc.set_value(3.62641882)
 
@@ -2020,6 +2068,8 @@ def _build_reboiler_energy_balance(m):
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
 
 
+# Conditional checks if the script is being executed as the main program.
+# If so, it runs the build_column function with the specified arguments.
 if __name__ == "__main__":
     # Inputs
     NT = 17  # Total number of trays

@@ -17,7 +17,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     Part I: A new mathematical framework (Linan et al., 2020)
 
     Args:
-        NT: int. Positive Integer defining the maximum number of CSTRs
+        NT(int): Positive Integer defining the maximum number of CSTRs
     Returns:
         m = Pyomo GDP model
     """

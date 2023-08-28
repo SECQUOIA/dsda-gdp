@@ -147,7 +147,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Splitting point mole balance
 
     def split_mole_rule(m, i):
-        """Splitting point: Partial moel balance, (21.L)"""
+        """Splitting point: Partial mole balance, (21.L)"""
         return m.F[i, 1] - m.P[i] - m.R[i] == 0
 
     m.split_mole = pe.Constraint(m.I, rule=split_mole_rule)
@@ -163,7 +163,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Splitting point additional constraints
 
     def split_add_rule(m, i):
-        """Splitting point: additional constraints, (21.N)"""
+        """Splitting point: additional constraints, (21.N)""" # TODO: How did it come up?
         return m.P[i]*m.Q[1] - m.F[i, 1]*m.QP == 0
 
     m.split_add = pe.Constraint(m.I, rule=split_add_rule)
@@ -192,7 +192,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def build_cstr_equations(disjunct, n):
         m = disjunct.model()
 
-        # Reaction rates calculation
+        # Reaction rates calculation # TODO : How did it come?
         @disjunct.Constraint()
         def YPD_rate_calc(disjunct):
             return m.rate['A', n]*((m.Q[n])**m.order1)*((m.Q[n])**m.order2)+m.k*((m.F['A', n])**m.order1)*((m.F['B', n])**m.order2) == 0
@@ -205,7 +205,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         # Volume activation
         @disjunct.Constraint()
         def YPD_vol_act(disjunct):
-            return m.c[n] - m.V[n] == 0
+            return m.c[n] - m.V[n] == 0 # TODO: Where does that come from ?
 
     def build_bypass_equations(disjunct, n):
         m = disjunct.model()
@@ -226,15 +226,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
             return m.QFR[n] == 0
 
         @disjunct.Constraint()
-        def neg_YPD_vol_desact(disjunct):
-            '''
-            Volume desactivation function for defining pyomo model
-            args:
-                disjunct: pyomo block with disjunct to include the constraint
-                n: pyomo set with reactor index
-            return: 
-                return constraint
-            '''
+        def neg_YPD_vol_desact(disjunct): # TODO: What is the intention for this?
             return m.c[n] == 0
 
     # YR Disjuction block equation definition
@@ -250,7 +242,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         # QFR activation
         @disjunct.Constraint()
         def YRD_QFR_act(disjunct):
-            return m.QFR[n] - m.QR == 0
+            return m.QFR[n] - m.QR == 0  # TODO: Does all the constraint are for the logical constraint to force them to be aligned?
 
     def build_no_recycle_equations(disjunct, n):
         m = disjunct.model()

@@ -74,7 +74,7 @@ def problem_logic_column(m):
         m : The pyomo model for the distillation column.
 
     Returns:
-        logic_expr : A list of logic expressions based on the input pyomo model.
+        logic_expr (list): A list of logic expressions based on the input pyomo model.
     """
 
     # Initialize an empty list to store the logic expressions

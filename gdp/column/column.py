@@ -52,11 +52,11 @@ def initialize(m):
     Initializes the values of the distillation model using provided data from an Excel sheet 'init.xlsx'
     and other model-related calculations.
 
-    Parameters:
-    - m: Model object representing the distillation column.
+    Args:
+        m (pyomo.ConcreteModel): Model object representing the distillation column.
 
     Returns:
-    None. The function modifies the model 'm' in-place.
+        None. The function modifies the model 'm' in-place.
     """
     m.reflux_frac.set_value(value(m.reflux_ratio / (1 + m.reflux_ratio)))
     m.boilup_frac.set_value(value(m.reboil_ratio / (1 + m.reboil_ratio)))
@@ -79,6 +79,7 @@ def initialize(m):
         if not var.fixed:
             var.set_value(val)
 
+    # active_trays are the condenser, reboiler, feed, and those conditional trays whose indicator_var is 1
     active_trays = [
         t
         for t in m.trays
@@ -89,12 +90,12 @@ def initialize(m):
 
     feed_tray = m.feed_tray
 
-    # Process 'trays' data from Excel
+    # Process 'trays' sheet with temperature from Excel
     tray_indexed_data = _excel_sheets['trays']
     tray_indexed_data.sort_values(by=['tray'], inplace=True)
     tray_indexed_data.set_index('tray', inplace=True)
 
-    # Process 'comps_and_trays' data from Excel and set multi-index
+    # Process 'comps_and_trays' sheet with flows and compositions from Excel and set multi-index
     comp_and_tray_indexed_data = _excel_sheets['comps_and_trays']
     comp_and_tray_indexed_data.sort_values(by=['comp', 'tray'], inplace=True)
     comp_and_tray_indexed_data.set_index(['comp', 'tray'], inplace=True)
@@ -271,8 +272,8 @@ def initialize(m):
         m.vap[t].set_value(value(sum(m.V[c, t] for c in m.comps)))
 
     # Setting the bottom and distillate values.
-    m.bot.set_value(52.24)
-    m.dis.set_value(47.7599)
+    m.bot.set_value(52.24) # Note: This could be initialized as the sum of component flows in the Excel spreadsheet
+    m.dis.set_value(47.7599) # Note: This could be initialized as the sum of component flows in the Excel spreadsheet
 
     # Calculating and setting mole fraction values (x and y) for components in the reboil and condensate trays.
     for c in m.comps:
@@ -321,7 +322,7 @@ def build_column(
         init (dict): Dictionary of initialization values
         boolean_ref (bool): Whether to use boolean reformulation
     Returns:
-        m (ConcreteModel): Pyomo model
+        m (pyomo.ConcreteModel): Pyomo model
     """
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene'])  # Initialize component set
@@ -1392,10 +1393,10 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     on the tray, as well as conditions for when the tray does not exist.
 
     Args:
-        m: The model object containing the relevant variables and parameters.
-        t: Tray number for which the constraints are being defined (integer).
-        tray: Disjunct object representing the case when the tray exists in the column.
-        no_tray: Disjunct object representing the case when the tray is absent in the column.
+        m (pyomo.ConcreteModel): The model object containing the relevant variables and parameters.
+        t (int): Tray number for which the constraints are being defined (integer).
+        tray (pyomo.Disjunct): Disjunct object representing the case when the tray exists in the column.
+        no_tray (pyomo.Disjunct): Disjunct object representing the case when the tray is absent in the column.
 
     Return:
         None. The function adds constraints to the model but does not return a value.
@@ -1471,7 +1472,7 @@ def _build_feed_tray_mass_balance(m):
     compositions on the feed tray.
 
     Args:
-        m: The model object containing variables and parameters related to the feed tray, components, and mass streams.
+        m (pyomo.ConcreteModel): The model object containing variables and parameters related to the feed tray, components, and mass streams.
 
     Constraints:
         - feed_mass_balance: Ensures that the total mass in and out of the feed tray for each component is balanced.
@@ -1529,7 +1530,7 @@ def _build_condenser_mass_balance(m):
     constraints.
 
     Args:
-        m (Model Object): A model object that includes the relevant variables, parameters,
+        m (pyomo.ConcreteModel): A model object that includes the relevant variables, parameters,
         and expressions for the distillation process, such as component flows, liquid
         and vapor compositions, and energy expressions.
 
@@ -1598,7 +1599,7 @@ def _build_reboiler_mass_balance(m):
     The function considers the molar flow rates to establish the mass balance in the reboiler.
 
     Args:
-        m (Model Object): A model object that includes the relevant variables, parameters,
+        m (pyomo.ConcreteModel): A model object that includes the relevant variables, parameters,
         and expressions for the distillation process, such as component flows, liquid
         and vapor compositions.
 
@@ -1645,11 +1646,11 @@ def _build_tray_phase_equilibrium(m, t, tray):
     and calculates the activity coefficient for each component.
 
     Args:
-        m (Model Object): A model object containing the relevant variables, parameters,
+        m (pyomo.ConcreteModel): A model object containing the relevant variables, parameters,
             and expressions for the distillation process, such as vapor pressure constants,
             phase equilibrium constants, and activity coefficients.
         t (int): Tray index representing the specific tray within the column.
-        tray (Block): A Pyomo Block object representing the specific tray within the model,
+        tray (pyomo.Block): A Pyomo Block object representing the specific tray within the model,
             where constraints related to the tray are to be added.
 
     Constraints:
@@ -1713,7 +1714,7 @@ def _build_column_heat_relations(m):
     trays including conditional trays, feed tray, condenser, and reboiler.
 
     Args:
-        m (Model Object): A model object that includes relevant variables, parameters, and expressions for
+        m (pyomo.ConcreteModel): A model object that includes relevant variables, parameters, and expressions for
         the distillation process, such as heat capacity coefficients, temperature references, and heat of
         vaporization for different components.
 
@@ -2078,7 +2079,10 @@ if __name__ == "__main__":
         'max_trays': NT,
         'xD': 0.95,
         'xB': 0.95,
-        'x_input': [15, 4],
+        'x_input': [
+            16, # Reflux position 
+            7, # Boilup position
+            ],
         'nlp_solver': 'ipopth',
     }  # Model arguments
     m = build_column(**model_args)  # Building the column model

@@ -520,10 +520,15 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     on the tray, as well as conditions for when the tray does not exist.
 
     Args:
-        m: The model object containing the relevant variables and parameters.
-        t: Tray number for which the constraints are being defined (integer).
-        tray: Disjunct object representing the case when the tray exists in the column.
-        no_tray: Disjunct object representing the case when the tray is absent in the column.
+        m (Model Object): A model object containing the relevant variables, parameters, and expressions
+            for the distillation process, such as liquid and vapor enthalpy expressions, and components.
+
+        t (integer): The index of the tray for which the energy balance is being constructed.
+
+        tray (Block Object): A block object representing the active scenario where the tray is in operation.
+
+        no_tray (Block Object): A block object representing the scenario where the tray is bypassed
+            (pass-through without liquid or vapor contact).
 
     Return:
         None. The function adds constraints to the model but does not return a value.
@@ -591,7 +596,9 @@ def _build_feed_tray_mass_balance(m):
     compositions on the feed tray.
 
     Args:
-        m: The model object containing variables and parameters related to the feed tray, components, and mass streams.
+        m (Model Object): A model object containing the relevant variables, parameters, and expressions
+            for the distillation process, such as liquid and vapor enthalpy expressions, feed vapor fraction,
+            components, feed temperature, and feed tray identifier.
 
     Constraints:
         - feed_mass_balance: Ensures that the total mass in and out of the feed tray for each component is balanced.
@@ -764,10 +771,12 @@ def _build_tray_phase_equilibrium(m, t, tray):
     Antoine equation.
 
     Args:
-        m: The model object containing the relevant variables and parameters such as vapor and liquid compositions,
-           phase equilibrium constants, relative vapor pressure, and temperature-dependent factors.
-        t: The specific tray number for which the phase equilibrium is being modeled.
-        tray: A container object within the model representing the tray for which the constraints are being built.
+        m (pyomo.ConcreteModel): A model object containing the relevant variables, parameters,
+            and expressions for the distillation process, such as vapor pressure constants,
+            phase equilibrium constants, and activity coefficients.
+        t (int): Tray index representing the specific tray within the column.
+        tray (pyomo.Block): A Pyomo Block object representing the specific tray within the model,
+            where constraints related to the tray are to be added.
 
     Constraints:
         - raoults_law: Models the relationship between vapor and liquid composition for each component on the tray

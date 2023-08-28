@@ -1,6 +1,13 @@
 """
-Distillation column model for 2018 PSE conference
-References: A comparative study between GDP and NLP formulations for conceptual design of distillation columns (Ghouse et al., 2018)
+main_column.py
+Distillation column solution for 2018 PSE conference [1]
+
+TODO: Add file description here
+
+
+References:
+[1] Bernal, David E., et al. "Process Superstructure Optimization through Discrete Steepest Descent Optimization: a GDP Analysis and Applications in Process Intensification." Computer Aided Chemical Engineering. Vol. 49. Elsevier, 2022. 1279-1284.
+[2] Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
 """
 # The code imports the functions from the column.py and gdp_column.py.
 # a script for solving Generalized Disjunctive Programming (GDP) problems using a variety of methods,

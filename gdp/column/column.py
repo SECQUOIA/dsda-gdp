@@ -1,14 +1,24 @@
 """
-Distillation column model for 2018 PSE conference
+column.py
+Fixed design solution of distillation column GDP model
+
+This file defines an optimization model for the design and operation of a distillation column for benzene-toluene separation.
+The objective is to minimize the operation cost (heat duties in condenser and reboiler) and fixed cost (number of trays in the column).
+The constraints are the MESH equations (material balance, equilibrium, summation, and enthalpy balance) for each tray together with logical constraints that encode the existence of trays and position of reflux and boilup flows.
+The continuous variables of this model are the flowrates of each component in liquid and vapor phase and temperatures at each tray, the reflux and boilup ratio, and the condenser and reboiler heat duties.
+The logical variables are the exitence or non-existence of the trays, and the position of the reflux and boilup flows.
+The complete model defines a Generalized Disjunctive Programming (GDP) problem.
+
+After the model is defined, the boolean variables are reformulated into integer variables known as external variables.
+The external variables are defined as user input and are used to activate or deactivate the trays and position the reflux and boilup flows.
+Using the GDP problem, we activate and deactivate selectively corresponding constraints.
+The model is initialized using data from an Excel sheet 'init.xlsx' and other model-related calculations.
+The resulting problem is a Nonlinear Programming (NLP) problem, which is solved through GAMS solvers specified by the user.
+
 References:
 - Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
 - Bernal, David E., et al. "Process Superstructure Optimization through Discrete Steepest Descent Optimization: a GDP Analysis and Applications in Process Intensification." Computer Aided Chemical Engineering. Vol. 49. Elsevier, 2022. 1279-1284.
 """
-# The column.py formulates the build column model, state the energy and the mass balances for every part of the column.
-# If the initial value for the varaible is given the model will use the initial value as the initial guess for the solver.
-# If the initial value is not given the model will use the default value for the initial guess.
-# There exist the code dealing activation or deactivation of trays in a distillation column based on the existence of specific flows,
-# and it then applies several transformations to ensure the model can be solved using dsda.
 
 from __future__ import division
 
@@ -243,6 +253,7 @@ def initialize(m):
             m.H_V[c, t].set_value(value(m.vap_enthalpy_expr[t, c]))
 
     # Setting initial values for distillate (D) and bottoms (B) for benzene and toluene.
+    # NOTE: This can be improved by bringing up the spreadsheed data and using boil-up and reflux ratio.
     m.D['benzene'].set_value(42.3152714)
     m.D['toluene'].set_value(5.4446286)
     m.B['benzene'].set_value(7.67928)
@@ -272,8 +283,8 @@ def initialize(m):
         m.vap[t].set_value(value(sum(m.V[c, t] for c in m.comps)))
 
     # Setting the bottom and distillate values.
-    m.bot.set_value(52.24) # Note: This could be initialized as the sum of component flows in the Excel spreadsheet
-    m.dis.set_value(47.7599) # Note: This could be initialized as the sum of component flows in the Excel spreadsheet
+    m.bot.set_value(52.24) # NOTE: This could be initialized as the sum of component flows in the Excel spreadsheet
+    m.dis.set_value(47.7599) # NOTE: This could be initialized as the sum of component flows in the Excel spreadsheet
 
     # Calculating and setting mole fraction values (x and y) for components in the reboil and condensate trays.
     for c in m.comps:
@@ -2085,4 +2096,5 @@ if __name__ == "__main__":
             ],
         'nlp_solver': 'ipopth',
     }  # Model arguments
-    m = build_column(**model_args)  # Building the column model
+    m = build_column(**model_args)  # Calculate the fixed value of the external variables
+    # NOTE: rename function to solve_fixed_externalvars_column

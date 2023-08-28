@@ -1,12 +1,19 @@
 """
-Distillation column model for 2018 PSE conference formulated into GDP models.
+gdp_column.py
+Distillation column GDP model for benzene-toluene separation.
+
+This file defines an optimization model for the design and operation of a distillation column for benzene-toluene separation.
+The objective is to minimize the operation cost (heat duties in condenser and reboiler) and fixed cost (number of trays in the column).
+The constraints are the MESH equations (material balance, equilibrium, summation, and enthalpy balance) for each tray together with logical constraints that encode the existence of trays and position of reflux and boilup flows.
+The continuous variables of this model are the flowrates of each component in liquid and vapor phase and temperatures at each tray, the reflux and boilup ratio, and the condenser and reboiler heat duties.
+The logical variables are the exitence or non-existence of the trays, and the position of the reflux and boilup flows.
+The complete model defines a Generalized Disjunctive Programming (GDP) problem.
+
+This model is to be imported by main_column.py where it is solved via differente solution methods (MINLP reformulation, GDP algorithms, and L-DSDA)
+
 References:
 - Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
 """
-# The gdp_column.py formulates the build column model, state the energy and the mass balances for every part of the column.
-# The model use the default value for the initial guess.
-# The model does not have the iteration
-# The model states the Boolean variable, the LD-SDA is done on main_column.py
 
 import math  # Provides functions for mathematical operations.
 import os  # Provides functions for interacting with the operating system.

@@ -283,8 +283,12 @@ def initialize(m):
         m.vap[t].set_value(value(sum(m.V[c, t] for c in m.comps)))
 
     # Setting the bottom and distillate values.
-    m.bot.set_value(52.24) # NOTE: This could be initialized as the sum of component flows in the Excel spreadsheet
-    m.dis.set_value(47.7599) # NOTE: This could be initialized as the sum of component flows in the Excel spreadsheet
+    m.bot.set_value(
+        52.24
+    )  # NOTE: This could be initialized as the sum of component flows in the Excel spreadsheet
+    m.dis.set_value(
+        47.7599
+    )  # NOTE: This could be initialized as the sum of component flows in the Excel spreadsheet
 
     # Calculating and setting mole fraction values (x and y) for components in the reboil and condensate trays.
     for c in m.comps:
@@ -2090,11 +2094,10 @@ if __name__ == "__main__":
         'max_trays': NT,
         'xD': 0.95,
         'xB': 0.95,
-        'x_input': [
-            16, # Reflux position 
-            7, # Boilup position
-            ],
+        'x_input': [16, 7],  # Reflux position  # Boilup position
         'nlp_solver': 'ipopth',
     }  # Model arguments
-    m = build_column(**model_args)  # Calculate the fixed value of the external variables
+    m = build_column(
+        **model_args
+    )  # Calculate the fixed value of the external variables
     # NOTE: rename function to solve_fixed_externalvars_column

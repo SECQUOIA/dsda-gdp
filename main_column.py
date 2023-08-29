@@ -5,7 +5,7 @@ Distillation column solution for 2018 PSE conference [1]
 This file imports the build_column function from gdp_column.py. gdp_column.py formulates the distillation column problem as a GDP problem.
 The code also imports the various functions from gdp.dsda.dsda_functions module.
 The main_column.py solves the Generalized Disjunctive Programming (GDP) using a variety of methods with GAMS solvers that are on the script.
-The methods used are Mixed Integer Non-Linear Programming (MINLP) reformulations and  GDP algorithms, and Logic-based Deepest Steepest Descent Algorithm(L-DSDA).
+The methods used are Mixed Integer Non-Linear Programming (MINLP) reformulations and  GDP algorithms, and Logic-based Discrete Steepest Descent Algorithm(L-DSDA).
 The results are written to a CSV files.
 
 

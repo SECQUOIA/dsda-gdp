@@ -2,17 +2,22 @@
 main_column.py
 Distillation column solution for 2018 PSE conference [1]
 
-TODO: Add file description here
+This file imports the build_column function from gdp_column.py. gdp_column.py formulates the distillation column problem as a GDP problem.
+The code also imports the various functions from gdp.dsda.dsda_functions module.
+The main_column.py solves the Generalized Disjunctive Programming (GDP) using a variety of methods with GAMS solvers that are on the script.
+The methods used are Mixed Integer Non-Linear Programming (MINLP) reformulations and  GDP algorithms, and Logic-based Deepest Steepest Descent Algorithm(L-DSDA).
+The results are written to a CSV files.
 
 
 References:
 [1] Bernal, David E., et al. "Process Superstructure Optimization through Discrete Steepest Descent Optimization: a GDP Analysis and Applications in Process Intensification." Computer Aided Chemical Engineering. Vol. 49. Elsevier, 2022. 1279-1284.
 [2] Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
 """
-# The code imports the functions from the column.py and gdp_column.py.
-# a script for solving Generalized Disjunctive Programming (GDP) problems using a variety of methods,
-# specifically the Mixed Integer Non-Linear Programming (MINLP) and GDPopt methods,
-# and a particular method called D-SDA MINLP.
+
+# List of differences when executing code in Albert's computer
+# When solving the problem via MINLP reformulation: Antigone and DICOPT solver executed faster. However, Baron solver was the solver which took more time.
+# When solving the problem using GDP algorithm, using knitro solver was longer when executing LOA and GLOA methods.
+# When solving the problem via DSDA, k=2 cases were executed faster for knitro, baron solvers. Other cases, there were no drastic differences.
 
 # Import division from the future to make it available in Python 2.7 and below
 from __future__ import division
@@ -78,7 +83,7 @@ def problem_logic_column(m):
     This function defines the logic rules for the distillation column.
 
     Args:
-        m : The pyomo model for the distillation column.
+        m (pyomo.ConcreteModel) : The pyomo model for the distillation column.
 
     Returns:
         logic_expr (list): A list of logic expressions based on the input pyomo model.

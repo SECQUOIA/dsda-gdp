@@ -1,3 +1,17 @@
+"""
+gdp_reactor.py
+
+The code build the CSTR models for the GDP superstructure. 
+The CSTRs have a autocatalytic reaction A + B -> 2B and minimizes total reactor network volume. 
+
+
+TODO: What does this file do? References?
+References:
+[1] Linan, David A., et al. "Optimal design of superstructures for placing units and streams with multiple and ordered available locations. Part I: A new mathematical framework." Computers & Chemical Engineering 137, (2020): 106794.
+
+"""
+
+
 import os
 
 import matplotlib.pyplot as plt
@@ -14,12 +28,12 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     The CSTRs have a autocatalytic reaction A + B -> 2B and minimizes total reactor network volume. 
     The optimal solution should yield NT reactors with a recycle before reactor NT.
     Reference: Optimal design of superstructures for placing units and streams with multiple and ordered available loactions.
-    Part I: A new mathematical framework (Linan et al., 2020)
+    Part I: A new mathematical framework (Linan et al., 2020) # TODO Add full reference
 
     Args:
         NT(int): Positive Integer defining the maximum number of CSTRs
     Returns:
-        m = Pyomo GDP model
+        m (pyomo.ConcreteModel): Pyomo GDP model
     """
 
     # PYOMO MODEL
@@ -41,6 +55,8 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Inlet molar flow [mol/s]
 
     def F0_Def(m, i):
+        """This function calculates the molar flow for a reagent 'i' by multiplying 
+    its initial concentration with the inlet volumetric flow The inlet molar flow of the reagent 'i' in [mol/s]. """
         return m.C0[i]*m.QF0
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
@@ -101,7 +117,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Unreacted feed unit mole balance
 
     def unreact_mole_rule(m, i, n):
-        """Unreacted feed unite: Partial mole balance, (21.D)"""
+        """Unreacted feed unite: Partial mole balance, (21.D) [1]"""
         if n == NT:
             return m.F0[i] + m.FR[i, n] - m.F[i, n] + m.rate[i, n]*m.V[n] == 0
         else:
@@ -113,7 +129,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     def unreact_cont_rule(m, n):
         if n == NT:
-            """Unreacted feed unit: Continuity, (21.E)"""
+            """Unreacted feed unit: Continuity, (21.E) [1]"""
             return m.QF0 + m.QFR[n] - m.Q[n] == 0
         else:
             return pe.Constraint.Skip
@@ -163,7 +179,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Splitting point additional constraints
 
     def split_add_rule(m, i):
-        """Splitting point: additional constraints, (21.N)""" # TODO: How did it come up?
+        """Splitting point: additional constraints, Molarity constraints over initial and final flows, read as an multiplication avoid the numerical complication. (21.N)"""
         return m.P[i]*m.Q[1] - m.F[i, 1]*m.QP == 0
 
     m.split_add = pe.Constraint(m.I, rule=split_add_rule)
@@ -190,71 +206,125 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # YD Disjunction block equation definition
 
     def build_cstr_equations(disjunct, n):
+        """
+        TODO: Add docummentation
+        Build the Continuous Stirred Tank Reactor (CSTR) equations for a given stage 'n'.
+        This function defines the reaction rates, their relations, and the volume activation 
+        constraints for the model associated with a given disjunct.
+
+        arg:
+            m (disjunct model): The Pyomo disjunct on which the constraints will be built.
+            n (int): The stage number for which the equations will be built.
+
+        return:
+            None. The function defines the equations for the given disjunct.
+        """
         m = disjunct.model()
 
         # Reaction rates calculation # TODO : How did it come?
         @disjunct.Constraint()
         def YPD_rate_calc(disjunct):
+            """Reaction rates calculation"""
             return m.rate['A', n]*((m.Q[n])**m.order1)*((m.Q[n])**m.order2)+m.k*((m.F['A', n])**m.order1)*((m.F['B', n])**m.order2) == 0
 
         # Reaction rate relation
         @disjunct.Constraint()
         def YPD_rate_rel(disjunct):
+            """The reaction rate relation between A and B."""
             return m.rate['B', n] + m.rate['A', n] == 0
 
         # Volume activation
         @disjunct.Constraint()
         def YPD_vol_act(disjunct):
-            return m.c[n] - m.V[n] == 0 # TODO: Where does that come from ?
+            """Volume activation"""
+            return m.c[n] - m.V[n] == 0
 
     def build_bypass_equations(disjunct, n):
+        """
+        Build the bypass equations for a given stage 'n' of the given CSTR superstructure.
+
+        arg:
+            m (disjunct model): The Pyomo disjunct on which the constraints will be built.
+            n (int): The stage number for which the equations will be built.
+
+        return:
+            None. The function defines the equations for the given disjunct.
+        """
         m = disjunct.model()
 
         # FR deactivation
         @disjunct.Constraint(m.I)
         def neg_YPD_FR_desact(disjunct, i):
+            """Molar flow recycle deactivation"""
             return m.FR[i, n] == 0
 
         # Rate deactivation
         @disjunct.Constraint(m.I)
         def neg_YPD_rate_desact(disjunct, i):
+            """Rate deactivation"""
             return m.rate[i, n] == 0
 
         # QFR deactivation
         @disjunct.Constraint()
         def neg_YPD_QFR_desact(disjunct):
+            """Outlet flow rate recycle deactivation"""
             return m.QFR[n] == 0
 
         @disjunct.Constraint()
-        def neg_YPD_vol_desact(disjunct): # TODO: What is the intention for this?
+        def neg_YPD_vol_desact(disjunct):
+            """Volume deactivation"""
             return m.c[n] == 0
 
     # YR Disjuction block equation definition
 
     def build_recycle_equations(disjunct, n):
+        """
+        Build the recycle equations for a given stage 'n' of the given CSTR superstructure.
+
+        arg:
+            m (disjunct model): The Pyomo disjunct on which the constraints will be built.
+            n (int): The stage number for which the equations will be built.
+
+        return:
+            None. The function defines the equations for the given disjunct.
+        """
         m = disjunct.model()
 
         # FR activation
         @disjunct.Constraint(m.I)
         def YRD_FR_act(disjunct, i):
+            """Molar flow recucle activation"""
             return m.FR[i, n] - m.R[i] == 0
 
         # QFR activation
         @disjunct.Constraint()
         def YRD_QFR_act(disjunct):
-            return m.QFR[n] - m.QR == 0  # TODO: Does all the constraint are for the logical constraint to force them to be aligned?
+            """ Outlet flow rate recycle activation via equalizing with the recycle flow rate"""
+            return m.QFR[n] - m.QR == 0
 
     def build_no_recycle_equations(disjunct, n):
+        """
+        Build the disjunct for non existence of recycle equations for a given stage 'n' of the given CSTR superstructure.
+
+        arg:
+            m (disjunct model): The Pyomo disjunct on which the constraints will be built.
+            n (int): The stage number for which the equations will be built.
+
+        return:
+            None. The function defines the equations for the given disjunct.
+        """
         m = disjunct.model()
 
         # FR deactivation
         @disjunct.Constraint(m.I)
         def neg_YRD_FR_desact(disjunct, i):
+            """Molar flow recycle deactivation"""
             return m.FR[i, n] == 0
 
         # QFR deactivation
         @disjunct.Constraint()
         def neg_YRD_QFR_desact(disjunct):
+            """Outlet flow rate recycle deactivation via equalizing with the recycle flow rate"""
             return m.QFR[n] == 0
 
     # Create disjunction blocks

@@ -1,3 +1,11 @@
+"""
+main_cstr.py
+
+The code imports the CSTR system from the `gdp.cstr.gdp_reactor` module and solves it using different methods (MINLP, GDPopt, DSDA).
+
+References:
+[1] Linan, David A., et al. "Optimal design of superstructures for placing units and streams with multiple and ordered available locations. Part I: A new mathematical framework." Computers & Chemical Engineering 137, (2020): 106794.
+"""
 from __future__ import division
 
 import csv
@@ -26,6 +34,27 @@ from gdp.dsda.dsda_functions import (external_ref,
 
 
 def visualize_cstr_superstructure(m, NT):
+    """
+    Visualize the Continuous Stirred Tank Reactor (CSTR) superstructure.
+
+    This function constructs and displays a visual representation of the CSTR system.
+    The stages are depicted as nodes, where bypasses are shown in 'whitesmoke' color,
+    and reactors are in 'lightslategray'. If recycling exists in the system, it is
+    depicted with edges labeled 'R'.
+
+    Args:
+        m (Pyomo ConcreteModel) : The Pyomo model instance containing all model variables and parameters 
+        related to the CSTR system. Particularly, the function expects `m.YP`, `m.YR` variables denoting bypasses and reactors.
+        
+        NT (int) : The total number of stages or reactors in the CSTR system.
+
+    Returns:
+        None
+
+    Note:
+        The function uses the NetworkX library for the visualization, and the 
+        representation is displayed using `plt.show()`.
+    """
     x = list((range(1, NT+1)))
 
     # Initialize bypasses (b), reactors(r) and recycle
@@ -108,6 +137,7 @@ def visualize_cstr_superstructure(m, NT):
 
 
 def problem_logic_cstr(m):
+    """"""
     logic_expr = []
     for n in m.N:
         logic_expr.append([m.YR[n], m.YR_is_recycle[n].indicator_var])

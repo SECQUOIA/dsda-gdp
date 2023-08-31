@@ -2,7 +2,8 @@
 main_cstr.py
 
 The code imports the CSTR system from the `gdp.cstr.gdp_reactor` module and solves it using different methods (MINLP, GDPopt, DSDA).
-The code 
+The code ...
+# TODO: complete description
 
 References:
 [1] Linan, David A., et al. "Optimal design of superstructures for placing units and streams with multiple and ordered available locations. Part I: A new mathematical framework." Computers & Chemical Engineering 137, (2020): 106794.
@@ -16,7 +17,7 @@ from math import ceil, fabs
 
 import matplotlib.pyplot as plt
 import networkx as nx
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import logging
 from pyomo.environ import SolverFactory, Suffix, value
 from pyomo.gdp import Disjunct, Disjunction
@@ -48,7 +49,7 @@ def visualize_cstr_superstructure(m, NT):
     depicted with edges labeled 'R'.
 
     Args:
-        m (Pyomo ConcreteModel) : The Pyomo model instance containing all model variables and parameters
+        m (pyomo.ConcreteModel) : The Pyomo model instance containing all model variables and parameters
         related to the CSTR system. Particularly, the function expects `m.YP`, `m.YR` variables denoting bypasses and reactors.
 
         NT (int) : The total number of stages or reactors in the CSTR system.
@@ -72,8 +73,8 @@ def visualize_cstr_superstructure(m, NT):
 
     # Use information from solved model
     for n in m.N:
-        yp[n] = pe.value(pe.value(m.YP[n].get_associated_binary()))
-        yr[n] = pe.value(pe.value(m.YR[n].get_associated_binary()))
+        yp[n] = pyo.value(pyo.value(m.YP[n].get_associated_binary()))
+        yr[n] = pyo.value(pyo.value(m.YR[n].get_associated_binary()))
 
     # Classify units in bypasses (b) or reactors(r) and determine recycle
     for i in x:
@@ -183,7 +184,7 @@ def problem_logic_cstr(m):
     Generate a set of logical expressions based on model parameters.
 
     Args:
-        m (Pyomo ConcreteModel) : The Pyomo model instance containing all model variables and parameters
+        m (pyomo.ConcreteModel) : The Pyomo model instance containing all model variables and parameters
         related to the CSTR system. Particularly, the function expects `m.YP`, `m.YR` variables denoting bypasses and reactors.
 
     Returns:
@@ -195,18 +196,18 @@ def problem_logic_cstr(m):
         logic_expr.append([~m.YR[n], m.YR_is_not_recycle[n].indicator_var])
         logic_expr.append(
             [
-                pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]),
+                pyo.lor(pyo.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]),
                 m.YP_is_cstr[n].indicator_var,
             ]
         )
         logic_expr.append(
             [
-                ~pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]),
+                ~pyo.lor(pyo.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]),
                 m.YP_is_bypass[n].indicator_var,
             ]
         )
         logic_expr.append(
-            [pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]), m.YP[n]]
+            [pyo.lor(pyo.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]), m.YP[n]]
         )
     return logic_expr
 
@@ -321,7 +322,7 @@ if __name__ == "__main__":
         #             gams_output=False,
         #             tee=globaltee,
         #         )
-        #         new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
+        #         new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pyo.value(
         #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
         #         dict_data.append(new_result)
         #         print(new_result)
@@ -345,7 +346,7 @@ if __name__ == "__main__":
                     'Method': 'GDPopt',
                     'Approach': strategy,
                     'Solver': solver,
-                    'Objective': pe.value(m_solved.obj),
+                    'Objective': pyo.value(m_solved.obj),
                     'Time': m_solved.results.solver.user_time,
                     'Status': m_solved.results.solver.termination_condition,
                     'User_time': 'NA',
@@ -384,7 +385,7 @@ if __name__ == "__main__":
         #                 tee=False,
         #                 global_tee=False,
         #             )
-        #             new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
+        #             new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pyo.value(
         #                 m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime, 'NT': NT}
         #             dict_data.append(new_result)
         #             print(new_result)

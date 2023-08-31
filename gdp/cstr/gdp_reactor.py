@@ -28,10 +28,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     The CSTRs have a autocatalytic reaction A + B -> 2B and minimizes total reactor network volume.
     The optimal solution should yield NT reactors with a recycle before reactor NT.
     Reference: Optimal design of superstructures for placing units and streams with multiple and ordered available loactions.
-    Part I: A new mathematical framework (Linan et al., 2020) # TODO Add full reference
 
     Args:
-        NT(int): Positive Integer defining the maximum number of CSTRs
+        NT (int): Positive Integer defining the maximum number of CSTRs
     Returns:
         m (pyomo.ConcreteModel): Pyomo GDP model
     """
@@ -206,24 +205,28 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     def build_cstr_equations(disjunct, n):
         """
-        TODO: Add docummentation
-        Build the Continuous Stirred Tank Reactor (CSTR) equations for a given stage 'n'.
-        This function defines the reaction rates, their relations, and the volume activation
-        constraints for the model associated with a given disjunct.
+        Build the Continuous Stirred Tank Reactor (CSTR) equations for a given reactor/stage 'n'.
+        This function defines the reaction rates, their constraints, and the volume activation
+        cost for the model associated with a given disjunct.
 
-        arg:
-            m (disjunct model): The Pyomo disjunct on which the constraints will be built.
+        Args:
+            m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
             n (int): The stage number for which the equations will be built.
 
-        return:
+        Return:
             None. The function defines the equations for the given disjunct.
         """
         m = disjunct.model()
 
-        # Reaction rates calculation # TODO : How did it come?
+        # Reaction rates calculation
         @disjunct.Constraint()
         def YPD_rate_calc(disjunct):
-            """Reaction rates calculation"""
+            """
+            Reaction rates calculation. #TODO: Add equation from paper
+            -r_A_n = k * (C_A_n)^order1 * (C_B_n)^order2
+            -r_B_n = k * (F_A_n/Q_n)^order1 * (F_B_n/Q_n)^order2
+            -r_B_n*(Q_n)^order1*(Q_n)^order2 = k * (F_A_n)^order1 * (F_B_n)^order2
+            """
             return (
                 m.rate['A', n] * ((m.Q[n]) ** m.order1) * ((m.Q[n]) ** m.order2)
                 + m.k * ((m.F['A', n]) ** m.order1) * ((m.F['B', n]) ** m.order2)
@@ -247,7 +250,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         Build the bypass equations for a given stage 'n' of the given CSTR superstructure.
 
         arg:
-            m (disjunct model): The Pyomo disjunct on which the constraints will be built.
+            m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
             n (int): The stage number for which the equations will be built.
 
         return:
@@ -285,7 +288,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         Build the recycle equations for a given stage 'n' of the given CSTR superstructure.
 
         arg:
-            m (disjunct model): The Pyomo disjunct on which the constraints will be built.
+            m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
             n (int): The stage number for which the equations will be built.
 
         return:
@@ -310,7 +313,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         Build the disjunct for non existence of recycle equations for a given stage 'n' of the given CSTR superstructure.
 
         arg:
-            m (disjunct model): The Pyomo disjunct on which the constraints will be built.
+            m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
             n (int): The stage number for which the equations will be built.
 
         return:
@@ -346,7 +349,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     @m.Disjunction(m.N)
     def YR_is_recycle_or_not(m, n):
-        """Disjunction for YR, (19,B)"""
+        """Disjunction for YR, (19.B)"""
         return [m.YR_is_recycle[n], m.YR_is_not_recycle[n]]
 
     # Associate Boolean variables with with disjunctions

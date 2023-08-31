@@ -23,15 +23,19 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
 from gdp.cstr.gdp_reactor import build_cstrs
-from gdp.dsda.dsda_functions import (external_ref,
-                                     extvars_gdp_to_mip,
-                                     generate_initialization,
-                                     get_external_information,
-                                     initialize_model,
-                                     solve_complete_external_enumeration,
-                                     solve_subproblem, solve_with_dsda,
-                                     solve_with_gdpopt, solve_with_minlp,
-                                     visualize_dsda)
+from gdp.dsda.dsda_functions import (
+    external_ref,
+    extvars_gdp_to_mip,
+    generate_initialization,
+    get_external_information,
+    initialize_model,
+    solve_complete_external_enumeration,
+    solve_subproblem,
+    solve_with_dsda,
+    solve_with_gdpopt,
+    solve_with_minlp,
+    visualize_dsda,
+)
 
 
 def visualize_cstr_superstructure(m, NT):
@@ -44,19 +48,19 @@ def visualize_cstr_superstructure(m, NT):
     depicted with edges labeled 'R'.
 
     Args:
-        m (Pyomo ConcreteModel) : The Pyomo model instance containing all model variables and parameters 
+        m (Pyomo ConcreteModel) : The Pyomo model instance containing all model variables and parameters
         related to the CSTR system. Particularly, the function expects `m.YP`, `m.YR` variables denoting bypasses and reactors.
-        
+
         NT (int) : The total number of stages or reactors in the CSTR system.
 
     Returns:
         None
 
     Note:
-        The function uses the NetworkX library for the visualization, and the 
+        The function uses the NetworkX library for the visualization, and the
         representation is displayed using `plt.show()`.
     """
-    x = list((range(1, NT+1)))
+    x = list((range(1, NT + 1)))
 
     # Initialize bypasses (b), reactors(r) and recycle
     xb = []
@@ -81,26 +85,30 @@ def visualize_cstr_superstructure(m, NT):
             recycle = i
 
     # Create labels for bypasses (b), reactors(r), input/output (f) and recycle(recy)
-    blabels = dict(zip(range(1, len(xb)+1), xb[::-1]))
-    rlabels = dict(zip(range(len(xb)+1, len(xb)+1+len(xr)), xr[::-1]))
-    flabels = {0: '', NT+1: ''}
+    blabels = dict(zip(range(1, len(xb) + 1), xb[::-1]))
+    rlabels = dict(zip(range(len(xb) + 1, len(xb) + 1 + len(xr)), xr[::-1]))
+    flabels = {0: '', NT + 1: ''}
     recylabels = {'r1': '', 'r2': '', 'r3': '', 'r4': ''}
 
     # Create posicions (pos) for bypasses (b), reactors(r), input/output(f) and recycle(recy)
     posb = {}
     posr = {}
-    posf = {0: (0.2, 0), NT+1: (NT+1, 0)}
-    posrecy = {'r1': (NT+0.5, -0.0009), 'r2': (NT+0.5, 0.008),
-               'r3': (NT-recycle+0.5, 0.007), 'r4': (NT-recycle+0.5, -0.0009)}
+    posf = {0: (0.2, 0), NT + 1: (NT + 1, 0)}
+    posrecy = {
+        'r1': (NT + 0.5, -0.0009),
+        'r2': (NT + 0.5, 0.008),
+        'r3': (NT - recycle + 0.5, 0.007),
+        'r4': (NT - recycle + 0.5, -0.0009),
+    }
 
-    for i in range(1, len(xb)+1):
+    for i in range(1, len(xb) + 1):
         posb[i] = (i, 0)
 
-    for i in range(len(xb)+1, len(xb)+1+len(xr)):
+    for i in range(len(xb) + 1, len(xb) + 1 + len(xr)):
         posr[i] = (i, 0)
 
     # Create flow arrow from input to output
-    arcsf = [(0, NT+1)]
+    arcsf = [(0, NT + 1)]
 
     # Declare graph
     graph = nx.DiGraph()
@@ -108,18 +116,46 @@ def visualize_cstr_superstructure(m, NT):
     # Graph input/out(f)
     nx.draw_networkx_labels(graph, posf, flabels)
     nx.draw_networkx_edges(graph, posf, arcsf, width=1, arrowsize=10)
-    nx.draw_networkx(graph, posf, node_size=1, node_color='black',
-                     nodelist=flabels, with_labels=True, node_shape='', edgecolors='black')
+    nx.draw_networkx(
+        graph,
+        posf,
+        node_size=1,
+        node_color='black',
+        nodelist=flabels,
+        with_labels=True,
+        node_shape='',
+        edgecolors='black',
+    )
 
     # Graph bypasses(b)
     nx.draw_networkx_labels(graph, posb, blabels)
-    nx.draw_networkx(graph, posb, node_size=900, node_color='whitesmoke', width=1.5,
-                     nodelist=blabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=0.2)
+    nx.draw_networkx(
+        graph,
+        posb,
+        node_size=900,
+        node_color='whitesmoke',
+        width=1.5,
+        nodelist=blabels,
+        with_labels=True,
+        node_shape='s',
+        edgecolors='black',
+        linewidths=0.2,
+    )
 
     # Graph reactors(r)
     nx.draw_networkx_labels(graph, posr, rlabels)
-    nx.draw_networkx(graph, posr, node_size=900, node_color='lightslategray', width=1.5,
-                     nodelist=rlabels, with_labels=True, node_shape='s', edgecolors='black', linewidths=1.5)
+    nx.draw_networkx(
+        graph,
+        posr,
+        node_size=900,
+        node_color='lightslategray',
+        width=1.5,
+        nodelist=rlabels,
+        with_labels=True,
+        node_shape='s',
+        edgecolors='black',
+        linewidths=1.5,
+    )
 
     # Graph recycle(recy) if it exists
     if recycle != 0:
@@ -127,12 +163,17 @@ def visualize_cstr_superstructure(m, NT):
         pairs = list(zip(list(arcsrecy), ['R', 'R']))
         edgelabels = dict(pairs)
         nx.draw_networkx_labels(graph, posrecy, recylabels)
-        nx.draw_networkx_edges(
-            graph, posrecy, arcsrecy, width=1, arrowsize=10)
-        nx.draw_networkx(graph, posrecy, node_size=0, node_color='white',
-                         nodelist=recylabels, node_shape='', edgecolors='black')
-        nx.draw_networkx_edge_labels(
-            graph, posrecy, edge_labels=edgelabels)
+        nx.draw_networkx_edges(graph, posrecy, arcsrecy, width=1, arrowsize=10)
+        nx.draw_networkx(
+            graph,
+            posrecy,
+            node_size=0,
+            node_color='white',
+            nodelist=recylabels,
+            node_shape='',
+            edgecolors='black',
+        )
+        nx.draw_networkx_edge_labels(graph, posrecy, edge_labels=edgelabels)
 
     plt.show()
 
@@ -152,17 +193,25 @@ def problem_logic_cstr(m):
     for n in m.N:
         logic_expr.append([m.YR[n], m.YR_is_recycle[n].indicator_var])
         logic_expr.append([~m.YR[n], m.YR_is_not_recycle[n].indicator_var])
-        logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(
-            1, n)), m.YF[n]), m.YP_is_cstr[n].indicator_var])
-        logic_expr.append([~pe.lor(pe.land(~m.YF[n2] for n2 in range(
-            1, n)), m.YF[n]), m.YP_is_bypass[n].indicator_var])
-        logic_expr.append([pe.lor(pe.land(~m.YF[n2] for n2 in range(
-            1, n)), m.YF[n]), m.YP[n]])
+        logic_expr.append(
+            [
+                pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]),
+                m.YP_is_cstr[n].indicator_var,
+            ]
+        )
+        logic_expr.append(
+            [
+                ~pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]),
+                m.YP_is_bypass[n].indicator_var,
+            ]
+        )
+        logic_expr.append(
+            [pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]), m.YP[n]]
+        )
     return logic_expr
 
 
 if __name__ == "__main__":
-
     # Results
     # NTs = range(5, 26, 1)
     NTs = [5]
@@ -173,13 +222,20 @@ if __name__ == "__main__":
     # Setting logging level to ERROR to avoid printing FBBT warning of some constraints not implemented
     logging.basicConfig(level=logging.ERROR)
 
-    csv_columns = ['Method', 'Approach', 'Solver',
-                   'Objective', 'Time', 'Status', 'User_time', 'NT']
+    csv_columns = [
+        'Method',
+        'Approach',
+        'Solver',
+        'Objective',
+        'Time',
+        'Status',
+        'User_time',
+        'NT',
+    ]
     dict_data = []
 
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    csv_file = os.path.join(
-        dir_path, "results", "cstr_results.csv")
+    csv_file = os.path.join(dir_path, "results", "cstr_results.csv")
 
     # nlps = ['knitro', 'baron']# , 'msnlp']
     nlps = ['knitro']
@@ -223,14 +279,19 @@ if __name__ == "__main__":
     for NT in NTs:
         # Create initialization for all methods starting with a single reactor
         json_file = os.path.join(
-            dir_path, 'gdp/dsda/', 'cstr_' + str(NT) + '_initialization.json')
+            dir_path, 'gdp/dsda/', 'cstr_' + str(NT) + '_initialization.json'
+        )
         if os.path.exists(json_file):
             init_path = json_file
         else:
             m = build_cstrs(NT)
             ext_ref = {m.YF: m.N, m.YR: m.N}
-            reformulation_dict, number_of_external_variables, lower_bounds, upper_bounds = get_external_information(
-                m, ext_ref, tee=globaltee)
+            (
+                reformulation_dict,
+                number_of_external_variables,
+                lower_bounds,
+                upper_bounds,
+            ) = get_external_information(m, ext_ref, tee=globaltee)
             m_fixed = external_ref(
                 m=m,
                 x=[1, 1],
@@ -239,9 +300,11 @@ if __name__ == "__main__":
                 tee=globaltee,
             )
             m_solved = solve_subproblem(
-                m=m_fixed, subproblem_solver='baron', timelimit=100, tee=True)
+                m=m_fixed, subproblem_solver='baron', timelimit=100, tee=True
+            )
             init_path = generate_initialization(
-                m=m_solved, starting_initialization=True, model_name='cstr_'+str(NT))
+                m=m_solved, starting_initialization=True, model_name='cstr_' + str(NT)
+            )
 
         # # MINLP
         # for solver in minlps:
@@ -278,11 +341,19 @@ if __name__ == "__main__":
                     strategy=strategy,
                     tee=globaltee,
                 )
-                new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
-                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
+                new_result = {
+                    'Method': 'GDPopt',
+                    'Approach': strategy,
+                    'Solver': solver,
+                    'Objective': pe.value(m_solved.obj),
+                    'Time': m_solved.results.solver.user_time,
+                    'Status': m_solved.results.solver.termination_condition,
+                    'User_time': 'NA',
+                    'NT': NT,
+                }
                 dict_data.append(new_result)
                 print(new_result)
-                
+
         visualize_cstr_superstructure(m, NT)
 
         # # D-SDA

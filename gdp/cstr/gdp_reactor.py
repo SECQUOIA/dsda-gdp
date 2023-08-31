@@ -25,7 +25,7 @@ from pyomo.opt.base.solvers import SolverFactory
 def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     """
     Function that builds CSTR superstructure model of size NT.
-    The CSTRs have a autocatalytic reaction A + B -> 2B and minimizes total reactor network volume. 
+    The CSTRs have a autocatalytic reaction A + B -> 2B and minimizes total reactor network volume.
     The optimal solution should yield NT reactors with a recycle before reactor NT.
     Reference: Optimal design of superstructures for placing units and streams with multiple and ordered available loactions.
     Part I: A new mathematical framework (Linan et al., 2020) # TODO Add full reference
@@ -55,9 +55,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Inlet molar flow [mol/s]
 
     def F0_Def(m, i):
-        """This function calculates the molar flow for a reagent 'i' by multiplying 
-    its initial concentration with the inlet volumetric flow The inlet molar flow of the reagent 'i' in [mol/s]. """
-        return m.C0[i]*m.QF0
+        """This function calculates the molar flow for a reagent 'i' by multiplying
+        its initial concentration with the inlet volumetric flow The inlet molar flow of the reagent 'i' in [mol/s].
+        """
+        return m.C0[i] * m.QF0
+
     m.F0 = pe.Param(m.I, initialize=F0_Def)
 
     # BOOLEAN VARIABLES
@@ -78,16 +80,13 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     m.Q = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
 
     # Outlet flow rate recycle activation of the superstructure unit [L/s]
-    m.QFR = pe.Var(m.N, initialize=0,
-                   within=pe.NonNegativeReals, bounds=(0, 10))
+    m.QFR = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
 
     # Molar flow [mol/s]
-    m.F = pe.Var(m.I, m.N, initialize=0,
-                 within=pe.NonNegativeReals, bounds=(0, 10))
+    m.F = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
 
     # Molar flow  recycle activation [mol/s]
-    m.FR = pe.Var(m.I, m.N, initialize=0,
-                  within=pe.NonNegativeReals, bounds=(0, 10))
+    m.FR = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
 
     # Reaction rate [mol/(L*s)]
     m.rate = pe.Var(m.I, m.N, initialize=0, within=pe.Reals, bounds=(-10, 10))
@@ -119,7 +118,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def unreact_mole_rule(m, i, n):
         """Unreacted feed unite: Partial mole balance, (21.D) [1]"""
         if n == NT:
-            return m.F0[i] + m.FR[i, n] - m.F[i, n] + m.rate[i, n]*m.V[n] == 0
+            return m.F0[i] + m.FR[i, n] - m.F[i, n] + m.rate[i, n] * m.V[n] == 0
         else:
             return pe.Constraint.Skip
 
@@ -142,7 +141,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def react_mole_rule(m, i, n):
         """Reactor sequence: Partial Molar Balance, (21.H)"""
         if n != NT:
-            return m.F[i, n+1] + m.FR[i, n] - m.F[i, n] + m.rate[i, n]*m.V[n] == 0
+            return m.F[i, n + 1] + m.FR[i, n] - m.F[i, n] + m.rate[i, n] * m.V[n] == 0
         else:
             return pe.Constraint.Skip
 
@@ -153,7 +152,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def react_cont_rule(m, n):
         """Reactor sequence: Continuity, (21.I)"""
         if n != NT:
-            return m.Q[n+1] + m.QFR[n] - m.Q[n] == 0
+            return m.Q[n + 1] + m.QFR[n] - m.Q[n] == 0
         else:
             return pe.Constraint.Skip
 
@@ -180,7 +179,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     def split_add_rule(m, i):
         """Splitting point: additional constraints, Molarity constraints over initial and final flows, read as an multiplication avoid the numerical complication. (21.N)"""
-        return m.P[i]*m.Q[1] - m.F[i, 1]*m.QP == 0
+        return m.P[i] * m.Q[1] - m.F[i, 1] * m.QP == 0
 
     m.split_add = pe.Constraint(m.I, rule=split_add_rule)
 
@@ -188,7 +187,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     def prod_spec_rule(m):
         """Product specification constraint, (21.O)"""
-        return m.QP*0.95 - m.P['B'] == 0
+        return m.QP * 0.95 - m.P['B'] == 0
 
     m.prod_spec = pe.Constraint(rule=prod_spec_rule)
 
@@ -197,7 +196,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def vol_cons_rule(m, n):
         """Volume constraint, (21.P)"""
         if n != 1:
-            return m.V[n] - m.V[n-1] == 0
+            return m.V[n] - m.V[n - 1] == 0
         else:
             return pe.Constraint.Skip
 
@@ -209,7 +208,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """
         TODO: Add docummentation
         Build the Continuous Stirred Tank Reactor (CSTR) equations for a given stage 'n'.
-        This function defines the reaction rates, their relations, and the volume activation 
+        This function defines the reaction rates, their relations, and the volume activation
         constraints for the model associated with a given disjunct.
 
         arg:
@@ -225,7 +224,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         @disjunct.Constraint()
         def YPD_rate_calc(disjunct):
             """Reaction rates calculation"""
-            return m.rate['A', n]*((m.Q[n])**m.order1)*((m.Q[n])**m.order2)+m.k*((m.F['A', n])**m.order1)*((m.F['B', n])**m.order2) == 0
+            return (
+                m.rate['A', n] * ((m.Q[n]) ** m.order1) * ((m.Q[n]) ** m.order2)
+                + m.k * ((m.F['A', n]) ** m.order1) * ((m.F['B', n]) ** m.order2)
+                == 0
+            )
 
         # Reaction rate relation
         @disjunct.Constraint()
@@ -299,7 +302,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         # QFR activation
         @disjunct.Constraint()
         def YRD_QFR_act(disjunct):
-            """ Outlet flow rate recycle activation via equalizing with the recycle flow rate"""
+            """Outlet flow rate recycle activation via equalizing with the recycle flow rate"""
             return m.QFR[n] - m.QR == 0
 
     def build_no_recycle_equations(disjunct, n):
@@ -379,11 +382,13 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # Unit operation in n constraint
 
     def unit_in_n_rule(m, n):
-        """YP[1] is true when n=1, else YP[n] is equivalent to YF[n] or 1 up to n-1 YF[n] are false. """
+        """YP[1] is true when n=1, else YP[n] is equivalent to YF[n] or 1 up to n-1 YF[n] are false."""
         if n == 1:
             return m.YP[n].equivalent_to(True)
         else:
-            return m.YP[n].equivalent_to(pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n]))
+            return m.YP[n].equivalent_to(
+                pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n])
+            )
 
     m.unit_in_n = pe.LogicalConstraint(m.N, rule=unit_in_n_rule)
 

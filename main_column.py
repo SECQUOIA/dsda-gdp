@@ -15,9 +15,20 @@ References:
 """
 
 # List of differences when executing code in Albert's computer
+# Program ran August 22, 2023.
+# Processor: 12th Gen Intel(R) Core(TM) i7-1265U   1.80 GHz 
+# Installed RAM: 32.0 GB (31.7 GB usable)
+# Python version: 3.7.7, GAMS version: 36.1, Pyomo version: 5.7.3
 # When solving the problem via MINLP reformulation: Antigone and DICOPT solver executed faster. However, Baron solver was the solver which took more time.
+# Antigone solver took
+
 # When solving the problem using GDP algorithm, using knitro solver was longer when executing LOA and GLOA methods.
-# When solving the problem via DSDA, k=2 cases were executed faster for knitro, baron solvers. Other cases, there were no drastic differences.
+# knitro solver running the LOA method took 
+
+# When solving the problem via DSDA, k=2 cases were executed faster for knitro, slower for baron solvers. 
+# knitro solver took 5.41 seconds(previously 6.03 seconds) when running dsda_mlp_hull.
+# baron took 6.8 seconds(previously 5.85 seconds) when running dsda_mlp_hull.
+# Other cases, there were no drastic differences.
 
 # Import division from the future to make it available in Python 2.7 and below
 from __future__ import division

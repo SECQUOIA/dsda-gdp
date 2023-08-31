@@ -213,7 +213,7 @@ def build_column(min_trays, max_trays, xD, xB):
     m.B = Var(
         m.comps,
         domain=NonNegativeReals,
-        doc='bottoms component flows in mol/s',
+        doc='bottoms component flows [mol/s]',
         bounds=(0, max_flow),
         initialize=50,
     )  # Bottoms component flows [mol/s]
@@ -527,14 +527,14 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     on the tray, as well as conditions for when the tray does not exist.
 
     Args:
-        m (Model Object): A model object containing the relevant variables, parameters, and expressions
+        m (pyomo.ConcreteModel): A model object containing the relevant variables, parameters, and expressions
             for the distillation process, such as liquid and vapor enthalpy expressions, and components.
 
-        t (integer): The index of the tray for which the energy balance is being constructed.
+        t (int): The index of the tray for which the energy balance is being constructed.
 
-        tray (Block Object): A block object representing the active scenario where the tray is in operation.
+        tray (pyomo.Block): A block object representing the active scenario where the tray is in operation.
 
-        no_tray (Block Object): A block object representing the scenario where the tray is bypassed
+        no_tray (pyomo.Block): A block object representing the scenario where the tray is bypassed
             (pass-through without liquid or vapor contact).
 
     Return:

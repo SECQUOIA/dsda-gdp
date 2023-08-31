@@ -79,9 +79,9 @@ def initialize(m):
         Set variable to the value if it is not fixed.
         Checks if the given variable is fixed. If not, sets its value to the provided value.
 
-        Parameters:
-        - var: A variable, typically part of a mathematical model.
-        - val: The value to be set for the variable if it's not fixed.
+        Args:
+            var (pyomo.Variable): A variable, typically part of a mathematical model.
+            val (float): The value to be set for the variable if it's not fixed.
 
         Returns:
             None. The function modifies the variable 'var' in-place if it's not fixed.

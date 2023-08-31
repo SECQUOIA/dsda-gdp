@@ -2,6 +2,7 @@
 main_cstr.py
 
 The code imports the CSTR system from the `gdp.cstr.gdp_reactor` module and solves it using different methods (MINLP, GDPopt, DSDA).
+The code 
 
 References:
 [1] Linan, David A., et al. "Optimal design of superstructures for placing units and streams with multiple and ordered available locations. Part I: A new mathematical framework." Computers & Chemical Engineering 137, (2020): 106794.
@@ -137,7 +138,16 @@ def visualize_cstr_superstructure(m, NT):
 
 
 def problem_logic_cstr(m):
-    """"""
+    """
+    Generate a set of logical expressions based on model parameters.
+
+    Args:
+        m (Pyomo ConcreteModel) : The Pyomo model instance containing all model variables and parameters
+        related to the CSTR system. Particularly, the function expects `m.YP`, `m.YR` variables denoting bypasses and reactors.
+
+    Returns:
+        logic_expr (list) : A list of logical expressions that are used to define the external variables of the CSTR system.
+    """
     logic_expr = []
     for n in m.N:
         logic_expr.append([m.YR[n], m.YR_is_recycle[n].indicator_var])
@@ -154,8 +164,8 @@ def problem_logic_cstr(m):
 if __name__ == "__main__":
 
     # Results
-    NTs = range(5, 26, 1)
-    # NTs = [5]
+    # NTs = range(5, 26, 1)
+    NTs = [5]
     timelimit = 900
     starting_point = [1, 1]
 
@@ -171,7 +181,8 @@ if __name__ == "__main__":
     csv_file = os.path.join(
         dir_path, "results", "cstr_results.csv")
 
-    nlps = ['knitro', 'baron']# , 'msnlp']
+    # nlps = ['knitro', 'baron']# , 'msnlp']
+    nlps = ['knitro']
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
     # nlp_opts['msnlp']['add_options'] = [
@@ -203,9 +214,11 @@ if __name__ == "__main__":
         'subsolver knitro \n'
         '$offecho \n'
     ]
-    transformations = ['bigm', 'hull']
+    # transformations = ['bigm', 'hull']
+    transformations = ['bigm']
     ks = ['Infinity', '2']
-    strategies = ['LOA', 'GLOA', 'LBB']
+    # strategies = ['LOA', 'GLOA', 'LBB']
+    strategies = ['LOA']
 
     for NT in NTs:
         # Create initialization for all methods starting with a single reactor
@@ -250,58 +263,60 @@ if __name__ == "__main__":
         #         dict_data.append(new_result)
         #         print(new_result)
 
-        # # GDPopt
-        # for solver in nlps:
-        #     for strategy in strategies:
-        #         new_result = {}
-        #         m = build_cstrs(NT)
-        #         m_init = initialize_model(m, json_path=init_path)
-        #         m_solved = solve_with_gdpopt(
-        #             m=m_init,
-        #             mip='cplex',
-        #             nlp=solver,
-        #             nlp_options=nlp_opts[solver],
-        #             timelimit=timelimit,
-        #             strategy=strategy,
-        #             tee=globaltee,
-        #         )
-        #         new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
-        #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
-        #         dict_data.append(new_result)
-        #         print(new_result)
-
-        # D-SDA
-        m = build_cstrs(NT)
-        ext_ref = {m.YF: m.N, m.YR: m.N}
-        get_external_information(m, ext_ref, tee=False)
-
+        # GDPopt
         for solver in nlps:
-            for k in ks:
-                for transformation in ['hull','bigm']:
-                    new_result = {}
-                    m_solved, _, _ = solve_with_dsda(
-                        model_function=build_cstrs,
-                        model_args={'NT': NT},
-                        starting_point=starting_point,
-                        ext_dict=ext_ref,
-                        ext_logic=problem_logic_cstr,
-                        mip_transformation=True,
-                        transformation=transformation,
-                        k=k,
-                        provide_starting_initialization=True,
-                        feasible_model='cstr_' + str(NT),
-                        subproblem_solver=solver,
-                        subproblem_solver_options=nlp_opts[solver],
-                        iter_timelimit=timelimit,
-                        timelimit=timelimit,
-                        gams_output=False,
-                        tee=False,
-                        global_tee=False,
-                    )
-                    new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-                        m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime, 'NT': NT}
-                    dict_data.append(new_result)
-                    print(new_result)
+            for strategy in strategies:
+                new_result = {}
+                m = build_cstrs(NT)
+                m_init = initialize_model(m, json_path=init_path)
+                m_solved = solve_with_gdpopt(
+                    m=m_init,
+                    mip='cplex',
+                    nlp=solver,
+                    nlp_options=nlp_opts[solver],
+                    timelimit=timelimit,
+                    strategy=strategy,
+                    tee=globaltee,
+                )
+                new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
+                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
+                dict_data.append(new_result)
+                print(new_result)
+                
+        visualize_cstr_superstructure(m, NT)
+
+        # # D-SDA
+        # m = build_cstrs(NT)
+        # ext_ref = {m.YF: m.N, m.YR: m.N}
+        # get_external_information(m, ext_ref, tee=False)
+
+        # for solver in nlps:
+        #     for k in ks:
+        #         for transformation in transformations:
+        #             new_result = {}
+        #             m_solved, _, _ = solve_with_dsda(
+        #                 model_function=build_cstrs,
+        #                 model_args={'NT': NT},
+        #                 starting_point=starting_point,
+        #                 ext_dict=ext_ref,
+        #                 ext_logic=problem_logic_cstr,
+        #                 mip_transformation=True,
+        #                 transformation=transformation,
+        #                 k=k,
+        #                 provide_starting_initialization=True,
+        #                 feasible_model='cstr_' + str(NT),
+        #                 subproblem_solver=solver,
+        #                 subproblem_solver_options=nlp_opts[solver],
+        #                 iter_timelimit=timelimit,
+        #                 timelimit=timelimit,
+        #                 gams_output=False,
+        #                 tee=False,
+        #                 global_tee=False,
+        #             )
+        #             new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
+        #                 m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime, 'NT': NT}
+        #             dict_data.append(new_result)
+        #             print(new_result)
 
         try:
             with open(csv_file, 'w') as csvfile:

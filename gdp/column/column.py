@@ -1,14 +1,24 @@
 """
-Distillation column model for 2018 PSE conference
+column.py
+Fixed design solution of distillation column GDP model
+
+This file defines an optimization model for the design and operation of a distillation column for benzene-toluene separation.
+The objective is to minimize the operation cost (heat duties in condenser and reboiler) and fixed cost (number of trays in the column).
+The constraints are the MESH equations (material balance, equilibrium, summation, and enthalpy balance) for each tray together with logical constraints that encode the existence of trays and position of reflux and boilup flows.
+The continuous variables of this model are the flowrates of each component in liquid and vapor phase and temperatures at each tray, the reflux and boilup ratio, and the condenser and reboiler heat duties.
+The logical variables are the exitence or non-existence of the trays, and the position of the reflux and boilup flows.
+The complete model defines a Generalized Disjunctive Programming (GDP) problem.
+
+After the model is defined, the boolean variables are reformulated into integer variables known as external variables.
+The external variables are defined as user input and are used to activate or deactivate the trays and position the reflux and boilup flows.
+Using the GDP problem, we activate and deactivate selectively corresponding constraints.
+The model is initialized using data from an Excel sheet 'init.xlsx' and other model-related calculations.
+The resulting problem is a Nonlinear Programming (NLP) problem, which is solved through GAMS solvers specified by the user.
+
 References:
 - Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
 - Bernal, David E., et al. "Process Superstructure Optimization through Discrete Steepest Descent Optimization: a GDP Analysis and Applications in Process Intensification." Computer Aided Chemical Engineering. Vol. 49. Elsevier, 2022. 1279-1284.
 """
-# The column.py formulates the build column model, state the energy and the mass balances for every part of the column.
-# If the initial value for the varaible is given the model will use the initial value as the initial guess for the solver.
-# If the initial value is not given the model will use the default value for the initial guess.
-# There exist the code dealing activation or deactivation of trays in a distillation column based on the existence of specific flows,
-# and it then applies several transformations to ensure the model can be solved using dsda.
 
 from __future__ import division
 
@@ -33,6 +43,7 @@ from pyomo.environ import (
     TransformationFactory,
     Var,
     exactly,
+    exp,
     land,
     log,
     lor,
@@ -43,8 +54,260 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolutionStatus, SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.util.infeasible import log_infeasible_constraints
+import pandas as pd
 
-from .initialize import initialize
+
+def initialize(m):
+    """
+    Initializes the values of the distillation model using provided data from an Excel sheet 'init.xlsx'
+    and other model-related calculations.
+
+    Args:
+        m (pyomo.ConcreteModel): Model object representing the distillation column.
+
+    Returns:
+        None. The function modifies the model 'm' in-place.
+    """
+    m.reflux_frac.set_value(value(m.reflux_ratio / (1 + m.reflux_ratio)))
+    m.boilup_frac.set_value(value(m.reboil_ratio / (1 + m.reboil_ratio)))
+
+    # Import the Excel Sheet
+    _excel_sheets = pd.read_excel('init.xlsx', sheet_name=None, engine='openpyxl')
+
+    def set_value_if_not_fixed(var, val):
+        """
+        Set variable to the value if it is not fixed.
+        Checks if the given variable is fixed. If not, sets its value to the provided value.
+
+        Args:
+            var (pyomo.Variable): A variable, typically part of a mathematical model.
+            val (float): The value to be set for the variable if it's not fixed.
+
+        Returns:
+            None. The function modifies the variable 'var' in-place if it's not fixed.
+        """
+        if not var.fixed:
+            var.set_value(val)
+
+    # active_trays are the condenser, reboiler, feed, and those conditional trays whose indicator_var is 1
+    active_trays = [
+        t
+        for t in m.trays
+        if t not in m.conditional_trays
+        or math.fabs(value(m.tray[t].indicator_var - 1)) <= 1e-3
+    ]
+    num_active_trays = len(active_trays)
+
+    feed_tray = m.feed_tray
+
+    # Process 'trays' sheet with temperature from Excel
+    tray_indexed_data = _excel_sheets['trays']
+    tray_indexed_data.sort_values(by=['tray'], inplace=True)
+    tray_indexed_data.set_index('tray', inplace=True)
+
+    # Process 'comps_and_trays' sheet with flows and compositions from Excel and set multi-index
+    comp_and_tray_indexed_data = _excel_sheets['comps_and_trays']
+    comp_and_tray_indexed_data.sort_values(by=['comp', 'tray'], inplace=True)
+    comp_and_tray_indexed_data.set_index(['comp', 'tray'], inplace=True)
+    comp_slices = {
+        c: comp_and_tray_indexed_data.loc[c, :] for c in m.comps
+    }  # Create dictionary of data slices per component
+
+    num_data_trays = tray_indexed_data.index.size
+    # If there are fewer active trays than data trays, average the data.
+    if num_active_trays < num_data_trays:
+        # Number of model trays is less than number of trays in data. Need to
+        # do averaging
+        new_indices = [1] + [
+            1 + (num_data_trays - 1) / (num_active_trays - 1) * i
+            for i in range(1, num_active_trays)
+        ]
+        # Combine data from adjacent trays based on linear combination.
+        for tray in range(2, num_active_trays):
+            indx = new_indices[tray - 1]
+            lower = math.floor(indx)
+            frac_above = indx - lower
+            # Take linear combination of values
+            tray_indexed_data.loc[tray] = (
+                tray_indexed_data.loc[lower] * (1 - frac_above)
+                + tray_indexed_data.loc[lower + 1] * frac_above
+            )
+            for c in m.comps:
+                comp_slices[c].loc[tray] = (
+                    comp_slices[c].loc[lower] * (1 - frac_above)
+                    + comp_slices[c].loc[lower + 1] * frac_above
+                )
+        tray_indexed_data.loc[num_active_trays] = tray_indexed_data.loc[num_data_trays]
+        # Trim data to match the number of active trays.
+        tray_indexed_data = tray_indexed_data.head(num_active_trays)
+        for c in m.comps:
+            comp_slices[c].loc[num_active_trays] = comp_slices[c].loc[num_data_trays]
+            comp_slices[c] = comp_slices[c].head(num_active_trays)
+    # If there are more or equal active trays than data trays, interpolate the data.
+    else:
+        # Stretch the data out and do interpolation
+        tray_indexed_data.index = pd.Index(
+            [1]
+            + [
+                int(round(num_active_trays / num_data_trays * i))
+                for i in range(2, num_data_trays + 1)
+            ],
+            name='tray',
+        )
+        tray_indexed_data = tray_indexed_data.reindex(
+            [i for i in range(1, num_active_trays + 1)]
+        ).interpolate()
+        # Stretch component data, handle potential N/A values, and interpolate
+        for c in m.comps:
+            comp_slices[c].index = pd.Index(
+                [1]
+                + [
+                    int(round(num_active_trays / num_data_trays * i))
+                    for i in range(2, num_data_trays + 1)
+                ],
+                name='tray',
+            )
+            # special handling necessary for V near top of column and L
+            # near column bottom. Do not want to interpolate with one end
+            # being potentially 0. (ie. V from total condenser). Instead,
+            # use back fill and forward fill.
+            comp_slices[c] = comp_slices[c].reindex(
+                [i for i in range(1, num_active_trays + 1)]
+            )
+            tray_below_condenser = sorted(active_trays, reverse=True)[1]
+            if pd.isna(comp_slices[c]['V'][tray_below_condenser]):
+                # V of the tray below the condenser is N/A. Find a valid
+                # value lower down to use.
+                val = next(
+                    comp_slices[c]['V'][t]
+                    for t in reversed(list(m.trays))
+                    if pd.notna(comp_slices[c]['V'][t]) and not t == m.condens_tray
+                )
+                comp_slices[c]['V'][tray_below_condenser] = val
+            if pd.isna(comp_slices[c]['L'][m.reboil_tray + 1]):
+                # L of the tray above the reboiler is N/A. Find a valid
+                # value higher up to use.
+                val = next(
+                    comp_slices[c]['L'][t]
+                    for t in m.trays
+                    if pd.notna(comp_slices[c]['L'][t]) and not t == m.reboil_tray
+                )
+                comp_slices[c]['L'][m.reboil_tray + 1] = val
+            comp_slices[c] = comp_slices[c].interpolate()
+
+    # Reindex the tray data and fill any missing values using back-fill method.
+    tray_indexed_data.index = pd.Index(sorted(active_trays), name='tray')
+    tray_indexed_data = tray_indexed_data.reindex(sorted(m.trays), method='bfill')
+
+    # Set the temperature values for trays, if not fixed.
+    for t in m.trays:
+        set_value_if_not_fixed(m.T[t], tray_indexed_data['T [K]'][t])
+
+    # Reindex and fill component data. Use back-fill for 'L' and 'x', and forward-fill for 'V' and 'y'
+    for c in m.comps:
+        comp_slices[c].index = pd.Index(sorted(active_trays), name='tray')
+        comp_slices[c] = comp_slices[c].reindex(sorted(m.trays))
+        comp_slices[c][['L', 'x']] = comp_slices[c][['L', 'x']].bfill()
+        comp_slices[c][['V', 'y']] = comp_slices[c][['V', 'y']].ffill()
+
+    comp_and_tray_indexed_data = pd.concat(comp_slices)
+
+    # Set component values for each tray if they are not fixed.
+    for c, t in m.comps * m.trays:
+        set_value_if_not_fixed(m.L[c, t], comp_and_tray_indexed_data['L'][c, t])
+        set_value_if_not_fixed(m.V[c, t], comp_and_tray_indexed_data['V'][c, t])
+        set_value_if_not_fixed(m.x[c, t], comp_and_tray_indexed_data['x'][c, t])
+        set_value_if_not_fixed(m.y[c, t], comp_and_tray_indexed_data['y'][c, t])
+
+    # Set enthalpy specifications for each component in the feed.
+    for c in m.comps:
+        m.H_L_spec_feed[c].set_value(value(m.feed_liq_enthalpy_expr[c]))
+        m.H_V_spec_feed[c].set_value(value(m.feed_vap_enthalpy_expr[c]))
+
+    # Compute and set several values for each component in each tray.
+    for t in m.trays:
+        for c in m.comps:
+            k = m.pvap_const[c]
+            x = m.Pvap_X[c, t]
+
+            x.set_value(value(1 - m.T[t] / k['Tc']))
+
+            m.Pvap[c, t].set_value(
+                value(
+                    exp(
+                        (
+                            k['A'] * x
+                            + k['B'] * x**1.5
+                            + k['C'] * x**3
+                            + k['D'] * x**6
+                        )
+                        / (1 - x)
+                    )
+                    * k['Pc']
+                )
+            )
+
+            m.Kc[c, t].set_value(value(m.gamma[c, t] * m.Pvap[c, t] / m.P))
+
+            m.H_L[c, t].set_value(value(m.liq_enthalpy_expr[t, c]))
+            m.H_V[c, t].set_value(value(m.vap_enthalpy_expr[t, c]))
+
+    # Setting initial values for distillate (D) and bottoms (B) for benzene and toluene.
+    # NOTE: This can be improved by bringing up the spreadsheed data and using boil-up and reflux ratio.
+    m.D['benzene'].set_value(42.3152714)
+    m.D['toluene'].set_value(5.4446286)
+    m.B['benzene'].set_value(7.67928)
+    m.B['toluene'].set_value(44.56072)
+    m.L['benzene', m.reboil_tray].set_value(7.67928)
+    m.L['toluene', m.reboil_tray].set_value(44.56072)
+
+    # Calculating and setting the vapor values (V) for benzene and toluene at the reboil tray.
+    m.V['benzene', m.reboil_tray].set_value(
+        value(m.L['benzene', m.reboil_tray + 1] - m.L['benzene', m.reboil_tray])
+    )
+    m.V['toluene', m.reboil_tray].set_value(
+        value(m.L['toluene', m.reboil_tray + 1] - m.L['toluene', m.reboil_tray])
+    )
+
+    # Calculating and setting the liquid values (L) for benzene and toluene at the condensate tray.
+    m.L['benzene', m.condens_tray].set_value(
+        value(m.V['benzene', m.condens_tray - 1] - m.D['benzene'])
+    )
+    m.L['toluene', m.condens_tray].set_value(
+        value(m.V['toluene', m.condens_tray - 1] - m.D['toluene'])
+    )
+
+    # Calculating and setting total liquid (liq) and vapor (vap) values for each tray
+    for t in m.trays:
+        m.liq[t].set_value(value(sum(m.L[c, t] for c in m.comps)))
+        m.vap[t].set_value(value(sum(m.V[c, t] for c in m.comps)))
+
+    # Setting the bottom and distillate values.
+    m.bot.set_value(
+        52.24
+    )  # NOTE: This could be initialized as the sum of component flows in the Excel spreadsheet
+    m.dis.set_value(
+        47.7599
+    )  # NOTE: This could be initialized as the sum of component flows in the Excel spreadsheet
+
+    # Calculating and setting mole fraction values (x and y) for components in the reboil and condensate trays.
+    for c in m.comps:
+        m.x[c, m.reboil_tray].set_value(
+            value(m.L[c, m.reboil_tray] / m.liq[m.reboil_tray])
+        )
+        m.y[c, m.reboil_tray].set_value(
+            value(m.V[c, m.reboil_tray] / m.vap[m.reboil_tray])
+        )
+        m.x[c, m.condens_tray].set_value(
+            value(m.L[c, m.condens_tray] / m.liq[m.condens_tray])
+        )
+        m.y[c, m.condens_tray].set_value(
+            value(m.x[c, m.condens_tray] * m.Kc[c, m.condens_tray])
+        )
+
+    # Setting heat values for the boiler and condenser.
+    m.Qb.set_value(2.307873115)
+    m.Qc.set_value(3.62641882)
 
 
 def build_column(
@@ -60,7 +323,7 @@ def build_column(
 ):
     t_start = time.process_time()
     """
-    Builds the column model.
+    Builds the column model  which is a Generalized Disjunctive Program (GDP)
     References: Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
     
     Args:
@@ -68,13 +331,13 @@ def build_column(
         max_trays (int): Maximum number of trays in the column
         xD (float): Distillate purity
         xB (float): Bottoms purity
-        x_input (dict): Dictionary of component mole fractions in the feed
+        x_input (list): List of the external variable values with the reflex position and the boilup position in the column
         nlp_solver (str): Name of the NLP solver to use
         provide_init (bool): Whether to provide initialization values
         init (dict): Dictionary of initialization values
         boolean_ref (bool): Whether to use boolean reformulation
     Returns:
-        m (ConcreteModel): Pyomo model
+        m (pyomo.ConcreteModel): Pyomo model
     """
     m = ConcreteModel('benzene-toluene column')
     m.comps = Set(initialize=['benzene', 'toluene'])  # Initialize component set
@@ -145,7 +408,7 @@ def build_column(
 
     # Disjunction statement defining whether a tray exists or not
     @m.Disjunction(m.conditional_trays, doc='Tray exists or does not')
-    def tray_no_tray(b, t):
+    def tray_no_tray(b, t):  # NOTE: This function is not accesed
         """Disjunction statement defining whether a tray exists or not"""
         return [b.tray[t], b.no_tray[t]]
 
@@ -409,7 +672,7 @@ def build_column(
             doc='Feed temperature [K]',
             domain=NonNegativeReals,
             bounds=(min_T, max_T),
-            initialize=368,
+            initialize=368,  # Inlet temperature (95 C)
         )
 
         # Vapor fraction of the feed, value between 0 and 1
@@ -788,8 +1051,12 @@ def build_column(
         m.YP = BooleanVar(
             m.intTrays, doc='Boolean var associated with tray and no_tray'
         )
-        m.YB_is_up = BooleanVar()
-        m.YR_is_down = BooleanVar()
+        m.YB_is_up = BooleanVar(
+            doc='Ensure that there is no boil-up flow above the feed tray'
+        )
+        m.YR_is_down = BooleanVar(
+            doc='Ensure that there is no reflux flow below the feed tray'
+        )
 
         # Logical constraints
         @m.LogicalConstraint()
@@ -805,12 +1072,16 @@ def build_column(
         @m.LogicalConstraint()
         def boilup_fix(m):
             """Ensure that only one boil-up is happening."""
-            return exactly(1, m.YB_is_up)
+            return exactly(
+                1, m.YB_is_up
+            )  # NOTE: These are the one-dimensional Boolean variables, so it would have been enough to fix them to 1
 
         @m.LogicalConstraint()
         def reflux_fix(m):
             """Ensure that only one reflux is happening."""
-            return exactly(1, m.YR_is_down)
+            return exactly(
+                1, m.YR_is_down
+            )  # NOTE: These are the one-dimensional Boolean variables, so it would have been enough to fix them to 1
 
         @m.LogicalConstraint()
         def no_reflux_down(m):
@@ -845,12 +1116,14 @@ def build_column(
         # Check if the condition for all trays above the reboil tray holds,
         # and fix YR_is_down based on this
         temp = value(land(~m.YR[n] for n in range(m.reboil_tray + 1, m.feed_tray)))
+        # temp is a temporary variable that stores the outcome of the logical condition for YR_is_down
         if temp == True:
             m.YR_is_down.fix(True)
 
         # Check if the condition for all trays above the feed tray holds,
         # and fix YB_is_up based on this
         temp = value(land(~m.YB[n] for n in range(m.feed_tray + 1, m.max_trays)))
+        # temp is a temporary variable that stores the outcome of the logical condition for YB_is_up
         if temp == True:
             m.YB_is_up.fix(True)
 
@@ -872,6 +1145,7 @@ def build_column(
         # Loop over conditional trays again
         for n in m.conditional_trays:
             # Check the logical condition (similar to the one in YP_or_notYP)
+            # temp is a temporary variable that stores the outcome of the logical condition for the current tray
             temp = value(
                 land(
                     lor(m.YR[j] for j in range(n, m.max_trays)),
@@ -888,7 +1162,7 @@ def build_column(
                 m.no_tray[n].indicator_var.fix(True)
 
     else:
-        # We are using a using of a boolean formulation because we know boolean and relationships take longer for GAMS to write
+        # We are using a Boolean formulation because we know the Boolean variables and their relationships take longer for GAMS to write
 
         # Dictionaries to store the fixed values of YR and YB for each tray
         YR_fixed = {}
@@ -956,6 +1230,7 @@ def build_column(
         # SOLVE
         # Get the path of the current file and the path where GAMS files will be stored
         dir_path = os.path.dirname(os.path.abspath(__file__))
+        # Specify the path where GAMS files will be stored
         gams_path = os.path.join(dir_path, "gamsfiles/")
         if not (os.path.exists(gams_path)):
             print(
@@ -970,7 +1245,7 @@ def build_column(
         opt = SolverFactory(solvername, solver=nlp_solver)
         m.results = opt.solve(
             m,
-            tee=False,
+            tee=True,
             # Uncomment the following lines if you want to save GAMS models
             # keepfiles=True,
             # tmpdir=gams_path,
@@ -1133,10 +1408,10 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     on the tray, as well as conditions for when the tray does not exist.
 
     Args:
-        m: The model object containing the relevant variables and parameters.
-        t: Tray number for which the constraints are being defined (integer).
-        tray: Disjunct object representing the case when the tray exists in the column.
-        no_tray: Disjunct object representing the case when the tray is absent in the column.
+        m (pyomo.ConcreteModel): The model object containing the relevant variables and parameters.
+        t (int): Tray number for which the constraints are being defined (integer).
+        tray (pyomo.Disjunct): Disjunct object representing the case when the tray exists in the column.
+        no_tray (pyomo.Disjunct): Disjunct object representing the case when the tray is absent in the column.
 
     Return:
         None. The function adds constraints to the model but does not return a value.
@@ -1145,21 +1420,29 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     @tray.Constraint(m.comps)
     def mass_balance(_, c):
         """Mass balance on each component on a tray."""
+
+        # Compute mass balance components
         return (
-            m.feed[c] if t == m.feed_tray else 0
-        ) - m.V[  # Total feed to the tray if it's a feed tray
-            c, t
-        ] - (  # Total vapor flow from the tray
-            m.D[c] if t == m.condens_tray else 0
-        ) + (  # Total distillate if it's a condenser tray
-            m.L[c, t + 1] if t < m.condens_tray else 0
-        ) - (  # Liquid flow from the tray above if it's not a condenser
-            m.B[c] if t == m.reboil_tray else 0
-        ) - (  # Total bottoms if it's a reboiler tray
-            m.L[c, t] if t > m.reboil_tray else 0
-        ) + (  # Liquid flow to the tray below if it's not a reboiler
-            m.V[c, t - 1] if t > m.reboil_tray else 0
-        ) == 0  # Vapor flow from the tray below if it's not a reboiler
+            (
+                m.feed[c] if t == m.feed_tray else 0
+            )  # Total feed to the tray if it's a feed tray
+            - m.V[c, t]  # Total vapor flow from the tray
+            - (
+                m.D[c] if t == m.condens_tray else 0
+            )  # Total distillate if it's a condenser tray
+            + (
+                m.L[c, t + 1] if t < m.condens_tray else 0
+            )  # Liquid flow from the tray above if it's not a condenser
+            - (
+                m.B[c] if t == m.reboil_tray else 0
+            )  # Total bottoms if it's a reboiler tray
+            - (
+                m.L[c, t] if t > m.reboil_tray else 0
+            )  # Liquid flow to the tray below if it's not a reboiler
+            + (
+                m.V[c, t - 1] if t > m.reboil_tray else 0
+            )  # Vapor flow from the tray below if it's not a reboiler
+        ) == 0
 
     @tray.Constraint(m.comps)
     def tray_liquid_composition(_, c):
@@ -1204,7 +1487,7 @@ def _build_feed_tray_mass_balance(m):
     compositions on the feed tray.
 
     Args:
-        m: The model object containing variables and parameters related to the feed tray, components, and mass streams.
+        m (pyomo.ConcreteModel): The model object containing variables and parameters related to the feed tray, components, and mass streams.
 
     Constraints:
         - feed_mass_balance: Ensures that the total mass in and out of the feed tray for each component is balanced.
@@ -1262,7 +1545,7 @@ def _build_condenser_mass_balance(m):
     constraints.
 
     Args:
-        m (Model Object): A model object that includes the relevant variables, parameters,
+        m (pyomo.ConcreteModel): A model object that includes the relevant variables, parameters,
         and expressions for the distillation process, such as component flows, liquid
         and vapor compositions, and energy expressions.
 
@@ -1331,7 +1614,7 @@ def _build_reboiler_mass_balance(m):
     The function considers the molar flow rates to establish the mass balance in the reboiler.
 
     Args:
-        m (Model Object): A model object that includes the relevant variables, parameters,
+        m (pyomo.ConcreteModel): A model object that includes the relevant variables, parameters,
         and expressions for the distillation process, such as component flows, liquid
         and vapor compositions.
 
@@ -1378,11 +1661,11 @@ def _build_tray_phase_equilibrium(m, t, tray):
     and calculates the activity coefficient for each component.
 
     Args:
-        m (Model Object): A model object containing the relevant variables, parameters,
+        m (pyomo.ConcreteModel): A model object containing the relevant variables, parameters,
             and expressions for the distillation process, such as vapor pressure constants,
             phase equilibrium constants, and activity coefficients.
         t (int): Tray index representing the specific tray within the column.
-        tray (Block): A Pyomo Block object representing the specific tray within the model,
+        tray (pyomo.Block): A Pyomo Block object representing the specific tray within the model,
             where constraints related to the tray are to be added.
 
     Constraints:
@@ -1446,7 +1729,7 @@ def _build_column_heat_relations(m):
     trays including conditional trays, feed tray, condenser, and reboiler.
 
     Args:
-        m (Model Object): A model object that includes relevant variables, parameters, and expressions for
+        m (pyomo.ConcreteModel): A model object that includes relevant variables, parameters, and expressions for
         the distillation process, such as heat capacity coefficients, temperature references, and heat of
         vaporization for different components.
 
@@ -1799,3 +2082,22 @@ def _build_reboiler_energy_balance(m):
     def reboiler_vap_enthalpy_calc(_, c):
         """Constraint sets the vapor enthalpy on the reboiler tray equal to the calculated vapor enthalpy from a given expression."""
         return m.H_V[c, t] == m.vap_enthalpy_expr[t, c]
+
+
+# Conditional checks if the script is being executed as the main program.
+# If so, it runs the build_column function with the specified arguments.
+if __name__ == "__main__":
+    # Inputs
+    NT = 17  # Total number of trays
+    model_args = {
+        'min_trays': 8,
+        'max_trays': NT,
+        'xD': 0.95,
+        'xB': 0.95,
+        'x_input': [16, 7],  # Reflux position  # Boilup position
+        'nlp_solver': 'ipopth',
+    }  # Model arguments
+    m = build_column(
+        **model_args
+    )  # Calculate the fixed value of the external variables
+    # NOTE: rename function to solve_fixed_externalvars_column

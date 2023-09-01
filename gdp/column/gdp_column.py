@@ -1,12 +1,19 @@
 """
-Distillation column model for 2018 PSE conference formulated into GDP models.
+gdp_column.py
+Distillation column GDP model for benzene-toluene separation.
+
+This file defines an optimization model for the design and operation of a distillation column for benzene-toluene separation.
+The objective is to minimize the operation cost (heat duties in condenser and reboiler) and fixed cost (number of trays in the column).
+The constraints are the MESH equations (material balance, equilibrium, summation, and enthalpy balance) for each tray together with logical constraints that encode the existence of trays and position of reflux and boilup flows.
+The continuous variables of this model are the flowrates of each component in liquid and vapor phase and temperatures at each tray, the reflux and boilup ratio, and the condenser and reboiler heat duties.
+The logical variables are the exitence or non-existence of the trays, and the position of the reflux and boilup flows.
+The complete model defines a Generalized Disjunctive Programming (GDP) problem.
+
+This model is to be imported by main_column.py where it is solved via differente solution methods (MINLP reformulation, GDP algorithms, and L-DSDA)
+
 References:
 - Ghouse, Jaffer H., et al. "A comparative study between GDP and NLP formulations for conceptual design of distillation columns." Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 865-870.
 """
-# The gdp_column.py formulates the build column model, state the energy and the mass balances for every part of the column.
-# The model use the default value for the initial guess.
-# The model does not have the iteration
-# The model states the Boolean variable, the LD-SDA is done on main_column.py
 
 import math  # Provides functions for mathematical operations.
 import os  # Provides functions for interacting with the operating system.
@@ -206,7 +213,7 @@ def build_column(min_trays, max_trays, xD, xB):
     m.B = Var(
         m.comps,
         domain=NonNegativeReals,
-        doc='bottoms component flows in mol/s',
+        doc='bottoms component flows [mol/s]',
         bounds=(0, max_flow),
         initialize=50,
     )  # Bottoms component flows [mol/s]
@@ -520,10 +527,15 @@ def _build_conditional_tray_mass_balance(m, t, tray, no_tray):
     on the tray, as well as conditions for when the tray does not exist.
 
     Args:
-        m: The model object containing the relevant variables and parameters.
-        t: Tray number for which the constraints are being defined (integer).
-        tray: Disjunct object representing the case when the tray exists in the column.
-        no_tray: Disjunct object representing the case when the tray is absent in the column.
+        m (pyomo.ConcreteModel): A model object containing the relevant variables, parameters, and expressions
+            for the distillation process, such as liquid and vapor enthalpy expressions, and components.
+
+        t (int): The index of the tray for which the energy balance is being constructed.
+
+        tray (pyomo.Block): A block object representing the active scenario where the tray is in operation.
+
+        no_tray (pyomo.Block): A block object representing the scenario where the tray is bypassed
+            (pass-through without liquid or vapor contact).
 
     Return:
         None. The function adds constraints to the model but does not return a value.
@@ -591,7 +603,9 @@ def _build_feed_tray_mass_balance(m):
     compositions on the feed tray.
 
     Args:
-        m: The model object containing variables and parameters related to the feed tray, components, and mass streams.
+        m (Model Object): A model object containing the relevant variables, parameters, and expressions
+            for the distillation process, such as liquid and vapor enthalpy expressions, feed vapor fraction,
+            components, feed temperature, and feed tray identifier.
 
     Constraints:
         - feed_mass_balance: Ensures that the total mass in and out of the feed tray for each component is balanced.
@@ -764,10 +778,12 @@ def _build_tray_phase_equilibrium(m, t, tray):
     Antoine equation.
 
     Args:
-        m: The model object containing the relevant variables and parameters such as vapor and liquid compositions,
-           phase equilibrium constants, relative vapor pressure, and temperature-dependent factors.
-        t: The specific tray number for which the phase equilibrium is being modeled.
-        tray: A container object within the model representing the tray for which the constraints are being built.
+        m (pyomo.ConcreteModel): A model object containing the relevant variables, parameters,
+            and expressions for the distillation process, such as vapor pressure constants,
+            phase equilibrium constants, and activity coefficients.
+        t (int): Tray index representing the specific tray within the column.
+        tray (pyomo.Block): A Pyomo Block object representing the specific tray within the model,
+            where constraints related to the tray are to be added.
 
     Constraints:
         - raoults_law: Models the relationship between vapor and liquid composition for each component on the tray

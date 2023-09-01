@@ -20,7 +20,7 @@ def build_model():
     for t in m.conditional_trays:
         m.tray[t].indicator_var.set_value(1)
         m.no_tray[t].indicator_var.set_value(0)
-
+    # Give initial values for the Big M coefficients in the MINLP reformulation
     m.BigM = Suffix(direction=Suffix.LOCAL)
     m.BigM[None] = 100
 

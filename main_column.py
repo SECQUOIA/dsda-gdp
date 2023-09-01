@@ -20,10 +20,11 @@ References:
 # Installed RAM: 32.0 GB (31.7 GB usable)
 # Python version: 3.7.7, GAMS version: 36.1, Pyomo version: 5.7.3
 # When solving the problem via MINLP reformulation: Antigone and DICOPT solver executed faster. However, Baron solver was the solver which took more time.
-# Antigone solver took
+# Antigone solver took 18.127 seconds (31.737 seconds previously) when running MINLP_hull. DICOPT took 0.758 seconds (previously 0.981 seconds) when running MINLP_hull.
+# Baron took 1.283 seconds (0.758 seconds) when running MINLP_bigM.
 
 # When solving the problem using GDP algorithm, using knitro solver was longer when executing LOA and GLOA methods.
-# knitro solver running the LOA method took 
+# knitro solver running the LOA method took 24.711 seconds(previous 19.122 seconds), GLOA methods took 200.83 seconds (previous 161.64 seconds).
 
 # When solving the problem via DSDA, k=2 cases were executed faster for knitro, slower for baron solvers. 
 # knitro solver took 5.41 seconds(previously 6.03 seconds) when running dsda_mlp_hull.

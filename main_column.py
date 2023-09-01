@@ -16,20 +16,26 @@ References:
 
 # List of differences when executing code in Albert's computer
 # Program ran August 22, 2023.
-# Processor: 12th Gen Intel(R) Core(TM) i7-1265U   1.80 GHz 
+# Processor: 12th Gen Intel(R) Core(TM) i7-1265U   1.80 GHz
 # Installed RAM: 32.0 GB (31.7 GB usable)
 # Python version: 3.7.7, GAMS version: 36.1, Pyomo version: 5.7.3
-# When solving the problem via MINLP reformulation: Antigone and DICOPT solver executed faster. However, Baron solver was the solver which took more time.
-# Antigone solver took 18.127 seconds (31.737 seconds previously) when running MINLP_hull. DICOPT took 0.758 seconds (previously 0.981 seconds) when running MINLP_hull.
-# Baron took 1.283 seconds (0.758 seconds) when running MINLP_bigM.
-
-# When solving the problem using GDP algorithm, using knitro solver was longer when executing LOA and GLOA methods.
-# knitro solver running the LOA method took 24.711 seconds(previous 19.122 seconds), GLOA methods took 200.83 seconds (previous 161.64 seconds).
-
-# When solving the problem via DSDA, k=2 cases were executed faster for knitro, slower for baron solvers. 
-# knitro solver took 5.41 seconds(previously 6.03 seconds) when running dsda_mlp_hull.
-# baron took 6.8 seconds(previously 5.85 seconds) when running dsda_mlp_hull.
-# Other cases, there were no drastic differences.
+# When solving the problem via MINLP reformulation:
+#   - Antigone took 18.127 seconds (31.737 seconds previously) when running MINLP_hull.
+#   - DICOPT took 0.758 seconds (previously 0.981 seconds) when running MINLP_hull. New status is optimal (previously NonInteger Intermediate) although the same solution. This failure had been identified before.
+#   - Baron took 1.283 seconds (0.758 seconds) when running MINLP_bigM. Both solutions converged to the initial point which is a local optimal solution.
+#   - DICOPT took 115 second (122 seconds) when running MINLP_bigM but now is converging to the global optimal solution.
+#   - SCIP returned the initial solution (previously nan) in the time limit for MINLP_hull.
+#   - SBB returned the initial solution (previously nan) in the 57 seconds (63 seconds) with infeasible status for MINLP_hull.
+#
+# When solving the problem using GDPOpt:
+#   - knitro took 24.711 seconds (previous 19.122 seconds) when running LOA.
+#   - knitro took 200.83 seconds (previous 161.64 seconds) when running GLOA.
+#
+# When solving the problem via DSDA, k=2:
+#   - knitro solver took 5.41 seconds (previously 6.03 seconds) when running dsda_mlp_hull.
+#   - baron took 6.8 seconds(previously 5.85 seconds) when running dsda_mlp_hull.
+#
+# In all other cases, there were no drastic differences.
 
 # Import division from the future to make it available in Python 2.7 and below
 from __future__ import division
@@ -192,7 +198,7 @@ if __name__ == "__main__":
 
     # Dictionary containing options for the NLP solvers
     nlp_opts = dict((nlp, {}) for nlp in nlps)
-    
+
     # A dictionary is created where the keys are the names of the Non-Linear Programming (NLP) solvers, and the values are empty dictionaries.
     # These empty dictionaries can later be filled with specific options for each solver.
     nlp_opts = dict((nlp, {}) for nlp in nlps)
@@ -245,7 +251,7 @@ if __name__ == "__main__":
     # NOTE: using DICOPT with the Hull reformulation might not return the correct results, as per the content of the .lst file. This is due to initialization.
 
     if 'sbb' in minlps:
-    # For the 'sbb' solver, options are added to specify 'knitro' as both the root solver and the subsolver.
+        # For the 'sbb' solver, options are added to specify 'knitro' as both the root solver and the subsolver.
         minlps_opts['sbb']['add_options'] = [
             'GAMS_MODEL.optfile = 1;'
             '\n'
@@ -329,8 +335,15 @@ if __name__ == "__main__":
                 gams_output=False,
                 tee=globaltee,
             )
-            new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pe.value(
-                m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
+            new_result = {
+                'Method': 'MINLP',
+                'Approach': transformation,
+                'Solver': solver,
+                'Objective': pe.value(m_solved.obj),
+                'Time': m_solved.results.solver.user_time,
+                'Status': m_solved.results.solver.termination_condition,
+                'User_time': 'NA',
+            }
             dict_data.append(new_result)
             print(new_result)
 
@@ -349,8 +362,15 @@ if __name__ == "__main__":
                 strategy=strategy,
                 tee=globaltee,
             )
-            new_result = {'Method': 'GDPopt', 'Approach': strategy, 'Solver': solver, 'Objective': pe.value(
-                m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA'}
+            new_result = {
+                'Method': 'GDPopt',
+                'Approach': strategy,
+                'Solver': solver,
+                'Objective': pe.value(m_solved.obj),
+                'Time': m_solved.results.solver.user_time,
+                'Status': m_solved.results.solver.termination_condition,
+                'User_time': 'NA',
+            }
             dict_data.append(new_result)
             print(new_result)
 

@@ -1,11 +1,14 @@
 """
 gdp_reactor.py
 
-The code build the CSTR models for the GDP superstructure. 
-The CSTRs have a autocatalytic reaction A + B -> 2B and minimizes total reactor network volume. 
+The code build the series of Continuous Stirred Tank Reactor models for the Generalized Disjunctive Programming superstructure. 
+The CSTRs have a autocatalytic reaction A + B -> 2B and the objective function is to minimizes total reactor network volume. 
+The code contains the mass and reaction balances, the logic constraints, and the objective function.
+The logical constraints are the existance of the recycle flow and bypass flow, and the existance of the CSTRs.
+The complete model defines a Generalized Disjunctive Programming (GDP) problem.
 
+This model is to be imported by main_cstr.py where it is solved via differente solution methods (MINLP reformulation, GDP algorithms, and L-DSDA).
 
-TODO: What does this file do? References?
 References:
 [1] Linan, David A., et al. "Optimal design of superstructures for placing units and streams with multiple and ordered available locations. Part I: A new mathematical framework." Computers & Chemical Engineering 137, (2020): 106794.
 

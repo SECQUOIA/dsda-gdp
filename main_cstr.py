@@ -1,9 +1,11 @@
 """
 main_cstr.py
 
-The code imports the CSTR system from the `gdp.cstr.gdp_reactor` module and solves it using different methods (MINLP, GDPopt, DSDA).
-The code ...
-# TODO: complete description
+The code imports the CSTR system from the `gdp.cstr.gdp_reactor` module and solves it using different methods.
+The code visualizes the CSTR superstructure and saves the results in a CSV file.
+The code generates a set of logical expressions based on the model parameters and uses them to define the external variables of the CSTR system.
+The methods used are Mixed Integer Non-Linear Programming (MINLP) reformulations and  GDP algorithms, and Logic-based Discrete Steepest Descent Algorithm(L-DSDA).
+The results for the optimization are written to a CSV files.
 
 References:
 [1] Linan, David A., et al. "Optimal design of superstructures for placing units and streams with multiple and ordered available locations. Part I: A new mathematical framework." Computers & Chemical Engineering 137, (2020): 106794.

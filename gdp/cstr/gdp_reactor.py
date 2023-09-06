@@ -52,7 +52,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     m.QF0 = pe.Param(initialize=1)  # Inlet volumetric flow [L/s]
     C0_Def = {'A': 0.99, 'B': 0.01}
     # Initial concentration of reagents [mol/L]
-    m.C0 = pe.Param(m.I, initialize=C0_Def)
+    m.C0 = pe.Param(m.I, initialize=C0_Def, doc="Initial concentration of reagents [mol/L]")
 
     # Inlet molar flow [mol/s]
 
@@ -62,55 +62,55 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """
         return m.C0[i] * m.QF0
 
-    m.F0 = pe.Param(m.I, initialize=F0_Def)
+    m.F0 = pe.Param(m.I, initialize=F0_Def, doc="Inlet molar flow [mol/s]")
 
     # BOOLEAN VARIABLES
 
     # Unreacted feed in reactor n
-    m.YF = pe.BooleanVar(m.N)
+    m.YF = pe.BooleanVar(m.N, doc="Unreacted feed in reactor n")
 
     # Existence of recycle flow in unit n
-    m.YR = pe.BooleanVar(m.N)
+    m.YR = pe.BooleanVar(m.N, doc="Existence of recycle flow in unit n")
 
     # Unit operation in n (True if unit n is a CSTR, False if unit n is a bypass)
-    m.YP = pe.BooleanVar(m.N)
+    m.YP = pe.BooleanVar(m.N, doc="Unit operation in n")
 
     # REAL VARIABLES
 
     # Network Variables
     # Outlet flow rate of the superstructure unit [L/s]
-    m.Q = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.Q = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Outlet flow rate of the superstructure unit [L/s]")
 
     # Outlet flow rate recycle activation of the superstructure unit [L/s]
-    m.QFR = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.QFR = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Outlet flow rate recycle activation of the superstructure unit [L/s]")
 
     # Molar flow [mol/s]
-    m.F = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.F = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Molar flow [mol/s]")
 
     # Molar flow  recycle activation [mol/s]
-    m.FR = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.FR = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Molar flow  recycle activation [mol/s]")
 
     # Reaction rate [mol/(L*s)]
-    m.rate = pe.Var(m.I, m.N, initialize=0, within=pe.Reals, bounds=(-10, 10))
+    m.rate = pe.Var(m.I, m.N, initialize=0, within=pe.Reals, bounds=(-10, 10), doc="Reaction rate [mol/(L*s)]"
 
     # Reactor volume [L]
-    m.V = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.V = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Reactor volume [L]")
 
     # Volume activation [L]
-    m.c = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.c = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Volume activation [L]")
 
     # Splitter Variables
     # Recycle flow rate  [L/s]
-    m.QR = pe.Var(initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.QR = pe.Var(initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Recycle flow rate  [L/s]")
 
     # Product flow rate  [L/s]
-    m.QP = pe.Var(initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.QP = pe.Var(initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Product flow rate  [L/s]")
 
     # Recycle molar flow [mol/s]
-    m.R = pe.Var(m.I, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.R = pe.Var(m.I, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Recycle molar flow [mol/s]")
 
     # Product molar flow [mol/s]
-    m.P = pe.Var(m.I, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10))
+    m.P = pe.Var(m.I, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Product molar flow [mol/s]")
 
     # CONSTRAINTS
 

@@ -1,3 +1,14 @@
+"""
+dsda_functions.py
+TODO
+1. The code contains the get_external_information function, which is used to obtain information from the model to perform the reformulation with external variables. 
+
+References:
+[1] Bernal, David E., et al. "Process Superstructure Optimization through Discrete Steepest Descent Optimization: a GDP Analysis and Applications in Process Intensification." Computer Aided Chemical Engineering. Vol. 49. Elsevier, 2022. 1279-1284.
+[2] Linan, David A., et al. "Optimal design of superstructures for placing units and streams with multiple and ordered available locations. Part I: A new mathematical framework." Computers & Chemical Engineering 137, (2020): 106794.
+
+
+"""
 import copy
 import csv
 import itertools as it
@@ -184,7 +195,8 @@ def external_ref(
     tee: bool = False
 ):
     """
-    Function that
+    Function that reformulates a given GDP model by taking into account external variables. This is particularly useful when translating GDP models to MINLP representations. The function allows the user to provide additional logical constraints and can optionally convert the model to its equivalent MINLP form using specified transformations.
+
     Args:
         m: GDP model that is going to be reformulated
         x: List with current value of the external variables
@@ -297,7 +309,8 @@ def extvars_gdp_to_mip(
     transformation: str = 'bigm',
 ):
     """
-    Function that
+    Function that transforms a given Generalized Disjunctive Programming (GDP) model into its equivalent Mixed-Integer Nonlinear Programming (MINLP) representation. It additionally maps the external variables defined for the GDP model into corresponding binary variables suitable for the MINLP formulation. The function allows for different transformation techniques, depending on user preferences.
+
     Args:
         m: GDP model that is going to be reformulated
         gdp_dict_extvar: A dictionary of dictionaries that looks as follows:
@@ -351,7 +364,7 @@ def extvars_gdp_to_mip(
     return m, mip_dict_extvar
 
 
-def preprocess_problem(m, simple: bool = True):
+def preprocess_problem(m, simple: bool = True): # TODO preprocess step not sure
     """
     Function that applies certain tranformations to the mdoel to first verify that it is not trivially 
     infeasible (via FBBT) and second, remove extra constraints to help NLP solvers
@@ -452,7 +465,7 @@ def solve_subproblem(
     return m
 
 
-def solve_with_minlp(
+def solve_with_minlp( # TODO: why are we solving the MINLP?
     m: pe.ConcreteModel(),
     transformation: str = 'bigm',
     minlp: str = 'baron',

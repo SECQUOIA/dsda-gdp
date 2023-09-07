@@ -32,8 +32,12 @@ References:
 #   - knitro took 200.83 seconds (previous 161.64 seconds) when running GLOA.
 #
 # When solving the problem via DSDA, k=2:
-#   - knitro solver took 5.41 seconds (previously 6.03 seconds) when running dsda_mlp_hull.
-#   - baron took 6.8 seconds(previously 5.85 seconds) when running dsda_mlp_hull.
+#   - knitro solver took 5.41 seconds (previously 6.03 seconds) when running dsda_mip_hull.
+#   - baron took 6.8 seconds(previously 5.85 seconds) when running dsda_mip_hull.
+# Differences in DSDA results
+#   - knitro took 12.15 seconds (previously 8.58 seconds) when running the DSDA (k = infinity).
+#   - knitro took 8.22 seconds (previously 6.34 seconds) when running the DSDA (k = 2).
+#   - baron reached into max time limit on both dsda (k = infinity) and DSDA (k = 2).
 #
 # In all other cases, there were no drastic differences.
 
@@ -263,7 +267,8 @@ if __name__ == "__main__":
 
     # Possible transformations for the optimization problems are defined.
     # 'bigm' and 'hull' are two common techniques used to transform a Generalized Disjunctive Programming (GDP) problem into a MINLP problem.
-    transformations = ['bigm', 'hull']
+    # transformations = ['bigm', 'hull']
+    transformations = []
 
     # Possible values for the neighborhood search
     ks = ['Infinity', '2']
@@ -385,15 +390,49 @@ if __name__ == "__main__":
     # The results are saved in a dictionary and appended to a list 'dict_data'.
     for solver in nlps:
         for k in ks:
-            for transformation in transformations:
+            mip_transformation = True
+            if mip_transformation:
+                for transformation in transformations:
+                    new_result = {}
+                    m_solved, _, _ = solve_with_dsda(
+                        model_function=build_column,
+                        model_args=model_args,
+                        starting_point=starting_point,
+                        ext_dict=ext_ref,
+                        mip_transformation=mip_transformation,
+                        transformation=transformation,
+                        ext_logic=problem_logic_column,
+                        k=k,
+                        provide_starting_initialization=True,
+                        feasible_model='column_' + str(NT),
+                        subproblem_solver=solver,
+                        subproblem_solver_options=nlp_opts[solver],
+                        iter_timelimit=timelimit,
+                        timelimit=timelimit,
+                        gams_output=False,
+                        tee=False,
+                        global_tee=globaltee,
+                    )
+                    new_result = {
+                        'Method': str('D-SDA_MIP_' + transformation),
+                        'Approach': str('k=' + k),
+                        'Solver': solver,
+                        'Objective': pe.value(m_solved.obj),
+                        'Time': m_solved.dsda_time,
+                        'Status': m_solved.dsda_status,
+                        'User_time': m_solved.dsda_usertime,
+                    }
+                    dict_data.append(new_result)
+                    print(new_result)
+            else:
                 new_result = {}
                 m_solved, _, _ = solve_with_dsda(
                     model_function=build_column,
                     model_args=model_args,
                     starting_point=starting_point,
                     ext_dict=ext_ref,
-                    mip_transformation=True,
-                    transformation=transformation,
+                    mip_transformation=mip_transformation,
+                    transformation=[],
                     ext_logic=problem_logic_column,
                     k=k,
                     provide_starting_initialization=True,
@@ -407,7 +446,7 @@ if __name__ == "__main__":
                     global_tee=globaltee,
                 )
                 new_result = {
-                    'Method': str('D-SDA_MIP_' + transformation),
+                    'Method': str('D-SDA'),
                     'Approach': str('k=' + k),
                     'Solver': solver,
                     'Objective': pe.value(m_solved.obj),
@@ -415,8 +454,8 @@ if __name__ == "__main__":
                     'Status': m_solved.dsda_status,
                     'User_time': m_solved.dsda_usertime,
                 }
-                dict_data.append(new_result)
-                print(new_result)
+            dict_data.append(new_result)
+            print(new_result)
 
     # The results are written to a CSV file.
     try:

@@ -48,8 +48,8 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     # PARAMETERS
     m.k = pe.Param(initialize=2, doc="Kinetic constant [L/(mol*s)]")  # Kinetic constant [L/(mol*s)]
     m.order1 = pe.Param(initialize=1, doc="Partial order of reaction 1")  # Partial order of reacton 1
-    m.order2 = pe.Param(initialize=1)  # Partial order of reaction 2
-    m.QF0 = pe.Param(initialize=1)  # Inlet volumetric flow [L/s]
+    m.order2 = pe.Param(initialize=1, doc="Partial order of reaction 2")  # Partial order of reaction 2
+    m.QF0 = pe.Param(initialize=1, doc="Inlet volumetric flow[L/s]")  # Inlet volumetric flow [L/s]
     C0_Def = {'A': 0.99, 'B': 0.01}
     # Initial concentration of reagents [mol/L]
     m.C0 = pe.Param(m.I, initialize=C0_Def, doc="Initial concentration of reagents [mol/L]")

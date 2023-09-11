@@ -217,7 +217,8 @@ def problem_logic_cstr(m):
 if __name__ == "__main__":
     # Results
     # NTs = range(5, 26, 1)
-    NTs = [5]
+    # NTs = range(10, 21, 5)
+    NTs = [10,15,20]
     timelimit = 900
     starting_point = [1, 1]
 
@@ -238,10 +239,11 @@ if __name__ == "__main__":
     dict_data = []
 
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    csv_file = os.path.join(dir_path, "results", "cstr_results.csv")
+    # csv_file = os.path.join(dir_path, "results", "cstr_results.csv")
+    csv_file = os.path.join(dir_path, "results", "cstr_results_new.csv")
 
-    # nlps = ['knitro', 'baron']# , 'msnlp']
-    nlps = ['knitro']
+    nlps = ['knitro', 'baron']# , 'msnlp']
+    # nlps = ['knitro']
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
     # nlp_opts['msnlp']['add_options'] = [
@@ -252,7 +254,8 @@ if __name__ == "__main__":
     #     '$offecho \n'
     # ]
 
-    minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
+    # minlps = ['antigone', 'baron', 'scip', 'dicopt', 'sbb', 'knitro']
+    minlps = ['baron', 'dicopt', 'sbb', 'knitro']
 
     minlps_opts = dict((minlp, {}) for minlp in minlps)
     minlps_opts['dicopt']['add_options'] = [
@@ -274,10 +277,10 @@ if __name__ == "__main__":
         '$offecho \n'
     ]
     # transformations = ['bigm', 'hull']
-    transformations = ['bigm']
+    transformations = ['hull']
     ks = ['Infinity', '2']
-    # strategies = ['LOA', 'GLOA', 'LBB']
-    strategies = ['LOA']
+    strategies = ['LOA', 'GLOA', 'LBB']
+    # strategies = ['LOA']
 
     for NT in NTs:
         # Create initialization for all methods starting with a single reactor
@@ -309,55 +312,55 @@ if __name__ == "__main__":
                 m=m_solved, starting_initialization=True, model_name='cstr_' + str(NT)
             )
 
-        # # MINLP
-        # for solver in minlps:
-        #     for transformation in transformations:
-        #         new_result = {}
-        #         m = build_cstrs(NT)
-        #         m_init = initialize_model(m, json_path=init_path)
-        #         m_solved = solve_with_minlp(
-        #             m=m_init,
-        #             transformation=transformation,
-        #             minlp=solver,
-        #             minlp_options=minlps_opts[solver],
-        #             timelimit=timelimit,
-        #             gams_output=False,
-        #             tee=globaltee,
-        #         )
-        #         new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pyo.value(
-        #             m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
-        #         dict_data.append(new_result)
-        #         print(new_result)
-
-        # GDPopt
-        for solver in nlps:
-            for strategy in strategies:
+        # MINLP
+        for solver in minlps:
+            for transformation in transformations:
                 new_result = {}
                 m = build_cstrs(NT)
                 m_init = initialize_model(m, json_path=init_path)
-                m_solved = solve_with_gdpopt(
+                m_solved = solve_with_minlp(
                     m=m_init,
-                    mip='cplex',
-                    nlp=solver,
-                    nlp_options=nlp_opts[solver],
+                    transformation=transformation,
+                    minlp=solver,
+                    minlp_options=minlps_opts[solver],
                     timelimit=timelimit,
-                    strategy=strategy,
+                    gams_output=False,
                     tee=globaltee,
                 )
-                new_result = {
-                    'Method': 'GDPopt',
-                    'Approach': strategy,
-                    'Solver': solver,
-                    'Objective': pyo.value(m_solved.obj),
-                    'Time': m_solved.results.solver.user_time,
-                    'Status': m_solved.results.solver.termination_condition,
-                    'User_time': 'NA',
-                    'NT': NT,
-                }
+                new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pyo.value(
+                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
                 dict_data.append(new_result)
                 print(new_result)
 
-        visualize_cstr_superstructure(m, NT)
+        # # GDPopt
+        # for solver in nlps:
+        #     for strategy in strategies:
+        #         new_result = {}
+        #         m = build_cstrs(NT)
+        #         m_init = initialize_model(m, json_path=init_path)
+        #         m_solved = solve_with_gdpopt(
+        #             m=m_init,
+        #             mip='cplex',
+        #             nlp=solver,
+        #             nlp_options=nlp_opts[solver],
+        #             timelimit=timelimit,
+        #             strategy=strategy,
+        #             tee=globaltee,
+        #         )
+        #         new_result = {
+        #             'Method': 'GDPopt',
+        #             'Approach': strategy,
+        #             'Solver': solver,
+        #             'Objective': pyo.value(m_solved.obj),
+        #             'Time': m_solved.results.solver.user_time,
+        #             'Status': m_solved.results.solver.termination_condition,
+        #             'User_time': 'NA',
+        #             'NT': NT,
+        #         }
+        #         dict_data.append(new_result)
+        #         print(new_result)
+
+        # # visualize_cstr_superstructure(m, NT)
 
         # # D-SDA
         # m = build_cstrs(NT)

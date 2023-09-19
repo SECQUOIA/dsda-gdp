@@ -906,9 +906,9 @@ def evaluate_neighbors(
     Returns:
     TODO COmplete these types
         fmin (float): Gives the best neighbor's objective
-        best_var: Type list and gives the best neighbor
-        best_dir: Type int and is the steepest direction (key in neighborhood)
-        improve: Type bool and shows if an improvement was made while looking for neighbors
+        best_var (list): Type list and gives the best neighbor
+        best_dir (int): Type int and is the steepest direction (key in neighborhood)
+        improve (bool): Type bool and shows if an improvement was made while looking for neighbors
         evaluation_time: Total solver-statement time only
         ns_evaluated: evaluations in neighbor search
         best_path: path to json with best solution found
@@ -1074,7 +1074,7 @@ def do_line_search(
         global_evaluated (list): list with points already evaluated
         init_path: path to initialization file
     Returns:
-        fmin: Type int and gives the moved point objective
+        fmin (int): Type int and gives the moved point objective
         best_var (list): Type list and gives the moved point
         moved: Type bool and shows if an improvement was made while line searching
         ls_time: Total solver-statement time only
@@ -1192,7 +1192,7 @@ def solve_with_dsda(
         starting_point (list): Feasible external variable initial point
         ext_dict (dict): Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values). Both keys and values are pyomo objects.
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
-        mip_transformation (bool): Whether to solve the enumeration using the external variables applied to the MIP problem insed of the GDP
+        mip_transformation (bool): Whether to solve the enumeration using the external variables applied to the MIP problem instead of the GDP
         transformation (str): Which transformation to apply to the GDP
         k (string): Type of neighborhood ('2' or 'Infinity)
         provide_intialization (bool): If an existing json file is provided with a feasible initialization of starting_point
@@ -1430,7 +1430,7 @@ def solve_with_dsda(
     return m2_solved, route, obj_route
 
 
-def visualize_dsda(
+def visualize_dsda( # TODO: Modify the code, I think scatter should be upper than the arrows. I suggest to move sc above for loop.
     route: list = [],
     feas_x: list = [],
     feas_y: list = [],

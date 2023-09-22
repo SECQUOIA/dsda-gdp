@@ -1610,7 +1610,7 @@ def solve_complete_external_enumeration(
         )
 
         results[i] = (m_solved.dsda_status, pe.value(m_solved.obj))
-
+    
         if global_tee:
             print(
                 'Evaluated:',

@@ -1,3 +1,10 @@
+"""
+main_small_batch.py
+This file contains the main function to solve the small batch problem with different approaches.
+
+References:
+    - Kocis, G. R.; Grossmann, I. E. Global Optimization of Nonconvex Mixed-Integer Nonlinear Programming (MINLP) Problems in Process Synthesis. Ind. Eng. Chem. Res. 1988, 27 (8), 1407–1421. 
+"""
 import csv
 import logging
 import os

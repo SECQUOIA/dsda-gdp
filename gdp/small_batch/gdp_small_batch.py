@@ -16,6 +16,13 @@ from pyomo.opt.base.solvers import SolverFactory
 
 
 def build_small_batch():
+    """
+    Function that builds the GDP model for the superstructure of the small batches problem.
+    Args:
+
+    Returns:
+        m: pyomo model
+    """
     NK = 3
 
     # Model
@@ -70,7 +77,7 @@ def build_small_batch():
     m.b = pe.Var(m.i, within=pe.NonNegativeReals, doc='Batch size of product i')  # Batch size of product i
     m.tl = pe.Var(m.i, within=pe.NonNegativeReals, doc='Cycle time of product i')  # Cycle time of product i
     # Number of units in parallel stage j
-    m.n = pe.Var(m.j, within=pe.NonNegativeReals)
+    m.n = pe.Var(m.j, within=pe.NonNegativeReals, doc='Number of units in parallel stage j')  # Number of units in parallel stage j
 
     # Constraints
 
@@ -95,11 +102,13 @@ def build_small_batch():
     # Relating number of units to 0-1 variables
     @m.Constraint(m.j)
     def units(m, j):
+        """Relating number of units to 0-1 variables"""
         return m.n[j] == sum(m.coeffval[k, j] for k in m.k)
 
     # Only one choice for parallel units is feasible
     @m.LogicalConstraint(m.j)
     def lim(m, j):
+        """Only one choice for parallel units is feasible"""
         return pe.exactly(1, m.Y[1, j], m.Y[2, j], m.Y[3, j])
 
     # _______ Disjunction_________
@@ -128,6 +137,7 @@ def build_small_batch():
 
     @m.Disjunction(m.k, m.j)
     def Y_exists_or_not(m, k, j):
+        """Create the disjunction for Y[k, j]"""
         return [m.Y_exists[k, j], m.Y_not_exists[k, j]]
 
     # Associate Boolean variables with with disjunction

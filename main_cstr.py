@@ -218,7 +218,7 @@ if __name__ == "__main__":
     # Results
     # NTs = range(5, 26, 1)
     # NTs = range(10, 21, 5)
-    NTs = [10,15,20]
+    NTs = [10, 15, 20]
     timelimit = 900
     starting_point = [1, 1]
 
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     # csv_file = os.path.join(dir_path, "results", "cstr_results.csv")
     csv_file = os.path.join(dir_path, "results", "cstr_results_new.csv")
 
-    nlps = ['knitro', 'baron']# , 'msnlp']
+    nlps = ['knitro', 'baron']  # , 'msnlp']
     # nlps = ['knitro']
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
@@ -327,8 +327,16 @@ if __name__ == "__main__":
                     gams_output=False,
                     tee=globaltee,
                 )
-                new_result = {'Method': 'MINLP', 'Approach': transformation, 'Solver': solver, 'Objective': pyo.value(
-                    m_solved.obj), 'Time': m_solved.results.solver.user_time, 'Status': m_solved.results.solver.termination_condition, 'User_time': 'NA', 'NT': NT}
+                new_result = {
+                    'Method': 'MINLP',
+                    'Approach': transformation,
+                    'Solver': solver,
+                    'Objective': pyo.value(m_solved.obj),
+                    'Time': m_solved.results.solver.user_time,
+                    'Status': m_solved.results.solver.termination_condition,
+                    'User_time': 'NA',
+                    'NT': NT,
+                }
                 dict_data.append(new_result)
                 print(new_result)
 

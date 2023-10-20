@@ -46,13 +46,23 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     m.N = pe.RangeSet(1, NT, doc='Set of units in the superstructure')
 
     # PARAMETERS
-    m.k = pe.Param(initialize=2, doc="Kinetic constant [L/(mol*s)]")  # Kinetic constant [L/(mol*s)]
-    m.order1 = pe.Param(initialize=1, doc="Partial order of reaction 1")  # Partial order of reacton 1
-    m.order2 = pe.Param(initialize=1, doc="Partial order of reaction 2")  # Partial order of reaction 2
-    m.QF0 = pe.Param(initialize=1, doc="Inlet volumetric flow[L/s]")  # Inlet volumetric flow [L/s]
+    m.k = pe.Param(
+        initialize=2, doc="Kinetic constant [L/(mol*s)]"
+    )  # Kinetic constant [L/(mol*s)]
+    m.order1 = pe.Param(
+        initialize=1, doc="Partial order of reaction 1"
+    )  # Partial order of reacton 1
+    m.order2 = pe.Param(
+        initialize=1, doc="Partial order of reaction 2"
+    )  # Partial order of reaction 2
+    m.QF0 = pe.Param(
+        initialize=1, doc="Inlet volumetric flow[L/s]"
+    )  # Inlet volumetric flow [L/s]
     C0_Def = {'A': 0.99, 'B': 0.01}
     # Initial concentration of reagents [mol/L]
-    m.C0 = pe.Param(m.I, initialize=C0_Def, doc="Initial concentration of reagents [mol/L]")
+    m.C0 = pe.Param(
+        m.I, initialize=C0_Def, doc="Initial concentration of reagents [mol/L]"
+    )
 
     # Inlet molar flow [mol/s]
 
@@ -79,38 +89,105 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
 
     # Network Variables
     # Outlet flow rate of the superstructure unit [L/s]
-    m.Q = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Outlet flow rate of the superstructure unit [L/s]")
+    m.Q = pe.Var(
+        m.N,
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Outlet flow rate of the superstructure unit [L/s]",
+    )
 
     # Outlet flow rate recycle activation of the superstructure unit [L/s]
-    m.QFR = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Outlet flow rate recycle activation of the superstructure unit [L/s]")
+    m.QFR = pe.Var(
+        m.N,
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Outlet flow rate recycle activation of the superstructure unit [L/s]",
+    )
 
     # Molar flow [mol/s]
-    m.F = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Molar flow [mol/s]")
+    m.F = pe.Var(
+        m.I,
+        m.N,
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Molar flow [mol/s]",
+    )
 
     # Molar flow  recycle activation [mol/s]
-    m.FR = pe.Var(m.I, m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Molar flow  recycle activation [mol/s]")
+    m.FR = pe.Var(
+        m.I,
+        m.N,
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Molar flow  recycle activation [mol/s]",
+    )
 
     # Reaction rate [mol/(L*s)]
-    m.rate = pe.Var(m.I, m.N, initialize=0, within=pe.Reals, bounds=(-10, 10), doc="Reaction rate [mol/(L*s)]")
+    m.rate = pe.Var(
+        m.I,
+        m.N,
+        initialize=0,
+        within=pe.Reals,
+        bounds=(-10, 10),
+        doc="Reaction rate [mol/(L*s)]",
+    )
 
     # Reactor volume [L]
-    m.V = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Reactor volume [L]")
+    m.V = pe.Var(
+        m.N,
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Reactor volume [L]",
+    )
 
     # Volume activation [L]
-    m.c = pe.Var(m.N, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Volume activation [L]")
+    m.c = pe.Var(
+        m.N,
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Volume activation [L]",
+    )
 
     # Splitter Variables
     # Recycle flow rate  [L/s]
-    m.QR = pe.Var(initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Recycle flow rate  [L/s]")
+    m.QR = pe.Var(
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Recycle flow rate  [L/s]",
+    )
 
     # Product flow rate  [L/s]
-    m.QP = pe.Var(initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Product flow rate  [L/s]")
+    m.QP = pe.Var(
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Product flow rate  [L/s]",
+    )
 
     # Recycle molar flow [mol/s]
-    m.R = pe.Var(m.I, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Recycle molar flow [mol/s]")
+    m.R = pe.Var(
+        m.I,
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Recycle molar flow [mol/s]",
+    )
 
     # Product molar flow [mol/s]
-    m.P = pe.Var(m.I, initialize=0, within=pe.NonNegativeReals, bounds=(0, 10), doc="Product molar flow [mol/s]")
+    m.P = pe.Var(
+        m.I,
+        initialize=0,
+        within=pe.NonNegativeReals,
+        bounds=(0, 10),
+        doc="Product molar flow [mol/s]",
+    )
 
     # CONSTRAINTS
 
@@ -124,7 +201,12 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         else:
             return pe.Constraint.Skip
 
-    m.unreact_mole = pe.Constraint(m.I, m.N, rule=unreact_mole_rule, doc="Unreacted feed unite: Partial mole balance, (21.D) [1]")
+    m.unreact_mole = pe.Constraint(
+        m.I,
+        m.N,
+        rule=unreact_mole_rule,
+        doc="Unreacted feed unite: Partial mole balance, (21.D) [1]",
+    )
 
     # Unreacted feed unit continuity
 
@@ -135,7 +217,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         else:
             return pe.Constraint.Skip
 
-    m.unreact_cont = pe.Constraint(m.N, rule=unreact_cont_rule, doc="Unreacted feed unit: Continuity, (21.E) [1]")
+    m.unreact_cont = pe.Constraint(
+        m.N, rule=unreact_cont_rule, doc="Unreacted feed unit: Continuity, (21.E) [1]"
+    )
 
     # Reactor Balances
     # Reactor mole balance
@@ -147,7 +231,12 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         else:
             return pe.Constraint.Skip
 
-    m.react_mole = pe.Constraint(m.I, m.N, rule=react_mole_rule, doc="Reactor sequence: Partial Molar Balance, (21.H) [1]")
+    m.react_mole = pe.Constraint(
+        m.I,
+        m.N,
+        rule=react_mole_rule,
+        doc="Reactor sequence: Partial Molar Balance, (21.H) [1]",
+    )
 
     # Reactor continuity
 
@@ -158,7 +247,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         else:
             return pe.Constraint.Skip
 
-    m.react_cont = pe.Constraint(m.N, rule=react_cont_rule, doc="Reactor sequence: Continuity, (21.I) [1]")
+    m.react_cont = pe.Constraint(
+        m.N, rule=react_cont_rule, doc="Reactor sequence: Continuity, (21.I) [1]"
+    )
 
     # Splitting Point Balances
     # Splitting point mole balance
@@ -167,7 +258,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """Splitting point: Partial mole balance, (21.L) [1]"""
         return m.F[i, 1] - m.P[i] - m.R[i] == 0
 
-    m.split_mole = pe.Constraint(m.I, rule=split_mole_rule, doc="Splitting point: Partial mole balance, (21.L) [1]")
+    m.split_mole = pe.Constraint(
+        m.I,
+        rule=split_mole_rule,
+        doc="Splitting point: Partial mole balance, (21.L) [1]",
+    )
 
     # Splitting point continuity
 
@@ -175,18 +270,24 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """Splitting point: continuity, (21.M) [1]"""
         return m.Q[1] - m.QP - m.QR == 0
 
-    m.split_cont = pe.Constraint(rule=split_cont_rule, doc="Splitting point: continuity, (21.M) [1]")
+    m.split_cont = pe.Constraint(
+        rule=split_cont_rule, doc="Splitting point: continuity, (21.M) [1]"
+    )
 
     # Splitting point additional constraints
 
     def split_add_rule(m, i):
-        """Splitting point: additional constraints, Molarity constraints over initial and final flows, 
+        """Splitting point: additional constraints, Molarity constraints over initial and final flows,
         read as an multiplication avoid the numerical complication. (21.N) [1]
         m.P[i]/m.QP =  m.F[i,1]/m.Q[1] (molarity balance)
         """
         return m.P[i] * m.Q[1] - m.F[i, 1] * m.QP == 0
 
-    m.split_add = pe.Constraint(m.I, rule=split_add_rule, doc="Splitting point: additional constraints, Molarity constraints over initial and final flows, (21.N) [1]")
+    m.split_add = pe.Constraint(
+        m.I,
+        rule=split_add_rule,
+        doc="Splitting point: additional constraints, Molarity constraints over initial and final flows, (21.N) [1]",
+    )
 
     # Product Specification
 
@@ -194,7 +295,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """Product specification constraint, (21.O) [1]"""
         return m.QP * 0.95 - m.P['B'] == 0
 
-    m.prod_spec = pe.Constraint(rule=prod_spec_rule, doc="Product specification constraint, (21.O) [1]")
+    m.prod_spec = pe.Constraint(
+        rule=prod_spec_rule, doc="Product specification constraint, (21.O) [1]"
+    )
 
     # Volume Constraint
 
@@ -205,7 +308,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         else:
             return pe.Constraint.Skip
 
-    m.vol_cons = pe.Constraint(m.N, rule=vol_cons_rule, doc="Volume constraint, (21.P) [1]")
+    m.vol_cons = pe.Constraint(
+        m.N, rule=vol_cons_rule, doc="Volume constraint, (21.P) [1]"
+    )
 
     # YD Disjunction block equation definition
 
@@ -340,11 +445,21 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
             return m.QFR[n] == 0
 
     # Create disjunction blocks
-    m.YR_is_recycle = Disjunct(m.N, rule=build_recycle_equations, doc="Disjunct for recycle equations")
-    m.YR_is_not_recycle = Disjunct(m.N, rule=build_no_recycle_equations, doc="Disjunct for non existence of recycle equations")
+    m.YR_is_recycle = Disjunct(
+        m.N, rule=build_recycle_equations, doc="Disjunct for recycle equations"
+    )
+    m.YR_is_not_recycle = Disjunct(
+        m.N,
+        rule=build_no_recycle_equations,
+        doc="Disjunct for non existence of recycle equations",
+    )
 
-    m.YP_is_cstr = Disjunct(m.N, rule=build_cstr_equations, doc="Disjunct for CSTR equations")
-    m.YP_is_bypass = Disjunct(m.N, rule=build_bypass_equations, doc="Disjunct for bypass equations")
+    m.YP_is_cstr = Disjunct(
+        m.N, rule=build_cstr_equations, doc="Disjunct for CSTR equations"
+    )
+    m.YP_is_bypass = Disjunct(
+        m.N, rule=build_bypass_equations, doc="Disjunct for bypass equations"
+    )
 
     # Create disjunctions
 
@@ -370,7 +485,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """If m.YR[n] is true, then m.YP[n] must also be true."""
         return m.YR[n].implies(m.YP[n])
 
-    m.cstr_if_recycle = pe.LogicalConstraint(m.N, rule=cstr_if_recycle_rule, doc="If m.YR[n] is true, then m.YP[n] must also be true.")
+    m.cstr_if_recycle = pe.LogicalConstraint(
+        m.N,
+        rule=cstr_if_recycle_rule,
+        doc="If m.YR[n] is true, then m.YP[n] must also be true.",
+    )
 
     # There is only one unreacted feed
 
@@ -378,7 +497,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """There is only one unreacted feed, (21.B) [1]"""
         return pe.exactly(1, m.YF)
 
-    m.one_unreacted_feed = pe.LogicalConstraint(rule=one_unreacted_feed_rule, doc="There is only one unreacted feed, (21.B) [1]")
+    m.one_unreacted_feed = pe.LogicalConstraint(
+        rule=one_unreacted_feed_rule, doc="There is only one unreacted feed, (21.B) [1]"
+    )
 
     # There is only one recycle stream
 
@@ -386,7 +507,9 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """There is only one recycle stream, (21.C) [1]"""
         return pe.exactly(1, m.YR)
 
-    m.one_recycle = pe.LogicalConstraint(rule=one_recycle_rule, doc="There is only one recycle stream, (21.C) [1]")
+    m.one_recycle = pe.LogicalConstraint(
+        rule=one_recycle_rule, doc="There is only one recycle stream, (21.C) [1]"
+    )
 
     # Unit operation in n constraint
 
@@ -399,7 +522,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
                 pe.lor(pe.land(~m.YF[n2] for n2 in range(1, n)), m.YF[n])
             )
 
-    m.unit_in_n = pe.LogicalConstraint(m.N, rule=unit_in_n_rule, doc="YP[1] is true when n=1, else YP[n] is equivalent to YF[n] or all YF[n] from 1 up to n-1 are false.")
+    m.unit_in_n = pe.LogicalConstraint(
+        m.N,
+        rule=unit_in_n_rule,
+        doc="YP[1] is true when n=1, else YP[n] is equivalent to YF[n] or all YF[n] from 1 up to n-1 are false.",
+    )
 
     # OBJECTIVE
 
@@ -407,6 +534,10 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """Objective function: Total reactor network volume, (21.Q) [1]"""
         return sum(m.c[n] for n in m.N)
 
-    m.obj = pe.Objective(rule=obj_rule, sense=pe.minimize, doc="Objective function: Total reactor network volume, (21.Q) [1]")
+    m.obj = pe.Objective(
+        rule=obj_rule,
+        sense=pe.minimize,
+        doc="Objective function: Total reactor network volume, (21.Q) [1]",
+    )
 
     return m

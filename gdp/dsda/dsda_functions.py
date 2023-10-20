@@ -1,6 +1,10 @@
 """
 dsda_functions.py
-TODO
+The function performs the Discrete-Steepes Descent Algorithm (D-SDA) for a given GDP model. 
+The function allows the user to provide additional logical constraints and can optionally convert the model to its equivalent MINLP form using specified transformations. 
+The function also allows the user to provide a MINLP solver to solve the subproblem model. The function returns the solution of the GDP model, the solution of the MINLP model, and the solution of the subproblem model.
+The function also returns the D-SDA convergence plot.
+
 1. The code contains the get_external_information function, which is used to obtain information from the model to perform the reformulation with external variables.
 2. The code have the external_ref function, which is used to reformulate a given GDP model by taking into account external variables. 
 3. dsda_functions.py has extvars_gdp_to_mip function used to transformed a GDP into MINLP model. The function maps the external variables defined for the GDP model into corresponding binary variables suitable for the MINLP formulation.  
@@ -538,7 +542,6 @@ def solve_with_minlp(
     rel_tol: float = 0.001,
 ) -> pe.ConcreteModel():
     """
-    TODO: Complete type hints in the documentation
     Function that transforms a GDP model and solves it as a mixed-integer nonlinear
     programming (MINLP) model.
     Args:
@@ -746,7 +749,8 @@ def neighborhood_k_eq_inf(dimension: int = 2) -> dict:
         dimension (int): Dimension of the neighborhood
     Returns:
         temp (dict): Dictionary contaning in each item a list with a direction within the neighborhood
-        TODO change temp name here to something more useful
+    Note:
+        temp is temporary variable.
     """
 
     neighbors = list(it.product([-1, 0, 1], repeat=dimension))
@@ -903,15 +907,15 @@ def evaluate_neighbors(
         rel_tol (float): Relative optimality tolerance
         global_evaluated (list): list with points already evaluated
         init_path (os.path): path to initialization file
+
     Returns:
-    TODO COmplete these types
         fmin (float): Gives the best neighbor's objective
         best_var (list): Type list and gives the best neighbor
         best_dir (int): Type int and is the steepest direction (key in neighborhood)
         improve (bool): Type bool and shows if an improvement was made while looking for neighbors
-        evaluation_time: Total solver-statement time only
-        ns_evaluated: evaluations in neighbor search
-        best_path: path to json with best solution found
+        evaluation_time (float): Total solver-statement time only
+        ns_evaluated (list) : evaluations in neighbor search
+        best_path (os.path): path to json with best solution found
 
     """
     # Global Tolerance parameters
@@ -1049,16 +1053,16 @@ def do_line_search(
     init_path=None,
 ):
     """
-    TODO CHeck
     Function that moves in a given "best direction" and evaluates the new moved point
+
     Args:
         start (list): Point of that is to be moved
         fmin (float): Objective at actual point
         direction: moving direction
-        model_function: function that returns GDP model to be solved
+        model_function (function): function that returns GDP model to be solved
         model_args (dict): Contains the argument values needed for model_function
         ext_dict (dict): Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values)
-        ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
+        ext_logic (function): Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a)
         mip_transformation (bool): Whether to solve the enumeration using the external variables applied to the MIP problem insed of the GDP
         transformation (str): Which transformation to apply to the GDP
         subproblem_solver (str): MINLP or NLP solver algorithm
@@ -1072,14 +1076,14 @@ def do_line_search(
         global_tee (gool): display D-SDA iteration output
         rel_tol (float): Relative optimality tolerance
         global_evaluated (list): list with points already evaluated
-        init_path: path to initialization file
+        init_path (os.path): path to initialization file
     Returns:
         fmin (int): Type int and gives the moved point objective
         best_var (list): Type list and gives the moved point
-        moved: Type bool and shows if an improvement was made while line searching
-        ls_time: Total solver-statement time only
+        moved (bool): Type bool and shows if an improvement was made while line searching
+        ls_time (float): Total solver-statement time only
         ls_evaluated (list): evaluations in line search
-        new_path: path of best json file
+        new_path (os.path): path of best json file
     """
     # Global Tolerance parameters
     epsilon = 1e-10
@@ -1184,14 +1188,13 @@ def solve_with_dsda(
     rel_tol: float = 1e-3,
 ):
     """
-    TODO please check types and order
     Function that computes Discrete-Steepest Descend Algorithm
     Args:
-        model_function: function that returns GDP model to be solved
+        model_function (function): function that returns GDP model to be solved
         model_args (dict): Contains the argument values needed for model_function
         starting_point (list): Feasible external variable initial point
         ext_dict (dict): Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values). Both keys and values are pyomo objects.
-        ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
+        ext_logic (function): Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).
         mip_transformation (bool): Whether to solve the enumeration using the external variables applied to the MIP problem instead of the GDP
         transformation (str): Which transformation to apply to the GDP
         k (string): Type of neighborhood ('2' or 'Infinity)
@@ -1430,7 +1433,7 @@ def solve_with_dsda(
     return m2_solved, route, obj_route
 
 
-def visualize_dsda( # TODO: Modify the code, I think scatter should be upper than the arrows. I suggest to move sc above for loop.
+def visualize_dsda(
     route: list = [],
     feas_x: list = [],
     feas_y: list = [],
@@ -1483,10 +1486,6 @@ def visualize_dsda( # TODO: Modify the code, I think scatter should be upper tha
             shape='full',
         )
 
-    # Plot complete route
-    for i in range(len(route) - 1):
-        drawArrow(route[i], route[i + 1])
-
     # Draws scatter plot of feasible points
     sc = plt.scatter(X1, X2, s=80, c=objs, cmap=cm)
     cbar = plt.colorbar(sc)
@@ -1496,6 +1495,12 @@ def visualize_dsda( # TODO: Modify the code, I think scatter should be upper tha
     plt.xlabel(ext1_name)
     plt.ylabel(ext2_name)
     plt.show()
+
+    # Plot complete route
+    for i in range(len(route) - 1):
+        drawArrow(route[i], route[i + 1])
+
+    
 
 
 def solve_complete_external_enumeration(
@@ -1517,10 +1522,9 @@ def solve_complete_external_enumeration(
     export_csv: bool = False,
 ):
     """
-    TODO Review order and types and documentation
     Function that computes complete enumeration using the external variable reformulation
     Args:
-        model_function: function that returns GDP model to be solved
+        model_function (function): function that returns GDP model to be solved
         model_args (dict): Contains the argument values needed for model_function
         ext_dict (dict): Dictionary with Boolean variables to be reformulated (keys) and their corresponding ordered sets (values). Both keys and values are pyomo objects.
         ext_logic: Function that returns a list of lists of the form [a,b], where a is an expressions of the reformulated Boolean variables and b is an equivalent Boolean or indicator variable (b<->a).

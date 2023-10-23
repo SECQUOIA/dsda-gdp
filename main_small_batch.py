@@ -15,23 +15,28 @@ import pyomo.environ as pe
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.infeasible import log_infeasible_constraints
 
-from gdp.dsda.dsda_functions import (external_ref, generate_initialization,
-                                     get_external_information,
-                                     initialize_model,
-                                     solve_complete_external_enumeration,
-                                     solve_subproblem, solve_with_dsda,
-                                     solve_with_gdpopt, solve_with_minlp,
-                                     visualize_dsda)
+from gdp.dsda.dsda_functions import (
+    external_ref,
+    generate_initialization,
+    get_external_information,
+    initialize_model,
+    solve_complete_external_enumeration,
+    solve_subproblem,
+    solve_with_dsda,
+    solve_with_gdpopt,
+    solve_with_minlp,
+    visualize_dsda,
+)
 from gdp.small_batch.gdp_small_batch import build_small_batch
 
 
 def problem_logic_batch(m):
     """
     This function returns the logic expressions to be used in the disjunctive constraints of the D-SDA approach for the small batch problem.
-    
+
     Args:
         m(pyomo.ConcreteModel): Pyomo model of the small batch problem
-    
+
     Return:
         logic_expr(list): List of logic expressions to be used in the disjunctive constraints
     """
@@ -53,14 +58,20 @@ if __name__ == "__main__":
     # Setting logging level to ERROR to avoid printing FBBT warning of some constraints not implemented
     logging.basicConfig(level=logging.ERROR)
 
-    csv_columns = ['Method', 'Approach', 'Solver',
-                   'Objective', 'Time', 'Status', 'User_time']
+    csv_columns = [
+        'Method',
+        'Approach',
+        'Solver',
+        'Objective',
+        'Time',
+        'Status',
+        'User_time',
+    ]
     dict_data = []
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    csv_file = os.path.join(
-        dir_path, "results", "small_batch_results.csv")
+    csv_file = os.path.join(dir_path, "results", "small_batch_results.csv")
 
-    nlps = ['knitro', 'baron'] # msnlp
+    nlps = ['knitro', 'baron']  # msnlp
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
     # nlp_opts['msnlp']['add_options'] = [
@@ -182,8 +193,15 @@ if __name__ == "__main__":
                     tee=globaltee,
                     global_tee=globaltee,
                 )
-                new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(
-                    m_solved.obj), 'Time': m_solved.dsda_time, 'Status': m_solved.dsda_status, 'User_time': m_solved.dsda_usertime}
+                new_result = {
+                    'Method': str('D-SDA_MIP_' + transformation),
+                    'Approach': str('k=' + k),
+                    'Solver': solver,
+                    'Objective': pe.value(m_solved.obj),
+                    'Time': m_solved.dsda_time,
+                    'Status': m_solved.dsda_status,
+                    'User_time': m_solved.dsda_usertime,
+                }
                 dict_data.append(new_result)
                 print(new_result)
 

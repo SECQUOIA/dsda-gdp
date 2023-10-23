@@ -56,7 +56,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         initialize=1, doc="Partial order of reaction 2"
     )  # Partial order of reaction 2
     m.QF0 = pe.Param(
-        initialize=1, doc="Inlet volumetric flow[L/s]"
+        initialize=1, doc="Inlet volumetric flow [L/s]"
     )  # Inlet volumetric flow [L/s]
     C0_Def = {'A': 0.99, 'B': 0.01}
     # Initial concentration of reagents [mol/L]

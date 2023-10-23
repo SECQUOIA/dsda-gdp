@@ -19,12 +19,15 @@ from pyomo.opt.base.solvers import SolverFactory
 def build_small_batch():
     """
     The function build the GDP model for the small batch problem.
+    
+    References:
+    - Kocis, G. R.; Grossmann, I. E. Global Optimization of Nonconvex Mixed-Integer Nonlinear Programming (MINLP) Problems in Process Synthesis. Ind. Eng. Chem. Res. 1988, 27 (8), 1407–1421. 
 
     Args:
         None
     
     Returns:
-        m: pyomo.ConcreteModel
+        m (pyomo.ConcreteModel): The GDP model for the small batch problem is created.
     """
     NK = 3
 
@@ -32,10 +35,10 @@ def build_small_batch():
     m = pe.ConcreteModel()
 
     # Sets
-    m.i = pe.Set(initialize=['a', 'b'], doc='Set of produncts')  # Set of products, i=1,2
+    m.i = pe.Set(initialize=['a', 'b'], doc='Set of produncts')  # Set of products, i = a, b
     m.j = pe.Set(initialize=['mixer', 'reactor',
-                             'centrifuge'])  # Set of stages, j=1,2,3
-    m.k = pe.RangeSet(NK)    # Set of potential number of parallel units
+                             'centrifuge'])  # Set of stages, j = mixer, reactor, centrifuge 
+    m.k = pe.RangeSet(NK)    # Set of potential number of parallel units, k = 1, 2, 3
 
     # Parameters and Scalars
 
@@ -44,10 +47,10 @@ def build_small_batch():
     m.vupp = pe.Param(initialize=2500, doc='Upper bound for size of batch unit [L]')  # Upper bound for size of batch unit [L]
 
     # Demand of product i
-    m.q = pe.Param(m.i, initialize={'a': 200000, 'b': 150000}, doc='Production rate pf the product [kg/]')
+    m.q = pe.Param(m.i, initialize={'a': 200000, 'b': 150000}, doc='Production rate of the product [kg]')
     # Cost coefficient for batch units
     m.alpha = pe.Param(
-        m.j, initialize={'mixer': 250, 'reactor': 500, 'centrifuge': 340}, doc='Cost coefficient for batch units')
+        m.j, initialize={'mixer': 250, 'reactor': 500, 'centrifuge': 340}, doc='Cost coefficient for batch units [$/L^beta]')
     # Cost exponent for batch units
     m.beta = pe.Param(
         m.j, initialize={'mixer': 0.6, 'reactor': 0.6, 'centrifuge': 0.6}, doc='Cost exponent for batch units')
@@ -58,7 +61,7 @@ def build_small_batch():
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
-            k (int)
+            k (int): number of parallel units
 
         Returns:
             Coefficient for number of parallel units.
@@ -71,8 +74,8 @@ def build_small_batch():
     s_init = {('a', 'mixer'): 2, ('a', 'reactor'): 3, ('a', 'centrifuge'): 4,
               ('b', 'mixer'): 4, ('b', 'reactor'): 6, ('b', 'centrifuge'): 3}
 
-    # Size factor for product i in stage j [Kg/L]
-    m.s = pe.Param(m.i, m.j, initialize=s_init, doc='Size factor for product i in stage j [Kg/L]')
+    # Size factor for product i in stage j [kg/L]
+    m.s = pe.Param(m.i, m.j, initialize=s_init, doc='Size factor for product i in stage j [kg/L]')
 
     t_init = {('a', 'mixer'): 8, ('a', 'reactor'): 20, ('a', 'centrifuge'): 4,
               ('b', 'mixer'): 10, ('b', 'reactor'): 12, ('b', 'centrifuge'): 3}
@@ -249,7 +252,8 @@ def build_small_batch():
     # Objective
     def obj_rule(m):
         """
-        Objective: mininimize the investment cost.
+        Objective: mininimize the investment cost [$].
+        min z = sum(alpha[j]*(n[j] + beta[j]*v[j])) for j = mixer, reactor, centrifuge
         
         Args:
             m: pyomo.ConcreteModel

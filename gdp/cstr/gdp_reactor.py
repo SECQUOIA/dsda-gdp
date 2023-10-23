@@ -70,7 +70,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         """
         This function calculates the molar flow for a reagent 'i' by multiplying
         its initial concentration with the inlet volumetric flow The inlet molar flow of the reagent 'i' in [mol/s].
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             i (str): Reagent name
@@ -205,7 +205,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def unreact_mole_rule(m, i, n):
         """
         Unreacted feed unite: Partial mole balance, (21.D) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             i (str): Reagent name
@@ -232,11 +232,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         if n == NT:
             """
             Unreacted feed unit: Continuity, (21.E) [1]
-            
+
             Args:
                 m (pyomo.ConcreteModel): Pyomo GDP model
                 n (int): Stage number
-            
+
             Returns:
                 None. The function defines the equations for the given disjunct.
             """
@@ -254,12 +254,12 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def react_mole_rule(m, i, n):
         """
         Reactor sequence: Partial Molar Balance, (21.H) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             i (str): Reagent name
             n (int): Stage number
-        
+
         Returns:
             None. The function defines the equations for the given disjunct.
         """
@@ -280,7 +280,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def react_cont_rule(m, n):
         """
         Reactor sequence: Continuity, (21.I) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             n (int): Stage number
@@ -303,7 +303,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def split_mole_rule(m, i):
         """
         Splitting point: Partial mole balance, (21.L) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             i (str): Reagent name
@@ -324,7 +324,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def split_cont_rule(m):
         """
         Splitting point: continuity, (21.M) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
 
@@ -348,7 +348,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             i (str): Reagent name
-        
+
         Returns:
             None. The function defines the equations for the given disjunct.
         """
@@ -365,7 +365,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def prod_spec_rule(m):
         """
         Product specification constraint, (21.O) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
 
@@ -383,7 +383,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def vol_cons_rule(m, n):
         """
         Volume constraint, (21.P) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             n (int): Stage number
@@ -444,11 +444,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def YPD_rate_rel(disjunct):
             """
             The reaction rate relation between A and B.
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
-            
+
             Return:
                 None. The function defines the equations for the given disjunct.
             """
@@ -459,11 +459,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def YPD_vol_act(disjunct):
             """
             Volume activation
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
-            
+
             Return:
                 None. The function defines the equations for the given disjunct.
             """
@@ -487,11 +487,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def neg_YPD_FR_desact(disjunct, i):
             """
             Molar flow recycle deactivation
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
-            
+
             Return:
                 None. The function defines the equations for the given disjunct.
             """
@@ -502,11 +502,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def neg_YPD_rate_desact(disjunct, i):
             """
             Rate deactivation
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
-            
+
             Return:
                 None. The function defines the equations for the given disjunct.
             """
@@ -517,11 +517,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def neg_YPD_QFR_desact(disjunct):
             """
             Outlet flow rate recycle deactivation
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
-            
+
             Return:
                 None. The function defines the equations for the given disjunct.
             """
@@ -531,11 +531,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def neg_YPD_vol_desact(disjunct):
             """
             Volume deactivation
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
-            
+
             Return:
                 None. The function defines the equations for the given disjunct.
             """
@@ -561,7 +561,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def YRD_FR_act(disjunct, i):
             """
             Molar flow recucle activation
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
@@ -576,7 +576,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def YRD_QFR_act(disjunct):
             """
             Outlet flow rate recycle activation via equalizing with the recycle flow rate
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
@@ -604,7 +604,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def neg_YRD_FR_desact(disjunct, i):
             """
             Molar flow recycle deactivation
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
@@ -619,11 +619,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
         def neg_YRD_QFR_desact(disjunct):
             """
             Outlet flow rate recycle deactivation via equalizing with the recycle flow rate
-            
+
             Args:
                 m (pyomo.Disjunct): The Pyomo disjunct on which the constraints will be built.
                 n (int): The stage number for which the equations will be built.
-            
+
             Return:
                 None. The function defines the equations for the given disjunct.
             """
@@ -652,7 +652,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def YP_is_cstr_or_bypass(m, n):
         """
         Disjunction for YP, (20) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             n (int): Stage number
@@ -666,11 +666,11 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def YR_is_recycle_or_not(m, n):
         """
         Disjunction for YR, (19.B) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             n (int): Stage number
-        
+
         Returns:
             None. The function defines the equations for the given disjunct.
         """
@@ -687,7 +687,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def cstr_if_recycle_rule(m, n):
         """
         If m.YR[n] is true, then m.YP[n] must also be true.
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             n (int): Stage number
@@ -708,7 +708,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def one_unreacted_feed_rule(m):
         """
         There is only one unreacted feed, (21.B) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
 
@@ -726,7 +726,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def one_recycle_rule(m):
         """
         There is only one recycle stream, (21.C) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
 
@@ -744,7 +744,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def unit_in_n_rule(m, n):
         """
         P[1] is true when n=1, else YP[n] is equivalent to YF[n] or all YF[n] from 1 up to n-1 are false.
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
             n (int): Stage number
@@ -770,7 +770,7 @@ def build_cstrs(NT: int = 5) -> pe.ConcreteModel():
     def obj_rule(m):
         """
         Objective function: Total reactor network volume, (21.Q) [1]
-        
+
         Args:
             m (pyomo.ConcreteModel): Pyomo GDP model
 

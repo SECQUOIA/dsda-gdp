@@ -30,7 +30,7 @@ def problem_logic_batch(m):
     This function returns the logic expressions to be used in the disjunctive constraints of the D-SDA approach for the small batch problem.
     
     Args:
-        m(pyomo.ConcreteModel): Pyomo model of the
+        m(pyomo.ConcreteModel): Pyomo model of the small batch problem
     
     Return:
         logic_expr(list): List of logic expressions to be used in the disjunctive constraints

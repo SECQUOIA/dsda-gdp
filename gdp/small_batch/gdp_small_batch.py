@@ -322,6 +322,17 @@ def build_small_batch():
 
 
 def external_ref(m, x, logic_expr=None):
+    """
+    Add the external variables to the GDP optimization problem.
+
+    Args:
+        m (pyomo.ConcreteModel): GDP optimization model
+        x (list): External variables
+        logic_expr (list, optional): Logic expressions to be used in the disjunctive constraints
+
+    Returns:
+        m (pyomo.ConcreteModel): GDP optimization model with the external variables
+    """
     ext_var = {}
     p = 0
     for j in m.j:
@@ -332,12 +343,12 @@ def external_ref(m, x, logic_expr=None):
         for j in m.j:
             if k == ext_var[j]:
                 m.Y[k, j].fix(True)
-                m.Y_exists[k, j].indicator_var.fix(True)  # IS THIS REQUIRED????
-                m.Y_not_exists[k, j].indicator_var.fix(False)  # IS THIS REQUIRED????
+                m.Y_exists[k, j].indicator_var.fix(True)  
+                m.Y_not_exists[k, j].indicator_var.fix(False)  
             else:
                 m.Y[k, j].fix(False)
-                m.Y_exists[k, j].indicator_var.fix(False)  # IS THIS REQUIRED????
-                m.Y_not_exists[k, j].indicator_var.fix(True)  # IS THIS REQUIRED????
+                m.Y_exists[k, j].indicator_var.fix(False) 
+                m.Y_not_exists[k, j].indicator_var.fix(True)  
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)

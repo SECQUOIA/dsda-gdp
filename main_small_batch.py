@@ -71,7 +71,7 @@ if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.abspath(__file__))
     csv_file = os.path.join(dir_path, "results", "small_batch_results.csv")
 
-    nlps = ['knitro', 'baron']  # msnlp
+    nlps = ['knitro', 'baron'] # 'msnlp']
 
     nlp_opts = dict((nlp, {}) for nlp in nlps)
     # nlp_opts['msnlp']['add_options'] = [

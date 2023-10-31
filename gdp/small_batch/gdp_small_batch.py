@@ -66,7 +66,7 @@ def build_small_batch():
     m.alpha = pe.Param(
         m.j,
         initialize={'mixer': 250, 'reactor': 500, 'centrifuge': 340},
-        doc='Cost coefficient for batch units [$/L^beta]',
+        doc='Cost coefficient for batch units [$/L^beta*No. of units]]',
     )
     # Cost exponent for batch units
     m.beta = pe.Param(
@@ -246,12 +246,13 @@ def build_small_batch():
         def coeffval_act(disjunct):
             """
             Coeffval activation.
+            m.coeffval[k,j] = m.coeff[k] = log(k)
 
             Args:
                 disjunct (pyomo.gdp.Disjunct): Disjunct block
 
             Returns:
-                Constraint
+               Logical Constraint
             """
             return m.coeffval[k, j] == m.coeff[k]
 
@@ -265,13 +266,22 @@ def build_small_batch():
             j (str): stage
 
         Returns:
-            None, the proposition is built inside the function
+            None, the proposition is built inside the function.
         """
         m = disjunct.model()
 
         # Coeffval deactivation
         @disjunct.Constraint()
         def coeffval_deact(disjunct):
+            """
+            Coeffval deactivation.
+
+            Args:
+                disjunct (pyomo.gdp.Disjunct): Disjunct block
+
+            Returns:
+                Logical Constraint
+            """
             return m.coeffval[k, j] == 0
 
     # Create disjunction block

@@ -354,12 +354,12 @@ def external_ref(m, x, logic_expr=None):
         for j in m.j:
             if k == ext_var[j]:
                 m.Y[k, j].fix(True)
-                m.Y_exists[k, j].indicator_var.fix(True)  
-                m.Y_not_exists[k, j].indicator_var.fix(False)  
+                m.Y_exists[k, j].indicator_var.fix(True)
+                m.Y_not_exists[k, j].indicator_var.fix(False)
             else:
                 m.Y[k, j].fix(False)
-                m.Y_exists[k, j].indicator_var.fix(False) 
-                m.Y_not_exists[k, j].indicator_var.fix(True)  
+                m.Y_exists[k, j].indicator_var.fix(False)
+                m.Y_not_exists[k, j].indicator_var.fix(True)
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)

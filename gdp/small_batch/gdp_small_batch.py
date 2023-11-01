@@ -161,7 +161,7 @@ def build_small_batch():
             j (str): stage
 
         Returns:
-            Constraint
+            Algebraic Constraint
         """
         return m.v[j] >= pe.log(m.s[i, j]) + m.b[i]
 
@@ -177,7 +177,7 @@ def build_small_batch():
             j (str): stage
 
         Returns:
-            Constraint
+            Algebraic Constraint
         """
         return m.n[j] + m.tl[i] >= pe.log(m.t[i, j])
 
@@ -191,7 +191,7 @@ def build_small_batch():
             m (pyomo.ConcreteModel): small batch GDP model
 
         Returns:
-            Constraint
+            Algebraic Constraint
         """
         return sum(m.q[i] * pe.exp(m.tl[i] - m.b[i]) for i in m.i) <= m.h
 
@@ -206,7 +206,7 @@ def build_small_batch():
             j (str): stage
 
         Returns:
-            Constraint
+            Algebraic Constraint
         """
         return m.n[j] == sum(m.coeffval[k, j] for k in m.k)
 
@@ -275,6 +275,7 @@ def build_small_batch():
         def coeffval_deact(disjunct):
             """
             Coeffval deactivation.
+            m.coeffval[k,j] = 0
 
             Args:
                 disjunct (pyomo.gdp.Disjunct): Disjunct block
@@ -319,7 +320,7 @@ def build_small_batch():
         min z = sum(alpha[j]*(n[j] + beta[j]*v[j])) for j = mixer, reactor, centrifuge
 
         Args:
-            m: pyomo.ConcreteModel
+            m (pyomo.ConcreteModel): small batch GDP model
 
         Returns:
             Objective function

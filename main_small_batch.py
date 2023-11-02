@@ -38,7 +38,7 @@ def problem_logic_batch(m):
         m (pyomo.ConcreteModel): Pyomo model of the small batch problem
 
     Return:
-        logic_expr(list): List of logic expressions to be used in the disjunctive constraints
+        logic_expr (list): List of logic expressions to be used in the disjunctive constraints
     """
     logic_expr = []
     for k in m.k:

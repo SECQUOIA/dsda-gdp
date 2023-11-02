@@ -354,12 +354,20 @@ def external_ref(m, x, logic_expr=None):
         for j in m.j:
             if k == ext_var[j]:
                 m.Y[k, j].fix(True)
-                m.Y_exists[k, j].indicator_var.fix(True)
-                m.Y_not_exists[k, j].indicator_var.fix(False)
+                m.Y_exists[k, j].indicator_var.fix(
+                    True
+                )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                m.Y_not_exists[k, j].indicator_var.fix(
+                    False
+                )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
             else:
                 m.Y[k, j].fix(False)
-                m.Y_exists[k, j].indicator_var.fix(False)
-                m.Y_not_exists[k, j].indicator_var.fix(True)
+                m.Y_exists[k, j].indicator_var.fix(
+                    False
+                )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                m.Y_not_exists[k, j].indicator_var.fix(
+                    True
+                )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
@@ -427,7 +435,7 @@ def solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=10):
 
 if __name__ == "__main__":
     m = build_small_batch()
-    # m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=120)
+    m_solved = solve_with_minlp(m, transformation='bigm', minlp='baron', timelimit=120)
 
     # EXTERNAL REF TEST (this thest can be deleted)
     newmodel = external_ref(m, [1, 2, 3], logic_expr=None)

@@ -302,7 +302,7 @@ def build_small_batch():
             j (str): stage
 
         Returns:
-            Disjunction
+            Y_exists_or_not (list): List of disjuncts
         """
         return [m.Y_exists[k, j], m.Y_not_exists[k, j]]
 
@@ -317,13 +317,14 @@ def build_small_batch():
     def obj_rule(m):
         """
         Objective: mininimize the investment cost [$].
-        min z = sum(alpha[j]*(n[j] + beta[j]*v[j])) for j = mixer, reactor, centrifuge
+        Equation:
+            min z = sum(alpha[j] * exp(n[j] + beta[j]*v[j])) for j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
 
         Returns:
-            Objective function
+            Objective function (pyomo.Objective): Objective function to minimize the investment cost [$].
         """
         return sum(m.alpha[j] * (pe.exp(m.n[j] + m.beta[j] * m.v[j])) for j in m.j)
 
@@ -354,20 +355,20 @@ def external_ref(m, x, logic_expr=None):
         for j in m.j:
             if k == ext_var[j]:
                 m.Y[k, j].fix(True)
-                m.Y_exists[k, j].indicator_var.fix(
-                    True
-                )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
-                m.Y_not_exists[k, j].indicator_var.fix(
-                    False
-                )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                # m.Y_exists[k, j].indicator_var.fix(
+                #     True
+                # )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                # m.Y_not_exists[k, j].indicator_var.fix(
+                #     False
+                # )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
             else:
                 m.Y[k, j].fix(False)
-                m.Y_exists[k, j].indicator_var.fix(
-                    False
-                )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
-                m.Y_not_exists[k, j].indicator_var.fix(
-                    True
-                )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                # m.Y_exists[k, j].indicator_var.fix(
+                #     False
+                # )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                # m.Y_not_exists[k, j].indicator_var.fix(
+                #     True
+                # )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
@@ -439,3 +440,7 @@ if __name__ == "__main__":
 
     # EXTERNAL REF TEST (this thest can be deleted)
     newmodel = external_ref(m, [1, 2, 3], logic_expr=None)
+    print('External Ref Test')
+    print('Y[1, mixer] = ', newmodel.Y[1, 'mixer'].value)
+    print('Y_exists[1, mixer] = ', newmodel.Y_exists[1, 'mixer'].indicator_var.value)
+    print('Y_not_exists[1, mixer] = ', newmodel.Y_not_exists[1, 'mixer'].indicator_var.value)

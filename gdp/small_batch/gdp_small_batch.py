@@ -357,18 +357,18 @@ def external_ref(m, x, logic_expr=None):
                 m.Y[k, j].fix(True)
                 # m.Y_exists[k, j].indicator_var.fix(
                 #     True
-                # )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                # )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True).
                 # m.Y_not_exists[k, j].indicator_var.fix(
                 #     False
-                # )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                # )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), 
             else:
                 m.Y[k, j].fix(False)
                 # m.Y_exists[k, j].indicator_var.fix(
                 #     False
-                # )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                # )  # Is this necessary?: m.Y_exists[k, j].indicator_var.fix(True), 
                 # m.Y_not_exists[k, j].indicator_var.fix(
                 #     True
-                # )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), This part activates the corresponding Algebraic Constraints.
+                # )  # Is this necessary?: m.Y_not_exists[k, j].indicator_var.fix(True), 
 
     pe.TransformationFactory('core.logical_to_linear').apply_to(m)
     pe.TransformationFactory('gdp.fix_disjuncts').apply_to(m)
@@ -440,7 +440,10 @@ if __name__ == "__main__":
 
     # EXTERNAL REF TEST (this thest can be deleted)
     newmodel = external_ref(m, [1, 2, 3], logic_expr=None)
-    print('External Ref Test')
-    print('Y[1, mixer] = ', newmodel.Y[1, 'mixer'].value)
-    print('Y_exists[1, mixer] = ', newmodel.Y_exists[1, 'mixer'].indicator_var.value)
-    print('Y_not_exists[1, mixer] = ', newmodel.Y_not_exists[1, 'mixer'].indicator_var.value)
+    # print('External Ref Test')
+    # print('Y[1, mixer] = ', newmodel.Y[1, 'mixer'].value)
+    # print('Y_exists[1, mixer] = ', newmodel.Y_exists[1, 'mixer'].indicator_var.value)
+    # print('Y_not_exists[1, mixer] = ', newmodel.Y_not_exists[1, 'mixer'].indicator_var.value)
+    # print('Y[2, mixer] = ', newmodel.Y[2, 'mixer'].value)
+    # print('Y_exists[2, mixer] = ', newmodel.Y_exists[2, 'mixer'].indicator_var.value)
+    # print('Y_not_exists[2, mixer] = ', newmodel.Y_not_exists[2, 'mixer'].indicator_var.value)

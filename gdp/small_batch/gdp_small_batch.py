@@ -155,7 +155,7 @@ def build_small_batch():
         """
         Volume Requirement for Stage j.
         Equation:
-            m.v[j] >= log(m.s[i,j]) + m.b[i]
+            v_j \geq log(s_ij) + b_i for i = a, b and j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -173,7 +173,7 @@ def build_small_batch():
         """
         Cycle time for each product i.
         Equation:
-            m.tl[i] >= log(m.t[i,j])
+            n_j + tl_i \geq log(t_ij) for i = a, b and j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -191,7 +191,7 @@ def build_small_batch():
         """
         Production time constraint.
         Equation:
-            sum(m.q[i] * exp(m.tl[i] - m.b[i])) <= m.h
+            \sum_{i \in I} q_i * \exp(tl_i - b_i) \leq h
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -207,7 +207,7 @@ def build_small_batch():
         """
         Relating number of units to 0-1 variables.
         Equation:
-            m.n[j] == sum(m.coeffval[k,j] for k in m.k)
+            n_j = \sum_{k \in K} coeffval_{k,j} for j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -225,12 +225,11 @@ def build_small_batch():
         """
         Only one choice for parallel units is feasible.
         Equation:
-            Sum(m.Y[k,j] for j in m.j) == 1, for k in m.k
+            \sum_{k \in K} Y_{k,j} = 1 for j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
             j (str): stage
-            k (int): number of parallel units
 
         Returns:
             Logical Constraint

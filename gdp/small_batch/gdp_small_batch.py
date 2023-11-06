@@ -154,6 +154,8 @@ def build_small_batch():
     def vol(m, i, j):
         """
         Volume Requirement for Stage j.
+        Equation:
+            m.v[j] >= log(m.s[i,j]) + m.b[i]
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -170,6 +172,8 @@ def build_small_batch():
     def cycle(m, i, j):
         """
         Cycle time for each product i.
+        Equation:
+            m.tl[i] >= log(m.t[i,j])
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -186,6 +190,8 @@ def build_small_batch():
     def time(m):
         """
         Production time constraint.
+        Equation:
+            sum(m.q[i] * exp(m.tl[i] - m.b[i])) <= m.h
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -200,10 +206,13 @@ def build_small_batch():
     def units(m, j):
         """
         Relating number of units to 0-1 variables.
+        Equation:
+            m.n[j] == sum(m.coeffval[k,j] for k in m.k)
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
             j (str): stage
+            k (int): number of parallel units
 
         Returns:
             Algebraic Constraint
@@ -215,10 +224,13 @@ def build_small_batch():
     def lim(m, j):
         """
         Only one choice for parallel units is feasible.
+        Equation:
+            Sum(m.Y[k,j] for j in m.j) == 1, for k in m.k
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
             j (str): stage
+            k (int): number of parallel units
 
         Returns:
             Logical Constraint

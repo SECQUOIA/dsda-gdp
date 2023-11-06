@@ -162,32 +162,32 @@ if __name__ == "__main__":
             dict_data.append(new_result)
             print(new_result)
 
-    # GDPopt
-    for solver in nlps:
-        for strategy in strategies:
-            new_result = {}
-            m = build_small_batch()
-            m_init = initialize_model(m, json_path=init_path)
-            m_solved = solve_with_gdpopt(
-                m_init,
-                mip='cplex',
-                nlp=solver,
-                nlp_options=nlp_opts[solver],
-                timelimit=timelimit,
-                strategy=strategy,
-                tee=globaltee,
-            )
-            new_result = {
-                'Method': 'GDPopt',
-                'Approach': strategy,
-                'Solver': solver,
-                'Objective': pe.value(m_solved.obj),
-                'Time': m_solved.results.solver.user_time,
-                'Status': m_solved.results.solver.termination_condition,
-                'User_time': 'NA',
-            }
-            dict_data.append(new_result)
-            print(new_result)
+    # # GDPopt
+    # for solver in nlps:
+    #     for strategy in strategies:
+    #         new_result = {}
+    #         m = build_small_batch()
+    #         m_init = initialize_model(m, json_path=init_path)
+    #         m_solved = solve_with_gdpopt(
+    #             m_init,
+    #             mip='cplex',
+    #             nlp=solver,
+    #             nlp_options=nlp_opts[solver],
+    #             timelimit=timelimit,
+    #             strategy=strategy,
+    #             tee=globaltee,
+    #         )
+    #         new_result = {
+    #             'Method': 'GDPopt',
+    #             'Approach': strategy,
+    #             'Solver': solver,
+    #             'Objective': pe.value(m_solved.obj),
+    #             'Time': m_solved.results.solver.user_time,
+    #             'Status': m_solved.results.solver.termination_condition,
+    #             'User_time': 'NA',
+    #         }
+    #         dict_data.append(new_result)
+    #         print(new_result)
 
     # D-SDA - MINLP
     m = build_small_batch()

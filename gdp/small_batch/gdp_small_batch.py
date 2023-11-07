@@ -37,7 +37,7 @@ def build_small_batch():
 
     # Sets
     m.i = pe.Set(
-        initialize=['a', 'b'], doc='Set of produncts'
+        initialize=['a', 'b'], doc='Set of products'
     )  # Set of products, i = a, b
     m.j = pe.Set(
         initialize=['mixer', 'reactor', 'centrifuge']

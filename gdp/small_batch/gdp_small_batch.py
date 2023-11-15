@@ -155,7 +155,7 @@ def build_small_batch():
         """
         Volume Requirement for Stage j.
         Equation:
-            v_j \geq log(s_ij) + b_i for i = a, b and j = mixer, reactor, centrifuge
+            v[j] >= log(s[i,j]) + b[i] for i = a, b and j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -173,7 +173,7 @@ def build_small_batch():
         """
         Cycle time for each product i.
         Equation:
-            n_j + tl_i \geq log(t_ij) for i = a, b and j = mixer, reactor, centrifuge
+            n[j] + tl[i] >= log(t[i,j]) for i = a, b and j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -191,7 +191,7 @@ def build_small_batch():
         """
         Production time constraint.
         Equation:
-            \sum_{i \in I} q_i * \exp(tl_i - b_i) \leq h
+            sum(q[i] * exp(tl[i] - b[i])) <= h for i = a, b
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -207,7 +207,7 @@ def build_small_batch():
         """
         Relating number of units to 0-1 variables.
         Equation:
-            n_j = \sum_{k \in K} coeffval_{k,j} for j = mixer, reactor, centrifuge
+            n[j] = sum(coeffval[k,j] for k = 1, 2, 3) for j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -225,7 +225,7 @@ def build_small_batch():
         """
         Only one choice for parallel units is feasible.
         Equation:
-            \sum_{k \in K} Y_{k,j} = 1 for j = mixer, reactor, centrifuge
+            sum(Y[k,j] for k = 1, 2, 3) = 1 for j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -257,7 +257,7 @@ def build_small_batch():
         def coeffval_act(disjunct):
             """
             Coeffval activation.
-            m.coeffval[k,j] = m.coeff[k] = log(k)
+            coeffval[k,j] = coeff[k] = log(k)
 
             Args:
                 disjunct (pyomo.gdp.Disjunct): Disjunct block
@@ -286,7 +286,7 @@ def build_small_batch():
         def coeffval_deact(disjunct):
             """
             Coeffval deactivation.
-            m.coeffval[k,j] = 0
+            coeffval[k,j] = 0
 
             Args:
                 disjunct (pyomo.gdp.Disjunct): Disjunct block

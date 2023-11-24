@@ -226,6 +226,7 @@ def build_small_batch():
         Only one choice for parallel units is feasible.
         Equation:
             sum(Y[k,j] for k = 1, 2, 3) = 1 for j = mixer, reactor, centrifuge
+            k stands for the number of potential parallel units for each stage.
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model

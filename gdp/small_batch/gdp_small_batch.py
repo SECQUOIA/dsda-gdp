@@ -155,7 +155,7 @@ def build_small_batch():
         """
         Volume Requirement for Stage j.
         Equation:
-            v[j] >= log(s[i,j]) + b[i] for i = a, b and j = mixer, reactor, centrifuge
+            v[j] >= log(s[i,j]) + b[i] for i = 'a', 'b' and j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model
@@ -173,7 +173,7 @@ def build_small_batch():
         """
         Cycle time for each product i.
         Equation:
-            n[j] + tl[i] >= log(t[i,j]) for i = a, b and j = mixer, reactor, centrifuge
+            n[j] + tl[i] >= log(t[i,j]) for i = 'a', 'b' and j = mixer, reactor, centrifuge
 
         Args:
             m (pyomo.ConcreteModel): small batch GDP model

@@ -240,7 +240,7 @@ def build_small_batch():
 
     def build_existence_equations(disjunct, k, j):
         """
-        Build the Logic Proposition (euqations) for the existence of the stage.
+        Build the Logic Proposition (equations) for the existence of the stage.
 
         Args:
             disjunct (pyomo.gdp.Disjunct): Disjunct block

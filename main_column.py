@@ -383,6 +383,7 @@ if __name__ == "__main__":
     # The model is solved using different combinations of solvers, 'k' values, and transformations.
     # The 'k' value is a parameter of the D-SDA method and the transformation refers to a reformulation strategy for the MINLP problem.
     # The results are saved in a dictionary and appended to a list 'dict_data'.
+
     for solver in nlps:
         for k in ks:
             for transformation in transformations:

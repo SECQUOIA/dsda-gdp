@@ -392,7 +392,7 @@ if __name__ == "__main__":
                     model_args=model_args,
                     starting_point=starting_point,
                     ext_dict=ext_ref,
-                    mip_transformation=True,
+                    mip_transformation=False,
                     transformation=transformation,
                     ext_logic=problem_logic_column,
                     k=k,

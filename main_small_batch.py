@@ -152,7 +152,7 @@ if __name__ == "__main__":
                     model_args={},
                     starting_point=starting_point,
                     ext_dict=ext_ref,
-                    mip_transformation=True,
+                    mip_transformation=False,
                     transformation=transformation,
                     ext_logic=problem_logic_batch,
                     k=k,
@@ -163,7 +163,7 @@ if __name__ == "__main__":
                     iter_timelimit=timelimit,
                     timelimit=timelimit,
                     gams_output=False,
-                    tee=globaltee,
+                    tee=False,
                     global_tee=globaltee,
                 )
                 new_result = {'Method': str('D-SDA_MIP_'+transformation), 'Approach': str('k='+k), 'Solver': solver, 'Objective': pe.value(

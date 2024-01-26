@@ -255,7 +255,7 @@ if __name__ == "__main__":
                         starting_point=starting_point,
                         ext_dict=ext_ref,
                         ext_logic=problem_logic_cstr,
-                        mip_transformation=True,
+                        mip_transformation=False,
                         transformation=transformation,
                         k=k,
                         provide_starting_initialization=True,

@@ -11,7 +11,6 @@ import pyomo.environ as pe
 from gdp.dsda.model_serializer import StoreSpec, from_json, to_json
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
-# from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 from pyomo.core.base.misc import display
 from pyomo.core.plugins.transform.logical_to_linear import \
     update_boolean_vars_from_binary

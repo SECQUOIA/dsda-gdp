@@ -21,7 +21,7 @@ import os  # Provides functions for interacting with the operating system.
 # Imports from the Pyomo library for building and solving optimization problems.
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.gdpopt.data_class import MasterProblemResult
+#from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 from pyomo.core.base.misc import display
 from pyomo.core.plugins.transform.logical_to_linear import (
     update_boolean_vars_from_binary,

@@ -28,7 +28,7 @@ import time
 
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.gdpopt.data_class import MasterProblemResult
+#from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 from pyomo.environ import (
     Block,
     BooleanVar,

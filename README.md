@@ -25,16 +25,6 @@ References:
 If this code was useful, please consider citing the following papers:
 
 ```bibtex
-@incollection{bernal2022process,
-  title={Process superstructure optimization through discrete steepest descent optimization: A GDP analysis and applications in process intensification},
-  author={Bernal, David E and Ovalle, Daniel and Liñán, David A and Ricardez-Sandoval, Luis A and Gómez, Jorge M and Grossmann, Ignacio E},
-  booktitle={Computer Aided Chemical Engineering},
-  volume={49},
-  pages={1279--1284},
-  year={2022},
-  publisher={Elsevier}
-}
-
 @article{ovalle2025logic,
   title={Logic-based discrete-steepest descent: A solution method for process synthesis generalized disjunctive programs},
   author={Ovalle, Daniel and Liñán, David A and Lee, Albert and Gómez, Jorge M and Ricardez-Sandoval, Luis and Grossmann, Ignacio E and Neira, David E Bernal},
@@ -42,6 +32,16 @@ If this code was useful, please consider citing the following papers:
   volume={195},
   pages={108993},
   year={2025},
+  publisher={Elsevier}
+}
+
+@incollection{bernal2022process,
+  title={Process superstructure optimization through discrete steepest descent optimization: A GDP analysis and applications in process intensification},
+  author={Bernal, David E and Ovalle, Daniel and Liñán, David A and Ricardez-Sandoval, Luis A and Gómez, Jorge M and Grossmann, Ignacio E},
+  booktitle={Computer Aided Chemical Engineering},
+  volume={49},
+  pages={1279--1284},
+  year={2022},
   publisher={Elsevier}
 }
 ```

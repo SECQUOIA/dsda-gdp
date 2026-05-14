@@ -26,9 +26,9 @@ If this code was useful, please consider citing the following papers:
 
 ```bibtex
 @incollection{bernal2022process,
-  title={Process superstructure optimization through discrete steepest descent optimization: a GDP analysis and applications in process intensification},
+  title={Process superstructure optimization through discrete steepest descent optimization: A GDP analysis and applications in process intensification},
   author={Bernal, David E and Ovalle, Daniel and Liñán, David A and Ricardez-Sandoval, Luis A and Gómez, Jorge M and Grossmann, Ignacio E},
-  booktitle={Computer aided chemical engineering},
+  booktitle={Computer Aided Chemical Engineering},
   volume={49},
   pages={1279--1284},
   year={2022},

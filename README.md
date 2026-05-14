@@ -19,3 +19,29 @@ References:
 [^3]: Kocis, G R, and Grossmann, I E, Global Optimization of Nonconvex MINLP. Problems in Process Synthesis. Independent Engineering Chemical Research 27 (1988), 1407-1421. [link](https://doi.org/10.1021/ie00080a013)
 [^4]: Liñán, D. A., Bernal, D. E., Ricardez-Sandoval, L. A., & Gómez, J. M. (2020). Optimal design of superstructures for placing units and streams with multiple and ordered available locations. Part II: Rigorous design of catalytic distillation columns. Computers & Chemical Engineering, 139, 106845. [link](https://doi.org/10.1016/j.compchemeng.2020.106845)
 [^5]: Liñán, D. A., Bernal, D. E., Gómez, J. M., & Ricardez-Sandoval, L. A. (2021). Optimal synthesis and design of catalytic distillation columns: A rate-based modeling approach. Chemical Engineering Science, 231, 116294. [link](https://doi.org/10.1016/j.ces.2020.116294)
+
+## Citation
+
+If this code was useful, please consider citing the following papers:
+
+```bibtex
+@incollection{bernal2022process,
+  title={Process superstructure optimization through discrete steepest descent optimization: a GDP analysis and applications in process intensification},
+  author={Bernal, David E and Ovalle, Daniel and Liñán, David A and Ricardez-Sandoval, Luis A and Gómez, Jorge M and Grossmann, Ignacio E},
+  booktitle={Computer aided chemical engineering},
+  volume={49},
+  pages={1279--1284},
+  year={2022},
+  publisher={Elsevier}
+}
+
+@article{ovalle2025logic,
+  title={Logic-based discrete-steepest descent: A solution method for process synthesis generalized disjunctive programs},
+  author={Ovalle, Daniel and Liñán, David A and Lee, Albert and Gómez, Jorge M and Ricardez-Sandoval, Luis and Grossmann, Ignacio E and Neira, David E Bernal},
+  journal={Computers \& Chemical Engineering},
+  volume={195},
+  pages={108993},
+  year={2025},
+  publisher={Elsevier}
+}
+```
